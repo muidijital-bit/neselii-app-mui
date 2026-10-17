@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
+import { LISTING_SUMMARY_COLUMNS, type ListingSummary } from '@/features/listings/api';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/providers/auth-provider';
 
@@ -24,12 +25,11 @@ export function useFavorites() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('favorites')
-        .select(
-          'created_at, listing:listings(id, title, price, currency, brand, model, year, km, fuel_type, transmission, city, district, status, is_featured, cover_image_url, created_at)',
-        )
+        .select(`created_at, listing:listings(${LISTING_SUMMARY_COLUMNS})`)
         .order('created_at', { ascending: false });
       if (error) throw error;
-      return data.flatMap((f) => (f.listing ? [f.listing] : []));
+      // Yayından kalkan ilanlar RLS nedeniyle null gelir
+      return data.flatMap((f) => (f.listing ? [f.listing as unknown as ListingSummary] : []));
     },
   });
 }
@@ -44,6 +44,20 @@ export function useToggleFavorite() {
         ? await supabase.from('favorites').delete().eq('user_id', userId).eq('listing_id', listingId)
         : await supabase.from('favorites').insert({ user_id: userId, listing_id: listingId });
       if (error) throw error;
+    },
+    onMutate: async ({ listingId, isFavorite }) => {
+      // Kalp simgesi anında değişsin
+      const key = ['favorite-ids', userId];
+      await queryClient.cancelQueries({ queryKey: key });
+      const previous = queryClient.getQueryData<Set<string>>(key);
+      const next = new Set(previous);
+      if (isFavorite) next.delete(listingId);
+      else next.add(listingId);
+      queryClient.setQueryData(key, next);
+      return { previous };
+    },
+    onError: (_e, _v, context) => {
+      queryClient.setQueryData(['favorite-ids', userId], context?.previous);
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['favorite-ids'] });

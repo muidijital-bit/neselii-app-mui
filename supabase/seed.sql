@@ -23,7 +23,7 @@ values
    'Şantiye kullanımına hazır.', 2150000, 'Ford Trucks', '2533 DC', 2017, 510000, '{"axle_count":"3"}',
    'Ankara', 'Yenimahalle', 'published', now() - interval '16 days'),
   ('is-makinesi', 'Yükleyici', 'CAT 950 GC Lastikli Yükleyici',
-   'Kova kapasitesi 3,1 m³.', 3900000, 'CAT', '950 GC', 2016, null, '{"work_hours":"11200"}',
+   'Kova kapasitesi 3,1 m³.', 3900000, 'CAT', '950 GC', 2016, null, '{"work_hours":11200}',
    'Ankara', 'Sincan', 'sold', now() - interval '20 days'),
   ('cekici', '4×2', 'MAN TGX 26.480 Çekici',
    'Retarderli, ADR uygun.', 2450000, 'MAN', 'TGX 26.480', 2018, 610000, '{"cab_type":"Yüksek"}',
@@ -42,13 +42,13 @@ values
    '{"fuel_type":"Hibrit","transmission":"Otomatik"}',
    'Ankara', 'Çankaya', 'published', now() - interval '2 days'),
   ('is-makinesi', 'Ekskavatör', 'Hidromek HMK 220 LC Ekskavatör',
-   'Paletli, kırıcı tesisatlı.', 4200000, 'Hidromek', 'HMK 220 LC', 2019, null, '{"work_hours":"7400"}',
+   'Paletli, kırıcı tesisatlı.', 4200000, 'Hidromek', 'HMK 220 LC', 2019, null, '{"work_hours":7400}',
    'Ankara', 'Sincan', 'published', now() - interval '9 days'),
   ('gayrimenkul', 'Depo', 'Sincan OSB 1.200 m² Kiralık Depo',
-   'Tır yanaşmaya uygun, 9 m tavan yüksekliği.', 18500000, null, null, null, null, '{"area_m2":"1200"}',
+   'Tır yanaşmaya uygun, 9 m tavan yüksekliği.', 18500000, null, null, null, null, '{"area_m2":1200}',
    'Ankara', 'Sincan', 'published', now() - interval '10 days'),
   ('arsa', 'Sanayi', 'Temelli 5.000 m² Sanayi İmarlı Arsa',
-   'Ana yola cepheli.', 12000000, null, null, null, null, '{"area_m2":"5000"}',
+   'Ana yola cepheli.', 12000000, null, null, null, null, '{"area_m2":5000}',
    'Ankara', 'Sincan', 'published', now() - interval '12 days');
 
 insert into public.announcements (title, body, published_at) values

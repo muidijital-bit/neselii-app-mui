@@ -1,12 +1,12 @@
 {
   "expo": {
-    "name": "Neşeli Otomotiv",
+    "name": "Neşeli Kamyon Tır Pazarı",
     "slug": "neselii-app-mui",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "neseliotomotiv",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "light",
     "ios": {
       "icon": "./assets/expo.icon",
       "bundleIdentifier": "com.neseliotomotiv.app"
@@ -22,7 +22,7 @@
       "package": "com.neseliotomotiv.app"
     },
     "web": {
-      "output": "server",
+      "output": "single",
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
@@ -30,12 +30,27 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#FFFFFF",
+          "backgroundColor": "#0A213F",
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
       ],
-      "expo-sqlite"
+      "expo-sqlite",
+      "expo-video",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Konumunuz yalnızca ilanları size olan uzaklığa göre sıralamak için kullanılır.",
+          "isIosBackgroundLocationEnabled": false,
+          "isAndroidBackgroundLocationEnabled": false
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#18A749"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

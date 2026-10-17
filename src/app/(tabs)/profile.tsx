@@ -1,48 +1,113 @@
 import { router } from 'expo-router';
-import { Alert, StyleSheet, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, View } from 'react-native';
 
-import { Button } from '@/components/button';
-import { StateView } from '@/components/state-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Spacing } from '@/constants/theme';
+import { ScreenHeader } from '@/components/screen-header';
+import { Text } from '@/components/text';
+import { Card, Divider, MenuRow } from '@/components/ui';
+import { Colors, Radius, Spacing } from '@/constants/theme';
+import { useFavoriteIds } from '@/features/favorites/api';
+import { useProfile } from '@/features/profile/api';
+import { useSavedSearches } from '@/features/saved-searches/api';
+import { formatMonthYear, initials } from '@/lib/format';
 import { useAuth } from '@/providers/auth-provider';
 
 export default function ProfileScreen() {
   const { session, signOut } = useAuth();
+  const profile = useProfile();
+  const favorites = useFavoriteIds();
+  const savedSearches = useSavedSearches();
 
-  if (!session) {
-    return (
-      <ThemedView style={styles.container}>
-        <StateView
-          title="Neşeli Otomotiv"
-          message="Favorilerinizi ve mesajlarınızı görmek için giriş yapın."
-          actionTitle="Giriş yap / Kayıt ol"
-          onAction={() => router.push('/sign-in')}
-        />
-      </ThemedView>
-    );
-  }
+  const name = profile.data?.full_name || session?.user.email?.split('@')[0] || '';
 
-  const fullName = session.user.user_metadata.full_name as string | undefined;
+  const confirmSignOut = () =>
+    Alert.alert('Çıkış yap', 'Hesabınızdan çıkış yapmak istediğinize emin misiniz?', [
+      { text: 'Vazgeç', style: 'cancel' },
+      {
+        text: 'Çıkış Yap',
+        style: 'destructive',
+        onPress: () => signOut().catch((e: Error) => Alert.alert('Hata', e.message)),
+      },
+    ]);
 
   return (
-    <ThemedView style={[styles.container, styles.content]}>
-      <View style={styles.header}>
-        <ThemedText type="subtitle">{fullName ?? 'Hesabım'}</ThemedText>
-        <ThemedText themeColor="textSecondary">{session.user.email}</ThemedText>
-      </View>
-      <Button
-        title="Çıkış yap"
-        variant="secondary"
-        onPress={() => signOut().catch((e: Error) => Alert.alert('Hata', e.message))}
-      />
-    </ThemedView>
+    <View style={styles.container}>
+      <ScreenHeader title="Profil" back={false} />
+      <ScrollView contentContainerStyle={styles.content}>
+        <Card style={styles.userCard}>
+          <View style={styles.avatar}>
+            <Text variant="heading" style={styles.avatarText}>
+              {initials(name)}
+            </Text>
+          </View>
+          <View style={styles.flex}>
+            <Text variant="heading" numberOfLines={1}>
+              {name}
+            </Text>
+            <Text variant="body" color="textSecondary" numberOfLines={1}>
+              {session?.user.email}
+            </Text>
+            {session?.user.created_at ? (
+              <Text variant="small">Üyelik: {formatMonthYear(session.user.created_at)}</Text>
+            ) : null}
+          </View>
+        </Card>
+
+        <Card>
+          <MenuRow icon="user" title="Profil Bilgilerim" onPress={() => router.push('/account/edit')} />
+          <Divider />
+          <MenuRow
+            icon="heart"
+            title="Favori İlanlarım"
+            value={favorites.data?.size ?? 0}
+            onPress={() => router.push('/account/favorites')}
+          />
+          <Divider />
+          <MenuRow
+            icon="bookmark"
+            title="Kayıtlı Aramalarım"
+            value={savedSearches.data?.length ?? 0}
+            onPress={() => router.push('/account/saved-searches')}
+          />
+          <Divider />
+          <MenuRow
+            icon="bell"
+            title="Bildirim Tercihleri"
+            onPress={() => router.push('/account/notification-settings')}
+          />
+        </Card>
+
+        <Card>
+          <MenuRow icon="shield" title="Gizlilik ve Güvenlik" onPress={() => router.push('/account/privacy')} />
+          <Divider />
+          <MenuRow icon="log-out" title="Çıkış Yap" chevron={false} onPress={confirmSignOut} />
+        </Card>
+
+        <Card>
+          <MenuRow
+            icon="trash-2"
+            tone="danger"
+            title="Hesabımı Sil"
+            subtitle="Hesabınız ve size ait tüm veriler kalıcı olarak silinir."
+            onPress={() => router.push('/account/delete')}
+          />
+        </Card>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  content: { padding: Spacing.three, gap: Spacing.four },
-  header: { gap: Spacing.one },
+  container: { flex: 1, backgroundColor: Colors.background },
+  content: { padding: Spacing.three, gap: Spacing.three },
+  flex: { flex: 1, gap: 2 },
+  userCard: { flexDirection: 'row', alignItems: 'center', gap: Spacing.four, padding: Spacing.four },
+  avatar: {
+    width: 72,
+    height: 72,
+    borderRadius: Radius.pill,
+    backgroundColor: Colors.navy,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarText: { color: Colors.white, fontSize: 24 },
 });

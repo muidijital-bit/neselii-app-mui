@@ -1,35 +1,51 @@
-import { ActivityIndicator, Pressable, StyleSheet, type PressableProps } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, View, type PressableProps } from 'react-native';
 
-import { ThemedText } from '@/components/themed-text';
-import { Spacing } from '@/constants/theme';
-import { useTheme } from '@/hooks/use-theme';
+import { Icon, type IconName } from '@/components/icon';
+import { Text } from '@/components/text';
+import { Colors, Radius, Spacing } from '@/constants/theme';
 
-type Props = PressableProps & {
+type Variant = 'primary' | 'navy' | 'outline' | 'outlineDark' | 'danger';
+
+type Props = Omit<PressableProps, 'children'> & {
   title: string;
-  variant?: 'primary' | 'secondary';
+  variant?: Variant;
+  icon?: IconName;
   loading?: boolean;
 };
 
-export function Button({ title, variant = 'primary', loading, disabled, style, ...rest }: Props) {
-  const theme = useTheme();
-  const isPrimary = variant === 'primary';
+const palette: Record<Variant, { bg: string; fg: string; border?: string }> = {
+  primary: { bg: Colors.green, fg: Colors.white },
+  navy: { bg: Colors.navy, fg: Colors.white },
+  outline: { bg: Colors.surface, fg: Colors.heading, border: Colors.inputBorder },
+  outlineDark: { bg: 'transparent', fg: Colors.white, border: Colors.navyBorder },
+  danger: { bg: Colors.danger, fg: Colors.white },
+};
+
+export function Button({ title, variant = 'primary', icon, loading, disabled, style, ...rest }: Props) {
+  const isDisabled = disabled || loading;
+  const colors = disabled ? { bg: Colors.disabled, fg: Colors.onDisabled } : palette[variant];
 
   return (
     <Pressable
-      disabled={disabled || loading}
+      accessibilityRole="button"
+      disabled={isDisabled}
       style={(state) => [
         styles.button,
-        { backgroundColor: isPrimary ? theme.primary : theme.backgroundElement },
-        (disabled || state.pressed) && styles.dimmed,
+        { backgroundColor: colors.bg },
+        'border' in colors && colors.border ? { borderWidth: 1.5, borderColor: colors.border } : null,
+        state.pressed && styles.pressed,
         typeof style === 'function' ? style(state) : style,
       ]}
       {...rest}>
       {loading ? (
-        <ActivityIndicator color={isPrimary ? theme.onPrimary : theme.text} />
+        <ActivityIndicator color={colors.fg} />
       ) : (
-        <ThemedText type="smallBold" style={{ color: isPrimary ? theme.onPrimary : theme.text }}>
-          {title}
-        </ThemedText>
+        <View style={styles.content}>
+          {icon ? <Icon name={icon} size={20} color={colors.fg} /> : null}
+          <Text variant="bodySemibold" style={[styles.label, { color: colors.fg }]}>
+            {title}
+          </Text>
+        </View>
       )}
     </Pressable>
   );
@@ -37,13 +53,13 @@ export function Button({ title, variant = 'primary', loading, disabled, style, .
 
 const styles = StyleSheet.create({
   button: {
-    minHeight: 48,
-    borderRadius: 12,
+    minHeight: 52,
+    borderRadius: Radius.md,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: Spacing.three,
   },
-  dimmed: {
-    opacity: 0.6,
-  },
+  content: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
+  label: { fontSize: 17 },
+  pressed: { opacity: 0.85 },
 });

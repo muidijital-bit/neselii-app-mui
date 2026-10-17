@@ -1,83 +1,124 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { Image } from 'expo-image';
 import { Link } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { ThemedText } from '@/components/themed-text';
-import { Spacing } from '@/constants/theme';
+import { Icon } from '@/components/icon';
+import { ListingImage } from '@/components/listing-image';
+import { Text } from '@/components/text';
+import { Badge } from '@/components/ui';
+import { Colors, Radius, Spacing } from '@/constants/theme';
 import type { ListingSummary } from '@/features/listings/api';
-import { useTheme } from '@/hooks/use-theme';
-import { formatKm, formatPrice } from '@/lib/format';
+import { formatPrice, isNewListing, statusLabels, timeAgo } from '@/lib/format';
 
 type Props = {
   listing: ListingSummary;
+  categoryName?: string;
   isFavorite?: boolean;
   onToggleFavorite?: () => void;
 };
 
-export function ListingCard({ listing, isFavorite, onToggleFavorite }: Props) {
-  const theme = useTheme();
-  const location = [listing.district, listing.city].filter(Boolean).join(', ');
+export function ListingCard({ listing, categoryName, isFavorite, onToggleFavorite }: Props) {
+  const location = [listing.city, listing.district].filter(Boolean).join(' / ');
+  const meta = [location, listing.published_at ? timeAgo(listing.published_at) : null]
+    .filter(Boolean)
+    .join(' · ');
 
   return (
     <Link href={{ pathname: '/listing/[id]', params: { id: listing.id } }} asChild>
-      <Pressable style={[styles.card, { backgroundColor: theme.backgroundElement }]}>
-        <Image
-          source={listing.cover_image_url}
-          style={styles.image}
-          contentFit="cover"
-          transition={150}
-          placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
-        />
-        <View style={styles.body}>
-          <ThemedText type="smallBold" numberOfLines={2}>
-            {listing.title}
-          </ThemedText>
-          <ThemedText type="small" themeColor="textSecondary">
-            {listing.year} · {formatKm(listing.km)}
-          </ThemedText>
-          {location ? (
-            <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
-              {location}
-            </ThemedText>
+      <Pressable style={({ pressed }) => [styles.card, pressed && styles.pressed]}>
+        <View style={styles.media}>
+          <ListingImage uri={listing.cover_url} style={styles.image} />
+          {listing.status !== 'published' ? (
+            <View style={styles.topBadge}>
+              <Badge label={statusLabels[listing.status]} tone="warning" />
+            </View>
+          ) : isNewListing(listing.published_at) ? (
+            <View style={styles.topBadge}>
+              <Badge label="Yeni" tone="info" />
+            </View>
           ) : null}
-          <ThemedText type="subtitle" style={[styles.price, { color: theme.primary }]}>
-            {formatPrice(listing.price, listing.currency)}
-          </ThemedText>
+          <View style={styles.mediaPills}>
+            {listing.photo_count > 0 ? (
+              <View style={styles.pill}>
+                <Icon name="camera" size={14} color="white" />
+                <Text variant="smallSemibold" style={styles.pillText}>
+                  {listing.photo_count}
+                </Text>
+              </View>
+            ) : null}
+            {listing.has_video ? (
+              <View style={styles.pill}>
+                <Icon name="play" size={14} color="white" />
+              </View>
+            ) : null}
+          </View>
         </View>
-        {onToggleFavorite ? (
-          <Pressable hitSlop={12} onPress={onToggleFavorite} style={styles.favorite}>
-            <Ionicons name={isFavorite ? 'heart' : 'heart-outline'} size={22} color={theme.primary} />
-          </Pressable>
-        ) : null}
+
+        <View style={styles.body}>
+          <View style={styles.titleRow}>
+            <Text variant="subheading" numberOfLines={2} style={styles.title}>
+              {listing.title}
+            </Text>
+            {onToggleFavorite ? (
+              <Pressable
+                hitSlop={12}
+                accessibilityRole="button"
+                accessibilityLabel={isFavorite ? 'Favorilerden çıkar' : 'Favorilere ekle'}
+                onPress={onToggleFavorite}>
+                <Icon
+                  name={isFavorite ? 'mci:heart' : 'heart'}
+                  size={24}
+                  color={isFavorite ? 'danger' : 'textTertiary'}
+                />
+              </Pressable>
+            ) : null}
+          </View>
+          <View style={styles.metaRow}>
+            <Icon name="map-pin" size={15} color="textSecondary" />
+            <Text variant="small" numberOfLines={1} style={styles.flex}>
+              {meta}
+            </Text>
+          </View>
+          <View style={styles.bottomRow}>
+            <Text variant="price" numberOfLines={1} style={styles.flex}>
+              {formatPrice(listing.price, listing.currency)}
+            </Text>
+            {categoryName ? <Badge label={categoryName} /> : null}
+          </View>
+        </View>
       </Pressable>
     </Link>
   );
 }
 
 const styles = StyleSheet.create({
+  flex: { flex: 1 },
   card: {
     flexDirection: 'row',
-    borderRadius: 12,
-    overflow: 'hidden',
+    gap: Spacing.three,
+    padding: Spacing.two + 2,
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
-  image: {
-    width: 130,
-    aspectRatio: 4 / 3,
+  pressed: { opacity: 0.9 },
+  media: { width: 112, height: 98 },
+  image: { width: '100%', height: '100%', borderRadius: Radius.md },
+  topBadge: { position: 'absolute', top: Spacing.two, left: Spacing.two },
+  mediaPills: { position: 'absolute', bottom: Spacing.two, left: Spacing.two, flexDirection: 'row', gap: Spacing.one },
+  pill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(10,33,63,0.92)',
+    borderRadius: Radius.sm,
+    paddingHorizontal: 7,
+    height: 26,
   },
-  body: {
-    flex: 1,
-    padding: Spacing.two,
-    gap: Spacing.half,
-  },
-  price: {
-    fontSize: 18,
-    lineHeight: 24,
-    marginTop: 'auto',
-  },
-  favorite: {
-    position: 'absolute',
-    top: Spacing.two,
-    right: Spacing.two,
-  },
+  pillText: { color: Colors.white, fontSize: 13 },
+  body: { flex: 1, gap: Spacing.one },
+  titleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.two },
+  title: { flex: 1, fontSize: 16, lineHeight: 21 },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.one },
+  bottomRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two, marginTop: 'auto' },
 });

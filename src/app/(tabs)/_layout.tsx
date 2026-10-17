@@ -1,45 +1,56 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { Tabs } from 'expo-router/js-tabs';
-import type { ComponentProps } from 'react';
 import type { ColorValue } from 'react-native';
 
-import { useTheme } from '@/hooks/use-theme';
+import { Icon, type IconName } from '@/components/icon';
+import { Colors, Fonts } from '@/constants/theme';
+import { useUnreadMessageCount } from '@/features/messages/api';
+import { useRealtimeBadges, useUnreadNotificationCount } from '@/features/notifications/api';
 
-type IconName = ComponentProps<typeof Ionicons>['name'];
-
-function tabIcon(name: IconName, activeName: IconName) {
-  return function TabIcon({ color, focused, size }: { color: ColorValue; focused: boolean; size: number }) {
-    return <Ionicons name={focused ? activeName : name} color={color as string} size={size} />;
+function tabIcon(name: IconName) {
+  return function TabIcon({ color }: { color: ColorValue }) {
+    return <Icon name={name} color={color as string} size={26} />;
   };
 }
 
+function badge(count: number | undefined) {
+  return count ? (count > 99 ? '99+' : count) : undefined;
+}
+
 export default function TabsLayout() {
-  const theme = useTheme();
+  useRealtimeBadges();
+  const unreadMessages = useUnreadMessageCount();
+  const unreadNotifications = useUnreadNotificationCount();
+
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: theme.primary,
-        tabBarInactiveTintColor: theme.textSecondary,
-        tabBarStyle: { backgroundColor: theme.background, borderTopColor: theme.border },
-        headerStyle: { backgroundColor: theme.background },
-        headerTintColor: theme.text,
+        headerShown: false,
+        tabBarActiveTintColor: Colors.heading,
+        tabBarInactiveTintColor: '#6B7480',
+        tabBarStyle: { backgroundColor: Colors.surface, borderTopColor: Colors.border },
+        tabBarLabelStyle: { fontFamily: Fonts.medium, fontSize: 12 },
+        tabBarBadgeStyle: { backgroundColor: Colors.danger, fontFamily: Fonts.bold, fontSize: 11 },
+        sceneStyle: { backgroundColor: Colors.background },
       }}>
-      <Tabs.Screen
-        name="index"
-        options={{ title: 'İlanlar', tabBarIcon: tabIcon('car-sport-outline', 'car-sport') }}
-      />
-      <Tabs.Screen
-        name="favorites"
-        options={{ title: 'Favoriler', tabBarIcon: tabIcon('heart-outline', 'heart') }}
-      />
+      <Tabs.Screen name="index" options={{ title: 'Ana Sayfa', tabBarIcon: tabIcon('home') }} />
+      <Tabs.Screen name="categories" options={{ title: 'Kategoriler', tabBarIcon: tabIcon('grid') }} />
       <Tabs.Screen
         name="messages"
-        options={{ title: 'Mesajlar', tabBarIcon: tabIcon('chatbubbles-outline', 'chatbubbles') }}
+        options={{
+          title: 'Mesajlar',
+          tabBarIcon: tabIcon('message-circle'),
+          tabBarBadge: badge(unreadMessages.data),
+        }}
       />
       <Tabs.Screen
-        name="profile"
-        options={{ title: 'Profil', tabBarIcon: tabIcon('person-outline', 'person') }}
+        name="notifications"
+        options={{
+          title: 'Bildirimler',
+          tabBarIcon: tabIcon('bell'),
+          tabBarBadge: badge(unreadNotifications.data),
+        }}
       />
+      <Tabs.Screen name="profile" options={{ title: 'Profil', tabBarIcon: tabIcon('user') }} />
     </Tabs>
   );
 }

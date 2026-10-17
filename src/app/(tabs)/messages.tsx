@@ -1,62 +1,62 @@
-import { Image } from 'expo-image';
-import { Link, router } from 'expo-router';
+import { Link } from 'expo-router';
 import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 
+import { Icon } from '@/components/icon';
+import { ListingImage } from '@/components/listing-image';
+import { ScreenHeader } from '@/components/screen-header';
 import { StateView } from '@/components/state-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Spacing } from '@/constants/theme';
+import { Text } from '@/components/text';
+import { CountBadge, Divider } from '@/components/ui';
+import { Colors, Radius, Spacing } from '@/constants/theme';
 import { useConversations } from '@/features/messages/api';
-import { useTheme } from '@/hooks/use-theme';
-import { formatTime } from '@/lib/format';
-import { useAuth } from '@/providers/auth-provider';
+import { timeAgo } from '@/lib/format';
 
 export default function MessagesScreen() {
-  const theme = useTheme();
-  const { userId } = useAuth();
   const conversations = useConversations();
 
-  if (!userId) {
-    return (
-      <ThemedView style={styles.container}>
-        <StateView
-          title="Mesajlarınız"
-          message="Satıcılarla mesajlaşmak için giriş yapın."
-          actionTitle="Giriş yap"
-          onAction={() => router.push('/sign-in')}
-        />
-      </ThemedView>
-    );
-  }
-
   return (
-    <ThemedView style={styles.container}>
+    <View style={styles.container}>
+      <ScreenHeader title="Mesajlar" back={false} />
       <FlatList
         data={conversations.data ?? []}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
         onRefresh={() => void conversations.refetch()}
         refreshing={conversations.isRefetching}
+        ListHeaderComponent={
+          <View style={styles.info}>
+            <Icon name="info" size={18} />
+            <Text variant="small" color="heading" style={styles.flex}>
+              Tüm görüşmeleriniz Neşeli Otomotiv ile ve bir ilana bağlıdır.
+            </Text>
+          </View>
+        }
+        ItemSeparatorComponent={() => <Divider />}
         renderItem={({ item }) => {
-          const other = item.buyer_id === userId ? item.seller : item.buyer;
+          const unread = item.unread_count > 0;
+          const preview = item.last_message
+            ? `${item.last_message_is_staff ? '' : 'Siz: '}${item.last_message}`
+            : 'Görüşme başlatıldı';
           return (
             <Link href={{ pathname: '/chat/[id]', params: { id: item.id } }} asChild>
-              <Pressable style={[styles.row, { borderBottomColor: theme.border }]}>
-                <Image source={item.listing?.cover_image_url} style={styles.thumb} contentFit="cover" />
-                <View style={styles.rowBody}>
-                  <ThemedText type="smallBold" numberOfLines={1}>
-                    {other?.full_name ?? 'Kullanıcı'}
-                  </ThemedText>
-                  <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
-                    {item.listing?.title}
-                  </ThemedText>
-                  <ThemedText type="small" numberOfLines={1}>
-                    {item.last_message ?? 'Konuşma başlatıldı'}
-                  </ThemedText>
+              <Pressable style={({ pressed }) => [styles.row, unread && styles.unread, pressed && styles.pressed]}>
+                <ListingImage uri={item.listing?.cover_url} style={styles.thumb} iconSize={20} />
+                <View style={styles.flex}>
+                  <View style={styles.line}>
+                    <Text variant={unread ? 'subheading' : 'bodyMedium'} numberOfLines={1} style={styles.flex}>
+                      {item.listing?.title ?? 'İlan kaldırıldı'}
+                    </Text>
+                    <Text variant={unread ? 'smallSemibold' : 'small'} color={unread ? 'green' : 'textSecondary'}>
+                      {timeAgo(item.last_message_at)}
+                    </Text>
+                  </View>
+                  <View style={styles.line}>
+                    <Text variant="small" numberOfLines={1} style={styles.flex}>
+                      {preview}
+                    </Text>
+                    <CountBadge count={item.unread_count} tone="green" />
+                  </View>
                 </View>
-                <ThemedText type="small" themeColor="textSecondary">
-                  {formatTime(item.last_message_at)}
-                </ThemedText>
               </Pressable>
             </Link>
           );
@@ -65,24 +65,40 @@ export default function MessagesScreen() {
           conversations.isLoading ? (
             <StateView loading />
           ) : (
-            <StateView title="Mesajınız yok" message="Bir ilan sayfasından satıcıya mesaj gönderebilirsiniz." />
+            <StateView
+              top
+              icon="message-circle"
+              title="Henüz mesajınız yok"
+              message="İlan sayfasındaki Mesaj Gönder butonuyla firmaya ilan hakkında soru sorabilirsiniz."
+            />
           )
         }
       />
-    </ThemedView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: { flex: 1, backgroundColor: Colors.surface },
   list: { flexGrow: 1 },
+  flex: { flex: 1 },
+  info: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    backgroundColor: Colors.surfaceHighlight,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.three,
+  },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.three,
-    padding: Spacing.three,
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.three,
   },
-  thumb: { width: 56, height: 56, borderRadius: 8 },
-  rowBody: { flex: 1, gap: Spacing.half },
+  unread: { backgroundColor: Colors.surfaceHighlight },
+  pressed: { opacity: 0.8 },
+  thumb: { width: 64, height: 64, borderRadius: Radius.md },
+  line: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two, minHeight: 26 },
 });

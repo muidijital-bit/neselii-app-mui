@@ -25,8 +25,10 @@ Telefonda **Expo Go** ile QR kodu okutarak test edebilirsiniz. Simülatör için
 
 1. [supabase.com](https://supabase.com) üzerinde yeni proje oluşturun.
 2. SQL Editor'de sırasıyla çalıştırın:
-   - `supabase/migrations/20261017000000_init.sql` (tablolar, RLS, realtime, storage bucket)
-   - Bir kullanıcı kaydedip admin yaptıktan sonra `supabase/seed.sql` (örnek ilanlar)
+   - `supabase/migrations/20261017000000_init.sql` (tablolar, RLS, bildirim tetikleyicileri, realtime, storage bucket)
+   - `supabase/seed.sql` (örnek ilanlar ve duyuru)
+   - Firma hesabını admin yapmak için, uygulamadan kayıt olduktan sonra:
+     `update public.profiles set role = 'admin' where id = (select id from auth.users where email = '<e-posta>');`
 3. Project Settings > API'den URL ve publishable key'i `.env.local` dosyasına yazın.
 
 Alternatif olarak Supabase CLI ile: `npx supabase link --project-ref <ref>` ve `npx supabase db push`.

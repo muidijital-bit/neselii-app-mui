@@ -1,16 +1,57 @@
--- Örnek veri. Önce Supabase Auth'ta bir kullanıcı oluşturun, ardından o kullanıcıyı admin yapın:
---   update public.profiles set role = 'admin', full_name = 'Neşeli Otomotiv', phone = '+905000000000'
---    where id = '<kullanici-uuid>';
--- Sonra aşağıdaki sorguyu çalıştırın (seller = ilk admin kullanıcı).
+-- Örnek veri (tasarımlardaki ilanlar). Migration'dan sonra SQL Editor'de çalıştırın.
+-- Fotoğraf eklenmez; uygulama fotoğrafsız ilanlarda yer tutucu gösterir.
 
-with seller as (
-  select id from public.profiles where role = 'admin' order by created_at limit 1
-)
 insert into public.listings
-  (seller_id, title, description, price, brand, model, series, year, km, fuel_type, transmission, body_type, color, city, district, is_featured, cover_image_url)
-select seller.id, v.*
-from seller, (values
-  ('Temiz 2020 Fiat Egea 1.4 Fire Urban', 'Hatasız, boyasız, bakımları yetkili serviste yapıldı.', 785000::numeric, 'Fiat', 'Egea', '1.4 Fire Urban', 2020, 68000, 'benzin', 'manuel', 'Sedan', 'Beyaz', 'İstanbul', 'Kadıköy', true, 'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=1200'),
-  ('2019 Renault Clio 1.5 dCi Touch', 'Düşük yakıt, değişen yok, 2 parça boya.', 690000, 'Renault', 'Clio', '1.5 dCi Touch', 2019, 112000, 'dizel', 'manuel', 'Hatchback', 'Gri', 'Ankara', 'Çankaya', false, 'https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=1200'),
-  ('2022 Toyota Corolla 1.8 Hybrid Dream', 'Garantisi devam ediyor, ilk sahibinden.', 1450000, 'Toyota', 'Corolla', '1.8 Hybrid Dream', 2022, 34000, 'hibrit', 'otomatik', 'Sedan', 'Siyah', 'İzmir', 'Bornova', true, 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=1200')
-) as v(title, description, price, brand, model, series, year, km, fuel_type, transmission, body_type, color, city, district, is_featured, cover_image_url);
+  (category_slug, subtype, title, description, price, brand, model, year, km, attributes,
+   city, district, status, published_at)
+values
+  ('cekici', '4×2', 'Mercedes-Benz Actros 1845 LS Çekici',
+   'Bakımları yetkili serviste yapıldı. Ekspertiz ve bakım kayıtları randevuda paylaşılır.',
+   2850000, 'Mercedes-Benz', 'Actros 1845 LS', 2019, 420000, '{"cab_type":"Yüksek"}',
+   'Ankara', 'Yenimahalle', 'published', now() - interval '7 days'),
+  ('ticari-arac', 'Panelvan', 'Ford Transit 350 L Uzun Şasi Panelvan',
+   'Filo aracı, düzenli bakımlı.', 985000, 'Ford', 'Transit 350 L', 2021, 158000, '{}',
+   'Ankara', 'Yenimahalle', 'published', now() - interval '14 days'),
+  ('otomobil', 'Sedan', 'BMW 320i Sedan M Sport',
+   'M Sport paket, hatasız.', 1450000, 'BMW', '320i', 2020, 64000,
+   '{"fuel_type":"Benzin","transmission":"Otomatik"}',
+   'Ankara', 'Yenimahalle', 'reserved', now() - interval '15 days'),
+  ('dorse', 'Damper', 'Tırsan 3 Akslı Kapaklı Damper Dorse',
+   'Hardox kasa, lastikler yeni.', 1150000, 'Tırsan', 'Damper', 2018, null, '{"axle_count":"3"}',
+   'Yozgat', 'Sorgun', 'published', now() - interval '15 days'),
+  ('kamyon', 'Damperli', 'Ford Trucks 2533 DC Damperli Kamyon',
+   'Şantiye kullanımına hazır.', 2150000, 'Ford Trucks', '2533 DC', 2017, 510000, '{"axle_count":"3"}',
+   'Ankara', 'Yenimahalle', 'published', now() - interval '16 days'),
+  ('is-makinesi', 'Yükleyici', 'CAT 950 GC Lastikli Yükleyici',
+   'Kova kapasitesi 3,1 m³.', 3900000, 'CAT', '950 GC', 2016, null, '{"work_hours":"11200"}',
+   'Ankara', 'Sincan', 'sold', now() - interval '20 days'),
+  ('cekici', '4×2', 'MAN TGX 26.480 Çekici',
+   'Retarderli, ADR uygun.', 2450000, 'MAN', 'TGX 26.480', 2018, 610000, '{"cab_type":"Yüksek"}',
+   'Ankara', 'Yenimahalle', 'unpublished', now() - interval '21 days'),
+  ('cekici', '6×2', 'Volvo FH 500 Globetrotter Çekici',
+   'I-Shift şanzıman, full bakımlı.', 3100000, 'Volvo', 'FH 500', 2020, 380000, '{"cab_type":"Yüksek"}',
+   'Ankara', 'Sincan', 'published', now() - interval '3 days'),
+  ('kamyon', 'Kasalı', 'Mercedes-Benz Axor 1833 Kasalı Kamyon',
+   'Yandan kapaklı kasa.', 1650000, 'Mercedes-Benz', 'Axor 1833', 2014, 690000, '{"axle_count":"2"}',
+   'Konya', 'Selçuklu', 'published', now() - interval '4 days'),
+  ('dorse', 'Tenteli', 'Kässbohrer Tenteli Dorse',
+   'Perdeli, sürgülü tavan.', 890000, 'Kässbohrer', 'Tenteli', 2019, null, '{"axle_count":"3"}',
+   'Ankara', 'Sincan', 'published', now() - interval '6 days'),
+  ('otomobil', 'SUV', 'Toyota RAV4 2.5 Hybrid Passion',
+   'İlk sahibinden, garantili.', 2350000, 'Toyota', 'RAV4', 2022, 41000,
+   '{"fuel_type":"Hibrit","transmission":"Otomatik"}',
+   'Ankara', 'Çankaya', 'published', now() - interval '2 days'),
+  ('is-makinesi', 'Ekskavatör', 'Hidromek HMK 220 LC Ekskavatör',
+   'Paletli, kırıcı tesisatlı.', 4200000, 'Hidromek', 'HMK 220 LC', 2019, null, '{"work_hours":"7400"}',
+   'Ankara', 'Sincan', 'published', now() - interval '9 days'),
+  ('gayrimenkul', 'Depo', 'Sincan OSB 1.200 m² Kiralık Depo',
+   'Tır yanaşmaya uygun, 9 m tavan yüksekliği.', 18500000, null, null, null, null, '{"area_m2":"1200"}',
+   'Ankara', 'Sincan', 'published', now() - interval '10 days'),
+  ('arsa', 'Sanayi', 'Temelli 5.000 m² Sanayi İmarlı Arsa',
+   'Ana yola cepheli.', 12000000, null, null, null, null, '{"area_m2":"5000"}',
+   'Ankara', 'Sincan', 'published', now() - interval '12 days');
+
+insert into public.announcements (title, body, published_at) values
+  ('Sincan şubemiz hizmete açıldı',
+   'Neşeli Otomotiv Sincan şubesi hizmete açıldı. Şubemizde ilanlarımızı yerinde inceleyebilir, randevu alarak yetkili temsilcilerimizle görüşebilirsiniz.',
+   now() - interval '14 days');

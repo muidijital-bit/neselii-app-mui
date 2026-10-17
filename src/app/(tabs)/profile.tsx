@@ -76,6 +76,23 @@ export default function ProfileScreen() {
           />
         </Card>
 
+        {profile.data?.role === 'admin' ? (
+          <Card>
+            <Text variant="overline" style={styles.panelLabel}>
+              Firma Paneli
+            </Text>
+            <MenuRow icon="list" title="İlan Yönetimi" onPress={() => router.push('/admin/listings')} />
+            <Divider />
+            <MenuRow icon="plus-circle" title="Yeni İlan Ekle" onPress={() => router.push('/admin/listing-form')} />
+            <Divider />
+            <MenuRow
+              icon="mci:bullhorn-outline"
+              title="Duyurular"
+              onPress={() => router.push('/admin/announcements')}
+            />
+          </Card>
+        ) : null}
+
         <Card>
           <MenuRow icon="shield" title="Gizlilik ve Güvenlik" onPress={() => router.push('/account/privacy')} />
           <Divider />
@@ -110,4 +127,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   avatarText: { color: Colors.white, fontSize: 24 },
+  panelLabel: { paddingHorizontal: Spacing.four, paddingTop: Spacing.three, color: Colors.green },
 });

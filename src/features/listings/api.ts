@@ -111,14 +111,15 @@ export function useListings({ query, filters, sort }: SearchState) {
   });
 }
 
-export function useListing(id: string) {
+export function useListing(id: string | undefined) {
   return useQuery({
     queryKey: ['listing', id],
+    enabled: !!id,
     queryFn: async (): Promise<ListingDetail> => {
       const { data, error } = await supabase
         .from('listings')
         .select('*, media:listing_media(*)')
-        .eq('id', id)
+        .eq('id', id!)
         .order('sort_order', { referencedTable: 'listing_media' })
         .single();
       if (error) throw error;

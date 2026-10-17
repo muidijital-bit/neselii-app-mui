@@ -14,7 +14,7 @@ export function useConversations() {
       const [conversations, unread] = await Promise.all([
         supabase
           .from('conversations')
-          .select('*, listing:listings(id, title, price, currency, cover_url)')
+          .select('*, listing:listings(id, title, price, currency, cover_url), customer:profiles!conversations_user_id_fkey(full_name, phone)')
           .order('last_message_at', { ascending: false }),
         supabase.from('conversation_unread').select('*'),
       ]);
@@ -45,7 +45,7 @@ export function useConversation(id: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('conversations')
-        .select('*, listing:listings(id, title, price, currency, cover_url)')
+        .select('*, listing:listings(id, title, price, currency, cover_url), customer:profiles!conversations_user_id_fkey(full_name, phone)')
         .eq('id', id)
         .single();
       if (error) throw error;

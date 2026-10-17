@@ -13,6 +13,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 
 import { Colors } from '@/constants/theme';
+import { useIsAdmin } from '@/features/admin/api';
 import { useOnboardingComplete } from '@/lib/app-storage';
 import { queryClient } from '@/lib/query-client';
 import { AuthProvider, useAuth } from '@/providers/auth-provider';
@@ -22,6 +23,7 @@ SplashScreen.preventAutoHideAsync();
 function RootStack() {
   const { session, isLoading, isPasswordRecovery } = useAuth();
   const onboarded = useOnboardingComplete();
+  const isAdmin = useIsAdmin();
   const [fontsLoaded, fontError] = useFonts({
     Inter_400Regular,
     Inter_500Medium,
@@ -77,6 +79,13 @@ function RootStack() {
           <Stack.Screen name="account/notification-settings" />
           <Stack.Screen name="account/privacy" />
           <Stack.Screen name="account/delete" />
+
+          <Stack.Protected guard={isAdmin}>
+            <Stack.Screen name="admin/listings" />
+            <Stack.Screen name="admin/listing-form" />
+            <Stack.Screen name="admin/announcements" />
+            <Stack.Screen name="admin/announcement-form" />
+          </Stack.Protected>
         </Stack.Protected>
       </Stack>
     </>

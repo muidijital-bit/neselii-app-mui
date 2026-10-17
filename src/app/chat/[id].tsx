@@ -4,6 +4,7 @@ import {
   Alert,
   FlatList,
   KeyboardAvoidingView,
+  Linking,
   Pressable,
   StyleSheet,
   TextInput,
@@ -18,13 +19,14 @@ import { StateView } from '@/components/state-view';
 import { Text } from '@/components/text';
 import { Company } from '@/constants/company';
 import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
+import { useIsAdmin } from '@/features/admin/api';
 import {
   useConversation,
   useMarkConversationRead,
   useMessages,
   useSendMessage,
 } from '@/features/messages/api';
-import { formatPrice, formatTime, timeAgo } from '@/lib/format';
+import { formatPrice, formatTime, initials, timeAgo } from '@/lib/format';
 import type { MessageRow } from '@/types/database';
 
 type Item = { kind: 'day'; id: string; label: string } | { kind: 'message'; id: string; message: MessageRow };
@@ -65,12 +67,15 @@ export default function ChatScreen() {
   const markRead = useMarkConversationRead();
   const { mutate: markConversationRead } = markRead;
 
-  const unreadFromStaff = messages.data?.some((m) => m.is_staff && !m.read_at) ?? false;
+  const isAdmin = useIsAdmin();
+  // Karşı taraftan gelen okunmamış mesaj var mı (admin için müşteri, müşteri için firma)
+  const hasUnread = messages.data?.some((m) => m.is_staff !== isAdmin && !m.read_at) ?? false;
   useEffect(() => {
-    if (unreadFromStaff) markConversationRead(id);
-  }, [unreadFromStaff, id, markConversationRead]);
+    if (hasUnread) markConversationRead(id);
+  }, [hasUnread, id, markConversationRead]);
 
   const listing = conversation.data?.listing;
+  const customer = conversation.data?.customer;
   const canSend = draft.trim().length > 0 && !sendMessage.isPending;
 
   const onSend = () => {
@@ -91,15 +96,30 @@ export default function ChatScreen() {
         <Pressable hitSlop={12} accessibilityLabel="Geri" onPress={() => router.back()}>
           <Icon name="chevron-left" size={30} />
         </Pressable>
-        <LogoMark size={52} />
+        {isAdmin ? (
+          <View style={styles.avatar}>
+            <Text variant="subheading" style={styles.white}>
+              {initials(customer?.full_name)}
+            </Text>
+          </View>
+        ) : (
+          <LogoMark size={52} />
+        )}
         <View style={styles.flex}>
-          <Text variant="subheading">{Company.name}</Text>
+          <Text variant="subheading" numberOfLines={1}>
+            {isAdmin ? customer?.full_name || 'Müşteri' : Company.name}
+          </Text>
           {listing ? (
             <Text variant="small" numberOfLines={1}>
               İlan: {listing.title}
             </Text>
           ) : null}
         </View>
+        {isAdmin && customer?.phone ? (
+          <Pressable hitSlop={12} accessibilityLabel="Müşteriyi ara" onPress={() => Linking.openURL(`tel:${customer.phone}`)}>
+            <Icon name="phone" size={24} />
+          </Pressable>
+        ) : null}
       </View>
 
       {messages.isLoading ? (
@@ -129,7 +149,9 @@ export default function ChatScreen() {
           }
           ListEmptyComponent={
             <Text variant="small" align="center" style={styles.empty}>
-              İlan hakkında sorunuzu yazın; Neşeli Otomotiv size buradan cevap verecek.
+              {isAdmin
+                ? 'Henüz mesaj yok.'
+                : 'İlan hakkında sorunuzu yazın; Neşeli Otomotiv size buradan cevap verecek.'}
             </Text>
           }
           renderItem={({ item }) => {
@@ -143,7 +165,7 @@ export default function ChatScreen() {
               );
             }
             const { message } = item;
-            const mine = !message.is_staff;
+            const mine = message.is_staff === isAdmin;
             return (
               <View style={[styles.bubble, mine ? styles.mine : styles.theirs]}>
                 <Text variant="body" style={mine ? styles.white : undefined}>
@@ -193,6 +215,14 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   flex: { flex: 1 },
   white: { color: Colors.white },
+  avatar: {
+    width: 52,
+    height: 52,
+    borderRadius: Radius.pill,
+    backgroundColor: Colors.navy,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

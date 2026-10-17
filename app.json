@@ -50,6 +50,14 @@
         {
           "color": "#18A749"
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "İlan fotoğraf ve videolarını yüklemek için galerinize erişim gerekir.",
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
       ]
     ],
     "experiments": {

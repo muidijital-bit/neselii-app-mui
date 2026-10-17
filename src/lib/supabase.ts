@@ -16,7 +16,8 @@ if (!supabaseUrl || !supabasePublishableKey) {
 
 export const supabase = createClient<Database>(supabaseUrl, supabasePublishableKey, {
   auth: {
-    storage: localStorage,
+    // Web'de sunucu tarafı render sırasında localStorage yoktur; o durumda oturum saklanmaz
+    storage: typeof localStorage === 'undefined' ? undefined : localStorage,
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,

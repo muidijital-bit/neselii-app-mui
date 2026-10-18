@@ -1,22 +1,23 @@
 import { StatusBar } from 'expo-status-bar';
-import { useRef, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { useState } from 'react';
+import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/button';
 import { Icon, type IconName } from '@/components/icon';
 import { Logo } from '@/components/logo';
+import { PhotoWall } from '@/components/photo-wall';
 import { Text } from '@/components/text';
-import { Colors, Radius, Spacing } from '@/constants/theme';
+import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
 import { completeOnboarding } from '@/lib/app-storage';
 import { requestLocationPermission, requestNotificationPermission } from '@/lib/permissions';
 
 type Page = {
   key: string;
-  illustration: IconName;
   eyebrow: string;
   title: string;
-  body?: string;
+  body: string;
   bullets?: { icon: IconName; text: string }[];
   primary: { title: string; icon?: IconName; action?: () => Promise<unknown> };
   secondary?: string;
@@ -25,31 +26,29 @@ type Page = {
 const pages: Page[] = [
   {
     key: 'welcome',
-    illustration: 'mci:truck-trailer',
-    eyebrow: 'Hoş geldiniz',
-    title: 'Firmamızın filosundan kamyon, çekici, dorse ve ticari araç ilanları',
-    primary: { title: 'Devam' },
+    eyebrow: 'Neşeli Kamyon Tır Pazarı',
+    title: 'Filomuzdaki araçlar artık cebinde',
+    body: 'Kamyon, çekici, dorse ve ticari araç ilanlarını incele, fiyatları karşılaştır, firmamızla anında mesajlaş.',
+    primary: { title: 'Başlayalım', icon: 'arrow-right' },
   },
   {
     key: 'notifications',
-    illustration: 'bell',
     eyebrow: 'Bildirimler',
-    title: 'Gelişmeleri kaçırmayın',
-    body: 'Size yalnızca şu durumlarda bildirim göndeririz:',
+    title: 'Fırsatları ilk sen yakala',
+    body: 'Sadece seni ilgilendiren durumlarda haber veririz:',
     bullets: [
-      { icon: 'tag', text: 'Yeni ilan yayımlandığında' },
-      { icon: 'trending-down', text: 'Fiyat veya ilan durumu değiştiğinde' },
-      { icon: 'message-circle', text: 'Mesajınıza cevap verildiğinde' },
+      { icon: 'tag', text: 'Aradığın kriterde yeni ilan çıktığında' },
+      { icon: 'trending-down', text: 'Favori ilanının fiyatı düştüğünde' },
+      { icon: 'message-circle', text: 'Mesajına cevap geldiğinde' },
     ],
     primary: { title: 'Bildirimlere İzin Ver', icon: 'bell', action: requestNotificationPermission },
     secondary: 'Şimdi Değil',
   },
   {
     key: 'location',
-    illustration: 'map-pin',
     eyebrow: 'Konum · İsteğe bağlı',
-    title: 'Size yakın ilanları önce gösterelim',
-    body: 'Konumunuz yalnızca ilanları size olan uzaklığa göre sıralamak için kullanılır.',
+    title: 'Sana en yakın araçlar önde',
+    body: 'Konumun yalnızca ilanları sana olan uzaklığa göre sıralamak için kullanılır, hiçbir yere kaydedilmez.',
     primary: { title: 'Konuma İzin Ver', icon: 'map-pin', action: requestLocationPermission },
     secondary: 'Şimdi Değil',
   },
@@ -57,26 +56,21 @@ const pages: Page[] = [
 
 export default function OnboardingScreen() {
   const insets = useSafeAreaInsets();
-  const { width } = useWindowDimensions();
-  const list = useRef<FlatList<Page>>(null);
+  const { height } = useWindowDimensions();
   const [index, setIndex] = useState(0);
   const [busy, setBusy] = useState(false);
+  const page = pages[index];
 
   const next = () => {
-    if (index >= pages.length - 1) {
-      completeOnboarding();
-      return;
-    }
-    list.current?.scrollToIndex({ index: index + 1, animated: true });
-    setIndex(index + 1);
+    if (index >= pages.length - 1) completeOnboarding();
+    else setIndex(index + 1);
   };
 
   const onPrimary = async () => {
-    const action = pages[index].primary.action;
-    if (action) {
+    if (page.primary.action) {
       setBusy(true);
       try {
-        await action();
+        await page.primary.action();
       } catch {
         // İzin penceresi açılamazsa (ör. web) sessizce devam et
       } finally {
@@ -86,58 +80,42 @@ export default function OnboardingScreen() {
     next();
   };
 
-  const page = pages[index];
-
   return (
-    <View style={[styles.container, { paddingTop: insets.top + Spacing.three }]}>
+    <View style={styles.container}>
       <StatusBar style="light" />
-      <View style={styles.top}>
-        <Logo height={40} />
-        <Pressable hitSlop={12} onPress={completeOnboarding}>
-          <Text variant="bodySemibold" style={styles.white}>
+      {/* Duvar logo çubuğunun altından başlar; logo her zaman düz zeminde kalır */}
+      <PhotoWall height={height * 0.62 - insets.top - 52} style={[styles.wall, { top: insets.top + 52 }]} />
+
+      <View style={[styles.top, { paddingTop: insets.top + Spacing.two }]}>
+        <Logo height={36} />
+        <Pressable hitSlop={12} onPress={completeOnboarding} style={styles.skip}>
+          <Text variant="smallSemibold" style={styles.white}>
             Atla
           </Text>
         </Pressable>
       </View>
 
-      <FlatList
-        ref={list}
-        data={pages}
-        horizontal
-        pagingEnabled
-        scrollEnabled={false}
-        showsHorizontalScrollIndicator={false}
-        keyExtractor={(p) => p.key}
-        getItemLayout={(_d, i) => ({ length: width, offset: width * i, index: i })}
-        renderItem={({ item }) => (
-          <View style={[styles.page, { width }]}>
-            <View style={styles.illustration}>
-              <Icon name={item.illustration} size={96} color={Colors.greenSoft} />
+      <View style={styles.flex} />
+
+      <Animated.View key={page.key} entering={FadeInDown.duration(450)} style={styles.content}>
+        <Text style={styles.eyebrow}>{page.eyebrow}</Text>
+        <Text variant="display" style={styles.title}>
+          {page.title}
+        </Text>
+        <Text variant="body" style={styles.body}>
+          {page.body}
+        </Text>
+        {page.bullets?.map((b) => (
+          <View key={b.text} style={styles.bullet}>
+            <View style={styles.bulletIcon}>
+              <Icon name={b.icon} size={18} color="white" />
             </View>
-            <Text variant="overline" style={styles.eyebrow}>
-              {item.eyebrow}
+            <Text variant="bodyMedium" style={[styles.white, styles.flex]}>
+              {b.text}
             </Text>
-            <Text variant="display" style={styles.white}>
-              {item.title}
-            </Text>
-            {item.body ? (
-              <Text variant="body" style={styles.body}>
-                {item.body}
-              </Text>
-            ) : null}
-            {item.bullets?.map((b) => (
-              <View key={b.text} style={styles.bullet}>
-                <View style={styles.bulletIcon}>
-                  <Icon name={b.icon} size={24} color="green" />
-                </View>
-                <Text variant="bodyMedium" style={[styles.white, styles.flex]}>
-                  {b.text}
-                </Text>
-              </View>
-            ))}
           </View>
-        )}
-      />
+        ))}
+      </Animated.View>
 
       <View style={[styles.footer, { paddingBottom: insets.bottom + Spacing.three }]}>
         <View style={styles.dots}>
@@ -156,36 +134,34 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.navy },
   flex: { flex: 1 },
   white: { color: Colors.white },
+  wall: { position: 'absolute', left: 0, right: 0 },
   top: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.four,
   },
-  page: { paddingHorizontal: Spacing.four, paddingTop: Spacing.four, gap: Spacing.three },
-  illustration: {
-    height: 220,
-    borderRadius: Radius.xl + 4,
-    backgroundColor: Colors.navyRaised,
-    borderWidth: 1,
-    borderColor: Colors.navyLine,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: Spacing.four,
+  skip: {
+    paddingHorizontal: Spacing.three,
+    paddingVertical: 6,
+    borderRadius: Radius.pill,
+    backgroundColor: 'rgba(255,255,255,0.14)',
   },
-  eyebrow: { color: Colors.green, fontSize: 14 },
-  body: { color: '#D5DEEA', fontSize: 18, lineHeight: 27 },
+  content: { paddingHorizontal: Spacing.four, gap: Spacing.three, paddingBottom: Spacing.four },
+  eyebrow: { fontFamily: Fonts.bold, fontSize: 12, letterSpacing: 1.4, textTransform: 'uppercase', color: Colors.orange },
+  title: { color: Colors.white, fontSize: 32, lineHeight: 39 },
+  body: { color: '#C9D5E5', fontSize: 17, lineHeight: 25 },
   bullet: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
   bulletIcon: {
-    width: 52,
-    height: 52,
+    width: 36,
+    height: 36,
     borderRadius: Radius.md,
-    backgroundColor: Colors.navyRaised,
+    backgroundColor: 'rgba(255,255,255,0.1)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   footer: { paddingHorizontal: Spacing.four, gap: Spacing.three },
-  dots: { flexDirection: 'row', gap: Spacing.two, marginBottom: Spacing.two },
-  dot: { width: 10, height: 10, borderRadius: Radius.pill, backgroundColor: '#3A6EA5' },
-  dotActive: { width: 32, backgroundColor: Colors.green },
+  dots: { flexDirection: 'row', gap: 6, marginBottom: Spacing.one },
+  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.25)' },
+  dotActive: { width: 28, backgroundColor: Colors.white },
 });

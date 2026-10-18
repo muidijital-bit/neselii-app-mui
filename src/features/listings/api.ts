@@ -94,6 +94,25 @@ function applySearch<T extends Filterable<T>>(q: T, query: string, filters: Sear
   return q;
 }
 
+/** Tanıtım ve giriş ekranlarındaki akan fotoğraf duvarı (oturum açmadan da okunabilir) */
+export function useWallPhotos() {
+  return useQuery({
+    queryKey: ['wall-photos'],
+    staleTime: 30 * 60_000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('listings')
+        .select('cover_url')
+        .in('status', VISIBLE_STATUSES)
+        .not('cover_url', 'is', null)
+        .order('price', { ascending: false })
+        .limit(24);
+      if (error) throw error;
+      return data.map((l) => l.cover_url as string);
+    },
+  });
+}
+
 /** Ana sayfa vitrini: öne çıkan ilanlar; yoksa fotoğraflı en yeni ilanlar */
 export function useFeaturedListings() {
   return useQuery({

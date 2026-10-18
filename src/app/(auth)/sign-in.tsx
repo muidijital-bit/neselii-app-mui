@@ -6,10 +6,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/button';
 import { Logo } from '@/components/logo';
+import { PhotoWall } from '@/components/photo-wall';
 import { Text } from '@/components/text';
 import { TextField } from '@/components/text-field';
 import { Colors, Radius, Spacing } from '@/constants/theme';
 import { authErrorMessage, useAuth } from '@/providers/auth-provider';
+
+const HERO_HEIGHT = 330;
 
 export default function SignInScreen() {
   const insets = useSafeAreaInsets();
@@ -39,8 +42,9 @@ export default function SignInScreen() {
         contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"
         bounces={false}>
-        <View style={[styles.hero, { paddingTop: insets.top + Spacing.five }]}>
-          <Logo height={88} />
+        <View style={[styles.hero, { paddingTop: insets.top + Spacing.five, minHeight: insets.top + HERO_HEIGHT }]}>
+          <PhotoWall height={insets.top + HERO_HEIGHT + 40} style={styles.wall} dim={0.6} />
+          <Logo height={64} />
           <Text variant="body" align="center" style={styles.tagline}>
             Firmamızın filosundan kamyon, çekici, dorse ve ticari araç ilanları.
           </Text>
@@ -102,13 +106,16 @@ const styles = StyleSheet.create({
   scroll: { flexGrow: 1 },
   hero: {
     alignItems: 'center',
-    gap: Spacing.four,
+    justifyContent: 'flex-end',
+    gap: Spacing.three,
     paddingHorizontal: Spacing.four,
     paddingBottom: Spacing.five + Spacing.three,
   },
+  wall: { position: 'absolute', top: 0, left: 0, right: 0 },
   tagline: { color: '#D5DEEA', fontSize: 17, lineHeight: 26 },
   sheet: {
     flexGrow: 1,
+    marginTop: -Spacing.four,
     backgroundColor: Colors.surface,
     borderTopLeftRadius: Radius.xl + 12,
     borderTopRightRadius: Radius.xl + 12,

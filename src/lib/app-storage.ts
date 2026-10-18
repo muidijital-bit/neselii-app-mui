@@ -25,6 +25,17 @@ export function completeOnboarding() {
   listeners.forEach((l) => l());
 }
 
+/** Yalnızca geliştirme: tanıtım ekranlarını yeniden göstermek için */
+export function resetOnboarding() {
+  try {
+    localStorage.removeItem(ONBOARDING_KEY);
+  } catch {
+    // Depolama yoksa yalnızca bu oturumda sıfırlanır
+  }
+  onboardingComplete = false;
+  listeners.forEach((l) => l());
+}
+
 /** Tanıtım ekranları bir kez gösterilir; hesap silinse de tekrar gösterilmez. */
 export function useOnboardingComplete() {
   return useSyncExternalStore(

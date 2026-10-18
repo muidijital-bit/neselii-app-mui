@@ -9,6 +9,7 @@ import { Colors, Radius, Spacing } from '@/constants/theme';
 import { useFavoriteIds } from '@/features/favorites/api';
 import { useProfile } from '@/features/profile/api';
 import { useSavedSearches } from '@/features/saved-searches/api';
+import { resetOnboarding } from '@/lib/app-storage';
 import { formatMonthYear, initials } from '@/lib/format';
 import { useAuth } from '@/providers/auth-provider';
 
@@ -100,6 +101,12 @@ export default function ProfileScreen() {
           <Divider />
           <MenuRow icon="log-out" title="Çıkış Yap" chevron={false} onPress={confirmSignOut} />
         </Card>
+
+        {__DEV__ ? (
+          <Card>
+            <MenuRow icon="refresh-cw" title="Tanıtımı yeniden göster (geliştirme)" chevron={false} onPress={resetOnboarding} />
+          </Card>
+        ) : null}
 
         <Card>
           <MenuRow

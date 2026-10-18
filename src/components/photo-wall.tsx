@@ -15,7 +15,6 @@ import Animated, {
 import { Colors, Radius } from '@/constants/theme';
 import { useWallPhotos } from '@/features/listings/api';
 
-const COLUMNS = 3;
 const GAP = 10;
 const TILE_RATIO = 1.25; // yükseklik / genişlik
 // Her sütun farklı hız ve başlangıç noktasıyla akar (sn başına piksel, başlangıç oranı)
@@ -23,6 +22,7 @@ const COLUMN_MOTION = [
   { speed: 22, offset: 0.0 },
   { speed: 30, offset: 0.45 },
   { speed: 25, offset: 0.2 },
+  { speed: 33, offset: 0.7 },
 ];
 
 type Props = {
@@ -32,10 +32,12 @@ type Props = {
   fadeTo?: string;
   /** Fotoğrafların üzerine binen lacivert karartma (0-1); üstüne metin/logo geliyorsa artırılır */
   dim?: number;
+  /** Sütun sayısı (3-4); kısa alanlarda 4 sütun daha "duvar" gibi görünür */
+  columns?: 3 | 4;
 };
 
 /** Gerçek ilan fotoğraflarından yukarıdan aşağıya sonsuz akan duvar. */
-export function PhotoWall({ height, style, fadeTo = Colors.navy, dim = 0.2 }: Props) {
+export function PhotoWall({ height, style, fadeTo = Colors.navy, dim = 0.2, columns: COLUMNS = 3 }: Props) {
   const { width } = useWindowDimensions();
   const photos = useWallPhotos();
   const reduceMotion = useReducedMotion();

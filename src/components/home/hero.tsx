@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/icon';
 import { Logo } from '@/components/logo';
+import { PhotoWall } from '@/components/photo-wall';
 import { Text } from '@/components/text';
 import { CountBadge } from '@/components/ui';
 import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
@@ -27,10 +28,20 @@ export function HomeHero({
 }: Props) {
   const insets = useSafeAreaInsets();
   const [query, setQuery] = useState('');
+  const [heroHeight, setHeroHeight] = useState(0);
+  const [wallTop, setWallTop] = useState(0);
 
   return (
-    <View style={[styles.hero, { paddingTop: insets.top + Spacing.three }]}>
-      <View style={styles.topRow}>
+    <View
+      style={[styles.hero, { paddingTop: insets.top + Spacing.three }]}
+      onLayout={(e) => setHeroHeight(e.nativeEvent.layout.height)}>
+      {/* Duvar logo satırının altından başlar; logo düz zeminde kalır */}
+      {heroHeight > 0 && wallTop > 0 ? (
+        <PhotoWall height={heroHeight - wallTop} dim={0.7} columns={4} style={[styles.wall, { top: wallTop }]} />
+      ) : null}
+      <View
+        style={styles.topRow}
+        onLayout={(e) => setWallTop(e.nativeEvent.layout.y + e.nativeEvent.layout.height + Spacing.two)}>
         <Logo height={38} />
         <Pressable
           hitSlop={12}
@@ -92,8 +103,10 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.four + Spacing.two,
     borderBottomLeftRadius: 28,
     borderBottomRightRadius: 28,
+    overflow: 'hidden',
     gap: Spacing.four,
   },
+  wall: { position: 'absolute', left: 0, right: 0 },
   topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   bell: {
     width: 44,

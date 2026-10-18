@@ -1,7 +1,6 @@
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Linking, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
 
 import { Button } from '@/components/button';
 import { FeaturedCarousel } from '@/components/home/featured-carousel';
@@ -11,6 +10,7 @@ import { PromoBanner } from '@/components/home/promo-banner';
 import { QuickActions } from '@/components/home/quick-actions';
 import { Icon } from '@/components/icon';
 import { StateView } from '@/components/state-view';
+import { useTabBarSpace } from '@/components/tab-bar';
 import { Text } from '@/components/text';
 import { Company } from '@/constants/company';
 import { Colors, Radius, Spacing } from '@/constants/theme';
@@ -32,6 +32,7 @@ export default function HomeScreen() {
   const profile = useProfile();
   const favoriteIds = useFavoriteIds();
   const toggleFavorite = useToggleFavorite();
+  const tabBarSpace = useTabBarSpace();
 
   const categoryMap = new Map((categories.data ?? []).map((c) => [c.slug, c]));
   const items = latest.data?.pages[0]?.items.slice(0, GRID_SIZE) ?? [];
@@ -58,10 +59,9 @@ export default function HomeScreen() {
     <View style={styles.container}>
       <StatusBar style="light" />
       <ScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingBottom: tabBarSpace }]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={Colors.navy} />}>
         <HomeHero
-          backgroundUri={featured.data?.[0]?.cover_url}
           firstName={firstName}
           totalListings={total}
           unreadNotifications={unread.data ?? 0}
@@ -80,17 +80,12 @@ export default function HomeScreen() {
         <PromoBanner count={financingCount.data} onPress={() => openListings({ filters: { financing: true } })} />
 
         <View style={styles.section}>
-          <SectionHeader
-            title="Öne Çıkan İlanlar"
-            accent="mci:fire"
-            action="Tümü"
-            onAction={() => openListings({ sort: 'price_desc' })}
-          />
+          <SectionHeader title="Öne Çıkan İlanlar" action="Tümü" onAction={() => openListings({ sort: 'price_desc' })} />
           {featured.isLoading ? <StateView loading /> : <FeaturedCarousel listings={featured.data ?? []} />}
         </View>
 
         <View style={styles.section}>
-          <SectionHeader title="Yeni Gelenler" accent="mci:truck-fast-outline" action="Tümü" onAction={() => openListings()} />
+          <SectionHeader title="Yeni Gelenler" action="Tümü" onAction={() => openListings()} />
           {latest.isLoading ? (
             <StateView loading />
           ) : latest.isError ? (
@@ -134,28 +129,15 @@ export default function HomeScreen() {
   );
 }
 
-function SectionHeader({
-  title,
-  accent,
-  action,
-  onAction,
-}: {
-  title: string;
-  accent: Parameters<typeof Icon>[0]['name'];
-  action: string;
-  onAction: () => void;
-}) {
+function SectionHeader({ title, action, onAction }: { title: string; action: string; onAction: () => void }) {
   return (
     <View style={styles.sectionHeader}>
-      <View style={styles.sectionTitle}>
-        <Icon name={accent} size={22} color={Colors.orange} />
-        <Text variant="heading">{title}</Text>
-      </View>
+      <Text variant="heading">{title}</Text>
       <Pressable hitSlop={8} onPress={onAction} style={styles.sectionAction}>
-        <Text variant="smallSemibold" color="green">
+        <Text variant="smallSemibold" color="heading">
           {action}
         </Text>
-        <Icon name="chevron-right" size={18} color="green" />
+        <Icon name="chevron-right" size={18} color="heading" />
       </Pressable>
     </View>
   );
@@ -164,10 +146,6 @@ function SectionHeader({
 function HelpCard() {
   return (
     <View style={styles.help}>
-      <Svg width={160} height={160} style={styles.helpShape}>
-        <Path d="M60 0 H110 L40 160 H-10 Z" fill={Colors.green} opacity={0.25} />
-        <Path d="M120 0 H140 L70 160 H50 Z" fill={Colors.orange} opacity={0.35} />
-      </Svg>
       <View style={styles.helpIcon}>
         <Icon name="mci:phone-in-talk" size={26} color="white" />
       </View>
@@ -195,7 +173,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.three,
   },
-  sectionTitle: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   sectionAction: { flexDirection: 'row', alignItems: 'center' },
   grid: { paddingHorizontal: Spacing.three, gap: Spacing.three },
   gridRow: { flexDirection: 'row', gap: Spacing.three },
@@ -205,9 +182,7 @@ const styles = StyleSheet.create({
     gap: Spacing.three,
     borderRadius: Radius.xl,
     backgroundColor: Colors.navy,
-    overflow: 'hidden',
   },
-  helpShape: { position: 'absolute', right: -10, top: 0 },
   helpIcon: {
     width: 52,
     height: 52,

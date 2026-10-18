@@ -4,6 +4,7 @@ import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 import type { IconName } from '@/components/icon';
 import { ScreenHeader } from '@/components/screen-header';
 import { StateView } from '@/components/state-view';
+import { useTabBarSpace } from '@/components/tab-bar';
 import { Text } from '@/components/text';
 import { Divider, IconTile } from '@/components/ui';
 import { Colors, Radius, Spacing } from '@/constants/theme';
@@ -47,6 +48,7 @@ export default function NotificationsScreen() {
   const notifications = useNotifications();
   const markRead = useMarkNotificationRead();
   const markAllRead = useMarkAllNotificationsRead();
+  const tabBarSpace = useTabBarSpace();
   const hasUnread = notifications.data?.some((n) => !n.read_at) ?? false;
 
   return (
@@ -67,7 +69,7 @@ export default function NotificationsScreen() {
       <FlatList
         data={notifications.data ?? []}
         keyExtractor={(n) => n.id}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={[styles.list, { paddingBottom: tabBarSpace }]}
         onRefresh={() => void notifications.refetch()}
         refreshing={notifications.isRefetching}
         ItemSeparatorComponent={() => <Divider />}

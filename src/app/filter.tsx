@@ -142,7 +142,7 @@ export default function FilterScreen() {
                   accessibilityRole="button"
                   accessibilityState={{ selected }}
                   onPress={() => selectCategory(c.slug)}
-                  style={[styles.categoryTile, selected && styles.categoryTileSelected]}>
+                  style={[styles.categoryTile, selected && styles.categoryTileSelected, c.count === 0 && styles.categoryTileEmpty]}>
                   <Icon name={c.icon} size={28} color={selected ? 'white' : 'heading'} />
                   <Text
                     variant="smallSemibold"
@@ -463,6 +463,7 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   categoryTileSelected: { backgroundColor: Colors.navy, borderColor: Colors.navy },
+  categoryTileEmpty: { opacity: 0.45 },
   segment: {
     height: 44,
     borderRadius: Radius.md,

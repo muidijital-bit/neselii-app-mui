@@ -4,6 +4,7 @@ import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 import { Icon } from '@/components/icon';
 import { ScreenHeader } from '@/components/screen-header';
 import { StateView } from '@/components/state-view';
+import { useTabBarSpace } from '@/components/tab-bar';
 import { Text } from '@/components/text';
 import { Divider, IconTile } from '@/components/ui';
 import { categoryIcons } from '@/constants/categories';
@@ -13,6 +14,7 @@ import { searchStore } from '@/features/listings/search-store';
 
 export default function CategoriesScreen() {
   const categories = useCategories();
+  const tabBarSpace = useTabBarSpace();
 
   return (
     <View style={styles.container}>
@@ -23,7 +25,7 @@ export default function CategoriesScreen() {
         ItemSeparatorComponent={() => <Divider />}
         onRefresh={() => void categories.refetch()}
         refreshing={categories.isRefetching}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={[styles.list, { paddingBottom: tabBarSpace }]}
         renderItem={({ item }) => (
           <Pressable
             accessibilityRole="button"

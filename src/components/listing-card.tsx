@@ -1,4 +1,4 @@
-import { Link } from 'expo-router';
+import { router } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Icon, type IconName } from '@/components/icon';
@@ -7,7 +7,7 @@ import { Text } from '@/components/text';
 import { categoryIcons } from '@/constants/categories';
 import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
 import type { ListingSummary } from '@/features/listings/api';
-import { formatNumber, isNewListing, statusLabels, timeAgo } from '@/lib/format';
+import { formatNumber, statusLabels, timeAgo } from '@/lib/format';
 
 type Props = {
   listing: ListingSummary;
@@ -31,102 +31,101 @@ export function ListingCard({ listing, categoryName, categoryIcon, isFavorite, o
       ? { label: statusLabels.reserved, bg: Colors.warning }
       : listing.status === 'sold'
         ? { label: statusLabels.sold, bg: Colors.danger }
-        : isNewListing(listing.published_at)
-          ? { label: 'Yeni', bg: Colors.green }
-          : null;
+        : null;
 
   return (
-    <Link href={{ pathname: '/listing/[id]', params: { id: listing.id } }} asChild>
-      <Pressable style={({ pressed }) => [styles.card, pressed && styles.pressed]}>
-        <View style={styles.media}>
-          <ListingImage
-            uri={listing.cover_url}
-            style={styles.image}
-            icon={(categoryIcon && categoryIcons[categoryIcon]) || 'camera'}
-            iconSize={44}
-            showLabel
-          />
-          {badge ? (
-            <View style={[styles.badge, { backgroundColor: badge.bg }]}>
-              <Text variant="caption" style={styles.badgeText}>
-                {badge.label}
-              </Text>
-            </View>
-          ) : null}
-          {onToggleFavorite ? (
-            <Pressable
-              hitSlop={8}
-              accessibilityRole="button"
-              accessibilityLabel={isFavorite ? 'Favorilerden çıkar' : 'Favorilere ekle'}
-              onPress={onToggleFavorite}
-              style={styles.heart}>
-              <Icon name={isFavorite ? 'mci:heart' : 'heart'} size={20} color={isFavorite ? 'danger' : 'heading'} />
-            </Pressable>
-          ) : null}
-          {listing.photo_count > 1 || listing.has_video ? (
-            <View style={styles.mediaPills}>
-              {listing.photo_count > 1 ? (
-                <View style={styles.pill}>
-                  <Icon name="camera" size={13} color="white" />
-                  <Text variant="caption" style={styles.pillText}>
-                    {listing.photo_count}
-                  </Text>
-                </View>
-              ) : null}
-              {listing.has_video ? (
-                <View style={styles.pill}>
-                  <Icon name="play" size={13} color="white" />
-                  <Text variant="caption" style={styles.pillText}>
-                    Video
-                  </Text>
-                </View>
-              ) : null}
-            </View>
-          ) : null}
-        </View>
-
-        <View style={styles.body}>
-          <View style={styles.eyebrowRow}>
-            <Text variant="caption" numberOfLines={1} style={styles.eyebrow}>
-              {eyebrow}
+    <Pressable
+      accessibilityRole="button"
+      onPress={() => router.push({ pathname: '/listing/[id]', params: { id: listing.id } })}
+      style={({ pressed }) => [styles.card, pressed && styles.pressed]}>
+      <View style={styles.media}>
+        <ListingImage
+          uri={listing.cover_url}
+          style={styles.image}
+          icon={(categoryIcon && categoryIcons[categoryIcon]) || 'camera'}
+          iconSize={44}
+          showLabel
+        />
+        {badge ? (
+          <View style={[styles.badge, { backgroundColor: badge.bg }]}>
+            <Text variant="caption" style={styles.badgeText}>
+              {badge.label}
             </Text>
-            {listing.published_at ? <Text variant="caption">{timeAgo(listing.published_at)}</Text> : null}
           </View>
-
-          <Text numberOfLines={2} style={styles.title}>
-            {listing.title}
-          </Text>
-
-          <View style={styles.specs}>
-            {specs.map((spec) => (
-              <View key={spec.icon} style={styles.spec}>
-                <Icon name={spec.icon} size={14} color="textSecondary" />
-                <Text variant="small" numberOfLines={1}>
-                  {spec.label}
+        ) : null}
+        {onToggleFavorite ? (
+          <Pressable
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={isFavorite ? 'Favorilerden çıkar' : 'Favorilere ekle'}
+            onPress={onToggleFavorite}
+            style={styles.heart}>
+            <Icon name={isFavorite ? 'mci:heart' : 'heart'} size={20} color={isFavorite ? 'danger' : 'heading'} />
+          </Pressable>
+        ) : null}
+        {listing.photo_count > 1 || listing.has_video ? (
+          <View style={styles.mediaPills}>
+            {listing.photo_count > 1 ? (
+              <View style={styles.pill}>
+                <Icon name="camera" size={13} color="white" />
+                <Text variant="caption" style={styles.pillText}>
+                  {listing.photo_count}
                 </Text>
               </View>
-            ))}
-          </View>
-
-          <View style={styles.divider} />
-
-          <View style={styles.priceRow}>
-            <Text style={styles.price} numberOfLines={1}>
-              {formatNumber(listing.price)}
-              <Text style={styles.currency}> {listing.currency === 'TRY' ? 'TL' : listing.currency}</Text>
-            </Text>
-            {financing ? (
-              <View style={styles.financing}>
-                <Icon name="credit-card" size={13} color="success" />
-                <Text variant="caption" numberOfLines={1} style={styles.financingText}>
-                  {financing.startsWith('%') ? financing.replace(' faizli', '') : '18 ay taksit'}
+            ) : null}
+            {listing.has_video ? (
+              <View style={styles.pill}>
+                <Icon name="play" size={13} color="white" />
+                <Text variant="caption" style={styles.pillText}>
+                  Video
                 </Text>
               </View>
             ) : null}
           </View>
+        ) : null}
+      </View>
+
+      <View style={styles.body}>
+        <View style={styles.eyebrowRow}>
+          <Text variant="caption" numberOfLines={1} style={styles.eyebrow}>
+            {eyebrow}
+          </Text>
+          {listing.published_at ? <Text variant="caption">{timeAgo(listing.published_at)}</Text> : null}
         </View>
-      </Pressable>
-    </Link>
+
+        <Text numberOfLines={2} style={styles.title}>
+          {listing.title}
+        </Text>
+
+        <View style={styles.specs}>
+          {specs.map((spec) => (
+            <View key={spec.icon} style={styles.spec}>
+              <Icon name={spec.icon} size={14} color="textSecondary" />
+              <Text variant="small" numberOfLines={1}>
+                {spec.label}
+              </Text>
+            </View>
+          ))}
+        </View>
+
+        <View style={styles.divider} />
+
+        <View style={styles.priceRow}>
+          <Text style={styles.price} numberOfLines={1}>
+            {formatNumber(listing.price)}
+            <Text style={styles.currency}> {listing.currency === 'TRY' ? 'TL' : listing.currency}</Text>
+          </Text>
+          {financing ? (
+            <View style={styles.financing}>
+              <Icon name="credit-card" size={13} color="heading" />
+              <Text variant="caption" numberOfLines={1} style={styles.financingText}>
+                {financing.startsWith('%') ? financing.replace(' faizli', '') : '18 ay taksit'}
+              </Text>
+            </View>
+          ) : null}
+        </View>
+      </View>
+    </Pressable>
   );
 }
 
@@ -182,7 +181,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     letterSpacing: 0.9,
     textTransform: 'uppercase',
-    color: Colors.green,
+    color: Colors.textSecondary,
   },
   title: { fontFamily: Fonts.semibold, fontSize: 16.5, lineHeight: 22, color: Colors.text },
   specs: { flexDirection: 'row', flexWrap: 'wrap', columnGap: Spacing.three, rowGap: 2 },
@@ -195,11 +194,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: Colors.successSoft,
+    backgroundColor: Colors.surfaceMuted,
     borderRadius: Radius.pill,
     paddingHorizontal: Spacing.two + 2,
     paddingVertical: 4,
     maxWidth: '55%',
   },
-  financingText: { color: Colors.success, fontFamily: Fonts.semibold },
+  financingText: { color: Colors.heading, fontFamily: Fonts.semibold },
 });

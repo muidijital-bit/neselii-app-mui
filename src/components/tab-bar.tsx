@@ -1,5 +1,6 @@
 import type { BottomTabBarProps } from 'expo-router/js-tabs';
 import { LayoutAnimation, Pressable, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon, type IconName } from '@/components/icon';
 import { Text } from '@/components/text';
@@ -13,13 +14,22 @@ const icons: Record<string, IconName> = {
   profile: 'user',
 };
 
+const BAR_HEIGHT = 64;
+const bottomGap = (insetBottom: number) => Math.max(insetBottom - 8, Spacing.three);
+
+/** Sekme ekranlarında içeriğin yüzen menünün altında kalmaması için gereken alt boşluk */
+export function useTabBarSpace() {
+  const insets = useSafeAreaInsets();
+  return BAR_HEIGHT + bottomGap(insets.bottom) + Spacing.three;
+}
+
 /**
  * Yüzen lacivert alt menü: aktif sekme yeşil bir hap içinde simge + yazıyla genişler,
  * diğerleri yalnızca simge olarak durur.
  */
 export function TabBar({ state, descriptors, navigation, insets }: BottomTabBarProps) {
   return (
-    <View style={[styles.wrap, { paddingBottom: Math.max(insets.bottom - 8, Spacing.three) }]}>
+    <View pointerEvents="box-none" style={[styles.wrap, { paddingBottom: bottomGap(insets.bottom) }]}>
       <View style={styles.bar}>
         {state.routes.map((route, index) => {
           const { options } = descriptors[route.key];
@@ -67,14 +77,16 @@ export function TabBar({ state, descriptors, navigation, insets }: BottomTabBarP
 
 const styles = StyleSheet.create({
   wrap: {
-    backgroundColor: 'transparent',
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
     paddingHorizontal: Spacing.three,
-    paddingTop: Spacing.two,
   },
   bar: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: 64,
+    height: BAR_HEIGHT,
     paddingHorizontal: 8,
     borderRadius: 24,
     backgroundColor: Colors.navy,

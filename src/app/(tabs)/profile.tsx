@@ -3,6 +3,7 @@ import { Alert, ScrollView, StyleSheet, View } from 'react-native';
 
 import { ScreenHeader } from '@/components/screen-header';
 import { Text } from '@/components/text';
+import { useTabBarSpace } from '@/components/tab-bar';
 import { Card, Divider, MenuRow } from '@/components/ui';
 import { Colors, Radius, Spacing } from '@/constants/theme';
 import { useFavoriteIds } from '@/features/favorites/api';
@@ -16,6 +17,7 @@ export default function ProfileScreen() {
   const profile = useProfile();
   const favorites = useFavoriteIds();
   const savedSearches = useSavedSearches();
+  const tabBarSpace = useTabBarSpace();
 
   const name = profile.data?.full_name || session?.user.email?.split('@')[0] || '';
 
@@ -32,7 +34,7 @@ export default function ProfileScreen() {
   return (
     <View style={styles.container}>
       <ScreenHeader title="Profil" back={false} />
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: tabBarSpace }]}>
         <Card style={styles.userCard}>
           <View style={styles.avatar}>
             <Text variant="heading" style={styles.avatarText}>

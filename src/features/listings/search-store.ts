@@ -54,6 +54,8 @@ export function useSearchState() {
 export function countActiveFilters(filters: SavedSearchFilters) {
   let count = 0;
   if (filters.category) count++;
+  if (filters.subtype) count++;
+  if (filters.financing) count++;
   if (filters.brand) count++;
   if (filters.minYear != null || filters.maxYear != null) count++;
   if (filters.minPrice != null || filters.maxPrice != null) count++;

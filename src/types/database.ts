@@ -122,6 +122,9 @@ export type FavoriteRow = {
 
 export type SavedSearchFilters = {
   category?: string;
+  subtype?: string;
+  /** Yalnızca taksit/kredi imkânı olan ilanlar */
+  financing?: boolean;
   brand?: string;
   minYear?: number;
   maxYear?: number;

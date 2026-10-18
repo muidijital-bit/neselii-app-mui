@@ -54,6 +54,63 @@ export function useCategoryMap() {
   return new Map((categories.data ?? []).map((c) => [c.slug, c]));
 }
 
+// Supabase sorgu oluşturucusunun burada kullanılan kısmı (liste ve sayaç sorguları ortak)
+type Filterable<T> = {
+  eq(column: string, value: unknown): T;
+  gte(column: string, value: unknown): T;
+  lte(column: string, value: unknown): T;
+  ilike(column: string, pattern: string): T;
+  or(filters: string): T;
+  not(column: string, operator: string, value: unknown): T;
+};
+
+/** Arama metni ve filtreleri sorguya uygular. */
+function applySearch<T extends Filterable<T>>(q: T, query: string, filters: SearchState['filters']): T {
+  const text = query.trim();
+  if (text) {
+    // İlan numarasıyla tam eşleşme ya da başlık/marka/model içinde arama
+    const escaped = text.replace(/[%_,()]/g, ' ');
+    q = /^\d+$/.test(text)
+      ? q.or(`listing_no.eq.${text},search_text.ilike.%${escaped}%`)
+      : q.ilike('search_text', `%${escaped}%`);
+  }
+  if (filters.category) q = q.eq('category_slug', filters.category);
+  if (filters.subtype) q = q.eq('subtype', filters.subtype);
+  if (filters.brand) q = q.eq('brand', filters.brand);
+  if (filters.minYear != null) q = q.gte('year', filters.minYear);
+  if (filters.maxYear != null) q = q.lte('year', filters.maxYear);
+  if (filters.minPrice != null) q = q.gte('price', filters.minPrice);
+  if (filters.maxPrice != null) q = q.lte('price', filters.maxPrice);
+  if (filters.financing) q = q.not('attributes->>financing', 'is', null);
+  for (const [key, value] of Object.entries(filters.fields ?? {})) {
+    const column = COLUMN_FIELDS.has(key) ? key : `attributes->${key}`;
+    if (typeof value === 'string') {
+      q = q.eq(COLUMN_FIELDS.has(key) ? key : `attributes->>${key}`, value);
+    } else {
+      if (value.min != null) q = q.gte(column, value.min);
+      if (value.max != null) q = q.lte(column, value.max);
+    }
+  }
+  return q;
+}
+
+/** Filtre ekranındaki "N ilanı göster" sayısı */
+export function useListingCount({ query, filters }: Pick<SearchState, 'query' | 'filters'>) {
+  return useQuery({
+    queryKey: ['listing-count', query, filters],
+    placeholderData: (previous) => previous,
+    queryFn: async () => {
+      const base = supabase
+        .from('listings')
+        .select('id', { count: 'exact', head: true })
+        .in('status', VISIBLE_STATUSES);
+      const { count, error } = await applySearch(base, query, filters);
+      if (error) throw error;
+      return count ?? 0;
+    },
+  });
+}
+
 export function useListings({ query, filters, sort }: SearchState) {
   return useInfiniteQuery({
     queryKey: ['listings', query, filters, sort],
@@ -66,29 +123,7 @@ export function useListings({ query, filters, sort }: SearchState) {
         .select(LISTING_SUMMARY_COLUMNS, { count: pageParam === 0 ? 'exact' : undefined })
         .in('status', VISIBLE_STATUSES);
 
-      const text = query.trim();
-      if (text) {
-        // İlan numarasıyla tam eşleşme ya da başlık/marka/model içinde arama
-        const escaped = text.replace(/[%_,()]/g, ' ');
-        q = /^\d+$/.test(text)
-          ? q.or(`listing_no.eq.${text},search_text.ilike.%${escaped}%`)
-          : q.ilike('search_text', `%${escaped}%`);
-      }
-      if (filters.category) q = q.eq('category_slug', filters.category);
-      if (filters.brand) q = q.eq('brand', filters.brand);
-      if (filters.minYear != null) q = q.gte('year', filters.minYear);
-      if (filters.maxYear != null) q = q.lte('year', filters.maxYear);
-      if (filters.minPrice != null) q = q.gte('price', filters.minPrice);
-      if (filters.maxPrice != null) q = q.lte('price', filters.maxPrice);
-      for (const [key, value] of Object.entries(filters.fields ?? {})) {
-        const column = COLUMN_FIELDS.has(key) ? key : `attributes->${key}`;
-        if (typeof value === 'string') {
-          q = q.eq(COLUMN_FIELDS.has(key) ? key : `attributes->>${key}`, value);
-        } else {
-          if (value.min != null) q = q.gte(column, value.min);
-          if (value.max != null) q = q.lte(column, value.max);
-        }
-      }
+      q = applySearch(q, query, filters);
 
       switch (sort) {
         case 'price_asc':

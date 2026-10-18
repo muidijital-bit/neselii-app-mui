@@ -20,6 +20,7 @@ import { ListingImage } from '@/components/listing-image';
 import { StateView } from '@/components/state-view';
 import { Text } from '@/components/text';
 import { Badge } from '@/components/ui';
+import { categoryIcons } from '@/constants/categories';
 import { Company } from '@/constants/company';
 import { Colors, Radius, Spacing } from '@/constants/theme';
 import { useFavoriteIds, useToggleFavorite } from '@/features/favorites/api';
@@ -59,6 +60,7 @@ export default function ListingDetailScreen() {
   const hasVideo = data.media.some((m) => m.type === 'video');
   const isFavorite = favoriteIds.data?.has(data.id) ?? false;
   const canMessage = data.status === 'published' || data.status === 'reserved';
+  const financing = typeof data.attributes.financing === 'string' ? data.attributes.financing : null;
 
   const specs: [string, string | null][] = [
     ['Marka', data.brand],
@@ -106,7 +108,13 @@ export default function ListingDetailScreen() {
               )}
             />
           ) : (
-            <ListingImage uri={null} style={{ width, height: HERO_HEIGHT }} iconSize={48} />
+            <ListingImage
+              uri={null}
+              style={{ width, height: HERO_HEIGHT }}
+              iconSize={64}
+              icon={(category && categoryIcons[category.icon]) || 'camera'}
+              showLabel
+            />
           )}
 
           <View style={[styles.heroActions, { top: insets.top + Spacing.two }]}>
@@ -171,6 +179,14 @@ export default function ListingDetailScreen() {
             </Text>
             <Badge label={statusLabels[data.status]} tone={statusTones[data.status]} />
           </View>
+          {financing ? (
+            <View style={styles.financing}>
+              <Icon name="credit-card" size={18} color="success" />
+              <Text variant="smallSemibold" style={styles.financingText}>
+                {financing}
+              </Text>
+            </View>
+          ) : null}
         </View>
 
         <View style={styles.section}>
@@ -275,6 +291,17 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.two,
   },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.one },
+  financing: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    alignSelf: 'flex-start',
+    backgroundColor: Colors.successSoft,
+    borderRadius: Radius.md,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
+  },
+  financingText: { color: Colors.success },
   priceRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, marginTop: Spacing.two },
   section: { backgroundColor: Colors.surface, padding: Spacing.three, gap: Spacing.one, marginBottom: Spacing.two },
   specRow: {

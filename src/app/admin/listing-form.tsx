@@ -35,6 +35,7 @@ import { formatNumber, statusLabels } from '@/lib/format';
 import type { ListingStatus } from '@/types/database';
 
 const STATUSES: ListingStatus[] = ['draft', 'published', 'reserved', 'sold', 'unpublished'];
+const FINANCING_OPTIONS = ['Kredi kartına 18 ay taksit', '%2,85 faizli kredi'];
 const MAX_PHOTOS = 30;
 
 const toText = (n: number | null | undefined) => (n == null ? '' : String(n));
@@ -86,6 +87,15 @@ function ListingForm({ id, initial }: { id?: string; initial?: ListingDetail }) 
   const categoryRow = categories.data?.find((c) => c.slug === category);
   const fields = categoryRow?.filter_fields ?? [];
   const hasKm = fields.some((f) => f.key === 'km');
+  const allFieldKeys = new Set((categories.data ?? []).flatMap((c) => c.filter_fields.map((f) => f.key)));
+  const financing = typeof attributes.financing === 'string' ? attributes.financing : null;
+  const setFinancing = (value: string | null) =>
+    setAttributes((a) => {
+      const next = { ...a };
+      if (value) next.financing = value;
+      else delete next.financing;
+      return next;
+    });
   const priceValue = toNumber(price);
   const yearValue = toNumber(year);
   const yearInvalid = yearValue != null && (yearValue < 1950 || yearValue > new Date().getFullYear() + 1);
@@ -102,9 +112,12 @@ function ListingForm({ id, initial }: { id?: string; initial?: ListingDetail }) 
       model: model.trim() || null,
       year: yearValue,
       km: hasKm ? toNumber(km) : null,
-      // Kategori değiştiyse eski kategorinin alanları atılır
+      // Kategori değiştiyse eski kategorinin alanları atılır; kategoriden bağımsız
+      // bilgiler (ödeme seçeneği, içe aktarma kaynağı) korunur
       attributes: Object.fromEntries(
-        Object.entries(attributes).filter(([key]) => fields.some((f) => f.key === key && f.key !== 'km')),
+        Object.entries(attributes).filter(
+          ([key]) => key !== 'km' && (fields.some((f) => f.key === key) || !allFieldKeys.has(key)),
+        ),
       ),
       city: city.trim(),
       district: district.trim() || null,
@@ -172,6 +185,17 @@ function ListingForm({ id, initial }: { id?: string; initial?: ListingDetail }) 
             onChangeText={setPrice}
             keyboardType="number-pad"
           />
+          <View style={styles.fieldBlock}>
+            <Text variant="smallMedium" color="textSecondary">
+              Ödeme seçeneği
+            </Text>
+            <View style={styles.wrap}>
+              <Chip label="Yok" selected={!financing} onPress={() => setFinancing(null)} />
+              {FINANCING_OPTIONS.map((option) => (
+                <Chip key={option} label={option} selected={financing === option} onPress={() => setFinancing(option)} />
+              ))}
+            </View>
+          </View>
           <TextField
             label="Açıklama"
             value={description}

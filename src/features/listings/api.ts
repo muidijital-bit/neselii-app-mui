@@ -14,11 +14,15 @@ export type ListingSummary = Pick<
   | 'id'
   | 'listing_no'
   | 'category_slug'
+  | 'subtype'
   | 'title'
   | 'price'
   | 'currency'
   | 'city'
   | 'district'
+  | 'year'
+  | 'km'
+  | 'attributes'
   | 'status'
   | 'cover_url'
   | 'photo_count'
@@ -27,7 +31,7 @@ export type ListingSummary = Pick<
 >;
 
 export const LISTING_SUMMARY_COLUMNS =
-  'id, listing_no, category_slug, title, price, currency, city, district, status, cover_url, photo_count, has_video, published_at';
+  'id, listing_no, category_slug, subtype, title, price, currency, city, district, year, km, attributes, status, cover_url, photo_count, has_video, published_at';
 
 export type ListingPage = { items: ListingSummary[]; count: number | null };
 

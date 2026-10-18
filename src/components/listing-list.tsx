@@ -28,6 +28,7 @@ export function ListingList({ data, refreshing, onRefresh, contentContainerStyle
           <ListingCard
             listing={item}
             categoryName={categories.get(item.category_slug)?.name}
+            categoryIcon={categories.get(item.category_slug)?.icon}
             isFavorite={isFavorite}
             onToggleFavorite={() => toggleFavorite.mutate({ listingId: item.id, isFavorite })}
           />

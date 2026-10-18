@@ -1,3 +1,4 @@
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { router } from 'expo-router';
 import { Alert, ScrollView, StyleSheet, View } from 'react-native';
 
@@ -12,6 +13,9 @@ import { useSavedSearches } from '@/features/saved-searches/api';
 import { resetOnboarding } from '@/lib/app-storage';
 import { formatMonthYear, initials } from '@/lib/format';
 import { useAuth } from '@/providers/auth-provider';
+
+// Test araçları: geliştirme sürümünde ve Expo Go'da görünür, TestFlight/App Store'da gizli
+const showTestTools = __DEV__ || Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
 
 export default function ProfileScreen() {
   const { session, signOut } = useAuth();
@@ -102,9 +106,9 @@ export default function ProfileScreen() {
           <MenuRow icon="log-out" title="Çıkış Yap" chevron={false} onPress={confirmSignOut} />
         </Card>
 
-        {__DEV__ ? (
+        {showTestTools ? (
           <Card>
-            <MenuRow icon="refresh-cw" title="Tanıtımı yeniden göster (geliştirme)" chevron={false} onPress={resetOnboarding} />
+            <MenuRow icon="refresh-cw" title="Tanıtımı yeniden göster (test)" chevron={false} onPress={resetOnboarding} />
           </Card>
         ) : null}
 

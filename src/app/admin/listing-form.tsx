@@ -8,6 +8,7 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -82,6 +83,7 @@ function ListingForm({ id, initial }: { id?: string; initial?: ListingDetail }) 
   const [city, setCity] = useState(initial?.city ?? 'Ankara');
   const [district, setDistrict] = useState(initial?.district ?? '');
   const [status, setStatus] = useState<ListingStatus>(initial?.status ?? 'draft');
+  const [isFeatured, setIsFeatured] = useState(initial?.is_featured ?? false);
   const [sheet, setSheet] = useState<'category' | 'subtype' | null>(null);
 
   const categoryRow = categories.data?.find((c) => c.slug === category);
@@ -122,6 +124,7 @@ function ListingForm({ id, initial }: { id?: string; initial?: ListingDetail }) 
       city: city.trim(),
       district: district.trim() || null,
       status,
+      is_featured: isFeatured,
     };
     save.mutate(
       { id, input },
@@ -170,6 +173,19 @@ function ListingForm({ id, initial }: { id?: string; initial?: ListingDetail }) 
           {status === 'draft' ? (
             <Text variant="small">Taslak ilanları yalnızca firma hesapları görür.</Text>
           ) : null}
+          <View style={styles.featuredRow}>
+            <View style={styles.flex}>
+              <Text variant="bodySemibold">Öne çıkar</Text>
+              <Text variant="small">Ana sayfadaki “Öne Çıkan İlanlar” vitrininde gösterilir.</Text>
+            </View>
+            <Switch
+              value={isFeatured}
+              onValueChange={setIsFeatured}
+              trackColor={{ false: Colors.disabled, true: Colors.orange }}
+              thumbColor={Colors.white}
+              ios_backgroundColor={Colors.disabled}
+            />
+          </View>
         </Card>
 
         <Card style={styles.card}>
@@ -484,6 +500,7 @@ const styles = StyleSheet.create({
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
   pair: { flexDirection: 'row', gap: Spacing.three },
   fieldBlock: { gap: Spacing.two },
+  featuredRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
   multiline: { minHeight: 120, paddingTop: Spacing.three },
   select: {
     minHeight: 54,

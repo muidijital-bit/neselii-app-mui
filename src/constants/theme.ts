@@ -12,6 +12,10 @@ export const Colors = {
   navyBorder: '#2E527A',
   green: '#18A749',
   greenSoft: '#88D59D',
+  // Vurgu rengi: kampanya, öne çıkan ilan, hızlı aksiyonlar
+  orange: '#FF7A1A',
+  orangeDeep: '#F05A00',
+  orangeSoft: '#FFF1E6',
   background: '#F2F4F7',
   surface: '#FFFFFF',
   surfaceMuted: '#EFF2F9',

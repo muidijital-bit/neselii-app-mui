@@ -1,198 +1,220 @@
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Linking, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 
 import { Button } from '@/components/button';
+import { FeaturedCarousel } from '@/components/home/featured-carousel';
+import { HomeHero } from '@/components/home/hero';
+import { ListingTile } from '@/components/home/listing-tile';
+import { PromoBanner } from '@/components/home/promo-banner';
+import { QuickActions } from '@/components/home/quick-actions';
 import { Icon } from '@/components/icon';
-import { ListingList } from '@/components/listing-list';
-import { Logo } from '@/components/logo';
 import { StateView } from '@/components/state-view';
 import { Text } from '@/components/text';
-import { Chip, CountBadge } from '@/components/ui';
-import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
-import { useCategories, useListings } from '@/features/listings/api';
-import { searchStore } from '@/features/listings/search-store';
+import { Company } from '@/constants/company';
+import { Colors, Radius, Spacing } from '@/constants/theme';
+import { useFavoriteIds, useToggleFavorite } from '@/features/favorites/api';
+import { useCategories, useFeaturedListings, useListingCount, useListings } from '@/features/listings/api';
+import { searchStore, type SearchState } from '@/features/listings/search-store';
 import { useUnreadNotificationCount } from '@/features/notifications/api';
+import { useProfile } from '@/features/profile/api';
 
-const LATEST = { query: '', filters: {}, sort: 'newest' as const };
+const LATEST: SearchState = { query: '', filters: {}, sort: 'newest' };
+const GRID_SIZE = 10;
 
 export default function HomeScreen() {
-  const insets = useSafeAreaInsets();
-  const [query, setQuery] = useState('');
   const categories = useCategories();
-  const listings = useListings(LATEST);
+  const featured = useFeaturedListings();
+  const latest = useListings(LATEST);
+  const financingCount = useListingCount({ query: '', filters: { financing: true } });
   const unread = useUnreadNotificationCount();
+  const profile = useProfile();
+  const favoriteIds = useFavoriteIds();
+  const toggleFavorite = useToggleFavorite();
 
-  const items = listings.data?.pages.flatMap((p) => p.items) ?? [];
-  const total = listings.data?.pages[0]?.count ?? 0;
+  const categoryMap = new Map((categories.data ?? []).map((c) => [c.slug, c]));
+  const items = latest.data?.pages[0]?.items.slice(0, GRID_SIZE) ?? [];
+  const total = latest.data?.pages[0]?.count ?? undefined;
+  const firstName = profile.data?.full_name?.trim().split(/\s+/)[0];
 
-  const openListings = (category?: string) => {
-    searchStore.reset({ filters: category ? { category } : {} });
+  const openListings = (search: Partial<SearchState> = {}) => {
+    searchStore.reset(search);
     router.push('/listings');
   };
 
-  const submitSearch = () => {
-    searchStore.reset({ query: query.trim() });
-    router.push('/listings');
-  };
+  const rows: (typeof items)[] = [];
+  for (let i = 0; i < items.length; i += 2) rows.push(items.slice(i, i + 2));
 
-  const header = (
-    <View style={styles.sections}>
-      <View style={styles.sectionHeader}>
-        <Text variant="heading">Kategoriler</Text>
-        <Pressable hitSlop={8} onPress={() => router.navigate('/categories')}>
-          <Text variant="bodySemibold" color="heading">
-            Tümü
-          </Text>
-        </Pressable>
-      </View>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.chips}
-        style={styles.chipsScroll}>
-        <Chip
-          label="Tümü"
-          count={categories.data?.reduce((sum, c) => sum + c.listing_count, 0)}
-          selected
-          onPress={() => openListings()}
-        />
-        {categories.data?.map((c) => (
-          <Chip key={c.slug} label={c.name} count={c.listing_count} onPress={() => openListings(c.slug)} />
-        ))}
-      </ScrollView>
-      <View style={styles.sectionHeader}>
-        <Text variant="heading">Yeni İlanlar</Text>
-        {total ? (
-          <View style={styles.countPill}>
-            <Text variant="smallSemibold" color="heading">
-              {total} ilan
-            </Text>
-          </View>
-        ) : null}
-      </View>
-    </View>
-  );
+  const refreshing = latest.isRefetching || featured.isRefetching;
+  const refresh = () => {
+    void latest.refetch();
+    void featured.refetch();
+    void categories.refetch();
+    void financingCount.refetch();
+  };
 
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
-      <View style={[styles.hero, { paddingTop: insets.top + Spacing.three }]}>
-        <View style={styles.heroTop}>
-          <Logo height={40} />
-          <Pressable
-            hitSlop={12}
-            accessibilityRole="button"
-            accessibilityLabel="Bildirimler"
-            onPress={() => router.navigate('/notifications')}>
-            <Icon name="bell" size={28} color="white" />
-            <View style={styles.bellBadge}>
-              <CountBadge count={unread.data ?? 0} />
-            </View>
-          </Pressable>
-        </View>
-        <View style={styles.searchRow}>
-          <View style={styles.searchField}>
-            <Icon name="search" size={22} color="textSecondary" />
-            <TextInput
-              value={query}
-              onChangeText={setQuery}
-              onSubmitEditing={submitSearch}
-              placeholder="Kelime, ilan no ile ara"
-              placeholderTextColor={Colors.textTertiary}
-              returnKeyType="search"
-              style={styles.searchInput}
-            />
-          </View>
-          <Pressable
-            accessibilityRole="button"
-            style={styles.filterButton}
-            onPress={() => {
-              searchStore.reset();
-              router.push({ pathname: '/filter', params: { next: 'listings' } });
-            }}>
-            <Icon name="sliders" size={22} color="white" />
-            <Text variant="bodySemibold" style={styles.filterText}>
-              Filtre
-            </Text>
-          </Pressable>
-        </View>
-      </View>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={Colors.navy} />}>
+        <HomeHero
+          backgroundUri={featured.data?.[0]?.cover_url}
+          firstName={firstName}
+          totalListings={total}
+          unreadNotifications={unread.data ?? 0}
+          onSearch={(query) => openListings({ query })}
+          onFilter={() => {
+            searchStore.reset();
+            router.push({ pathname: '/filter', params: { next: 'listings' } });
+          }}
+          onNotifications={() => router.navigate('/notifications')}
+        />
 
-      <ListingList
-        data={items}
-        ListHeaderComponent={header}
-        refreshing={listings.isRefetching}
-        onRefresh={() => {
-          void listings.refetch();
-          void categories.refetch();
-        }}
-        ListEmptyComponent={
-          listings.isLoading ? (
+        <View style={styles.quickActions}>
+          <QuickActions onSelect={(action) => openListings(action.search)} />
+        </View>
+
+        <PromoBanner count={financingCount.data} onPress={() => openListings({ filters: { financing: true } })} />
+
+        <View style={styles.section}>
+          <SectionHeader
+            title="Öne Çıkan İlanlar"
+            accent="mci:fire"
+            action="Tümü"
+            onAction={() => openListings({ sort: 'price_desc' })}
+          />
+          {featured.isLoading ? <StateView loading /> : <FeaturedCarousel listings={featured.data ?? []} />}
+        </View>
+
+        <View style={styles.section}>
+          <SectionHeader title="Yeni Gelenler" accent="mci:truck-fast-outline" action="Tümü" onAction={() => openListings()} />
+          {latest.isLoading ? (
             <StateView loading />
-          ) : listings.isError ? (
+          ) : latest.isError ? (
             <StateView
               icon="wifi-off"
               title="İlanlar yüklenemedi"
-              message="Bağlantınızı kontrol edip tekrar deneyin."
-              actions={[{ title: 'Tekrar dene', onPress: () => void listings.refetch() }]}
+              actions={[{ title: 'Tekrar dene', onPress: () => void latest.refetch() }]}
             />
           ) : (
-            <StateView icon="inbox" title="Henüz ilan yok" />
-          )
-        }
-        ListFooterComponent={
-          listings.hasNextPage ? (
-            <Button title="Tüm ilanları gör" variant="outline" onPress={() => openListings()} />
-          ) : undefined
-        }
-      />
+            <View style={styles.grid}>
+              {rows.map((row) => (
+                <View key={row[0].id} style={styles.gridRow}>
+                  {row.map((item) => {
+                    const isFavorite = favoriteIds.data?.has(item.id) ?? false;
+                    return (
+                      <ListingTile
+                        key={item.id}
+                        listing={item}
+                        categoryIcon={categoryMap.get(item.category_slug)?.icon}
+                        isFavorite={isFavorite}
+                        onToggleFavorite={() => toggleFavorite.mutate({ listingId: item.id, isFavorite })}
+                      />
+                    );
+                  })}
+                  {row.length === 1 ? <View style={styles.flex} /> : null}
+                </View>
+              ))}
+              <Button
+                title={total ? `Tüm ilanları gör (${total})` : 'Tüm ilanları gör'}
+                variant="navy"
+                icon="arrow-right"
+                onPress={() => openListings()}
+              />
+            </View>
+          )}
+        </View>
+
+        <HelpCard />
+      </ScrollView>
+    </View>
+  );
+}
+
+function SectionHeader({
+  title,
+  accent,
+  action,
+  onAction,
+}: {
+  title: string;
+  accent: Parameters<typeof Icon>[0]['name'];
+  action: string;
+  onAction: () => void;
+}) {
+  return (
+    <View style={styles.sectionHeader}>
+      <View style={styles.sectionTitle}>
+        <Icon name={accent} size={22} color={Colors.orange} />
+        <Text variant="heading">{title}</Text>
+      </View>
+      <Pressable hitSlop={8} onPress={onAction} style={styles.sectionAction}>
+        <Text variant="smallSemibold" color="green">
+          {action}
+        </Text>
+        <Icon name="chevron-right" size={18} color="green" />
+      </Pressable>
+    </View>
+  );
+}
+
+function HelpCard() {
+  return (
+    <View style={styles.help}>
+      <Svg width={160} height={160} style={styles.helpShape}>
+        <Path d="M60 0 H110 L40 160 H-10 Z" fill={Colors.green} opacity={0.25} />
+        <Path d="M120 0 H140 L70 160 H50 Z" fill={Colors.orange} opacity={0.35} />
+      </Svg>
+      <View style={styles.helpIcon}>
+        <Icon name="mci:phone-in-talk" size={26} color="white" />
+      </View>
+      <Text variant="heading" style={styles.white}>
+        Aradığını bulamadın mı?
+      </Text>
+      <Text variant="body" style={styles.helpText}>
+        Filomuz her gün yenileniyor. İhtiyacını söyle, sana uygun aracı birlikte bulalım.
+      </Text>
+      <Button title="Hemen Ara" icon="phone" onPress={() => Linking.openURL(`tel:${Company.phone}`)} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  hero: {
+  content: { paddingBottom: Spacing.four, gap: Spacing.four },
+  flex: { flex: 1 },
+  white: { color: Colors.white },
+  quickActions: { marginTop: -Spacing.two },
+  section: { gap: Spacing.three },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.three,
+  },
+  sectionTitle: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
+  sectionAction: { flexDirection: 'row', alignItems: 'center' },
+  grid: { paddingHorizontal: Spacing.three, gap: Spacing.three },
+  gridRow: { flexDirection: 'row', gap: Spacing.three },
+  help: {
+    marginHorizontal: Spacing.three,
+    padding: Spacing.four,
+    gap: Spacing.three,
+    borderRadius: Radius.xl,
     backgroundColor: Colors.navy,
-    paddingHorizontal: Spacing.three,
-    paddingBottom: Spacing.four,
-    gap: Spacing.four,
+    overflow: 'hidden',
   },
-  heroTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  bellBadge: { position: 'absolute', top: -8, right: -8 },
-  searchRow: { flexDirection: 'row', gap: Spacing.two },
-  searchField: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.two,
-    backgroundColor: Colors.surface,
-    borderRadius: Radius.md,
-    paddingHorizontal: Spacing.three,
-    height: 54,
-  },
-  searchInput: { flex: 1, height: 54, fontFamily: Fonts.regular, fontSize: 16, color: Colors.text },
-  filterButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.two,
+  helpShape: { position: 'absolute', right: -10, top: 0 },
+  helpIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     backgroundColor: Colors.green,
-    borderRadius: Radius.md,
-    paddingHorizontal: Spacing.four,
-    height: 54,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  filterText: { color: Colors.white, fontSize: 17 },
-  sections: { gap: Spacing.three },
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  chipsScroll: { marginHorizontal: -Spacing.three },
-  chips: { gap: Spacing.two, paddingHorizontal: Spacing.three },
-  countPill: {
-    backgroundColor: Colors.surfaceHighlight,
-    borderRadius: Radius.sm,
-    paddingHorizontal: Spacing.two + 2,
-    paddingVertical: Spacing.one,
-  },
+  helpText: { color: '#C9D5E5' },
 });

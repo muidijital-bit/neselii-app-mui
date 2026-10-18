@@ -51,6 +51,7 @@ export type ListingInput = Pick<
   | 'city'
   | 'district'
   | 'status'
+  | 'is_featured'
 >;
 
 function useInvalidateListings() {
@@ -58,6 +59,7 @@ function useInvalidateListings() {
   return (id?: string) => {
     queryClient.invalidateQueries({ queryKey: ['admin-listings'] });
     queryClient.invalidateQueries({ queryKey: ['listings'] });
+    queryClient.invalidateQueries({ queryKey: ['featured-listings'] });
     queryClient.invalidateQueries({ queryKey: ['categories'] });
     queryClient.invalidateQueries({ queryKey: ['brands'] });
     if (id) queryClient.invalidateQueries({ queryKey: ['listing', id] });

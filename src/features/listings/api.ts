@@ -94,6 +94,28 @@ function applySearch<T extends Filterable<T>>(q: T, query: string, filters: Sear
   return q;
 }
 
+/** Ana sayfa vitrini: öne çıkan ilanlar; yoksa fotoğraflı en yeni ilanlar */
+export function useFeaturedListings() {
+  return useQuery({
+    queryKey: ['featured-listings'],
+    queryFn: async (): Promise<ListingSummary[]> => {
+      const base = () =>
+        supabase
+          .from('listings')
+          .select(LISTING_SUMMARY_COLUMNS)
+          .in('status', VISIBLE_STATUSES)
+          .not('cover_url', 'is', null)
+          .order('published_at', { ascending: false })
+          .limit(8);
+      const featured = await base().eq('is_featured', true);
+      if (!featured.error && featured.data.length) return featured.data as ListingSummary[];
+      const latest = await base();
+      if (latest.error) throw latest.error;
+      return latest.data as ListingSummary[];
+    },
+  });
+}
+
 /** Filtre ekranındaki "N ilanı göster" sayısı */
 export function useListingCount({ query, filters }: Pick<SearchState, 'query' | 'filters'>) {
   return useQuery({

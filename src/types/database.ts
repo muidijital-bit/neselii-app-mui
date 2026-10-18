@@ -94,6 +94,7 @@ export type ListingRow = {
   latitude: number | null;
   longitude: number | null;
   status: ListingStatus;
+  is_featured: boolean;
   cover_url: string | null;
   photo_count: number;
   has_video: boolean;

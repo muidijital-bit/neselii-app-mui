@@ -27,7 +27,7 @@ const pages: Page[] = [
     key: 'welcome',
     illustration: 'mci:truck-trailer',
     eyebrow: 'Hoş geldiniz',
-    title: 'Firmamızın filosundan kamyon, çekici, dorse, otomobil ve iş makinesi ilanları',
+    title: 'Firmamızın filosundan kamyon, çekici, dorse ve ticari araç ilanları',
     primary: { title: 'Devam' },
   },
   {

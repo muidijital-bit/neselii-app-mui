@@ -80,7 +80,6 @@ export default function FilterScreen() {
   const category = categories.data?.find((c) => c.slug === filters.category);
   const fields = category?.filter_fields ?? [];
   const showKm = !category || fields.some((f) => f.key === 'km');
-  const totalCount = categories.data?.reduce((sum, c) => sum + c.listing_count, 0);
 
   const update = (patch: Partial<SavedSearchFilters>) => setFilters((f) => ({ ...f, ...patch }));
   const setField = (key: string, value: FieldValue) =>
@@ -125,35 +124,28 @@ export default function FilterScreen() {
 
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <Section title="Kategori">
-          <EqualGrid columns={3}>
-            {[
-              { slug: undefined, name: 'Tümü', icon: 'grid' as const, count: totalCount },
-              ...(categories.data ?? []).map((c) => ({
-                slug: c.slug,
-                name: c.name,
-                icon: categoryIcons[c.icon] ?? ('grid' as const),
-                count: c.listing_count,
-              })),
-            ].map((c) => {
+          <EqualGrid columns={2}>
+            {(categories.data ?? []).map((c) => {
               const selected = filters.category === c.slug;
               return (
                 <Pressable
-                  key={c.slug ?? 'all'}
+                  key={c.slug}
                   accessibilityRole="button"
                   accessibilityState={{ selected }}
-                  onPress={() => selectCategory(c.slug)}
-                  style={[styles.categoryTile, selected && styles.categoryTileSelected, c.count === 0 && styles.categoryTileEmpty]}>
-                  <Icon name={c.icon} size={28} color={selected ? 'white' : 'heading'} />
-                  <Text
-                    variant="smallSemibold"
-                    numberOfLines={1}
-                    adjustsFontSizeToFit
-                    style={{ color: selected ? Colors.white : Colors.heading }}>
-                    {c.name}
-                  </Text>
-                  <Text variant="caption" style={{ color: selected ? Colors.greenSoft : Colors.textTertiary }}>
-                    {c.count ?? '–'} ilan
-                  </Text>
+                  // Seçili kategoriye tekrar dokunmak seçimi kaldırır (tüm kategoriler)
+                  onPress={() => selectCategory(selected ? undefined : c.slug)}
+                  style={[styles.categoryTile, selected && styles.categoryTileSelected]}>
+                  <View style={[styles.categoryIcon, selected && styles.categoryIconSelected]}>
+                    <Icon name={categoryIcons[c.icon] ?? 'grid'} size={24} color={selected ? 'white' : 'heading'} />
+                  </View>
+                  <View style={styles.flex}>
+                    <Text variant="bodySemibold" numberOfLines={1} style={{ color: selected ? Colors.white : Colors.heading }}>
+                      {c.name}
+                    </Text>
+                    <Text variant="caption" style={{ color: selected ? Colors.greenSoft : Colors.textSecondary }}>
+                      {c.listing_count} ilan
+                    </Text>
+                  </View>
                 </Pressable>
               );
             })}
@@ -452,18 +444,24 @@ const styles = StyleSheet.create({
   grid: { gap: Spacing.two },
   gridRow: { flexDirection: 'row', gap: Spacing.two },
   categoryTile: {
-    aspectRatio: 1.05,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two + 2,
+    height: 68,
     borderRadius: Radius.md + 2,
     backgroundColor: Colors.surfaceMuted,
+    paddingHorizontal: Spacing.two + 2,
+  },
+  categoryTileSelected: { backgroundColor: Colors.navy },
+  categoryIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
-    paddingHorizontal: Spacing.one,
-    borderWidth: 1.5,
-    borderColor: 'transparent',
   },
-  categoryTileSelected: { backgroundColor: Colors.navy, borderColor: Colors.navy },
-  categoryTileEmpty: { opacity: 0.45 },
+  categoryIconSelected: { backgroundColor: 'rgba(255,255,255,0.12)' },
   segment: {
     height: 44,
     borderRadius: Radius.md,

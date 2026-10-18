@@ -13,7 +13,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 
 import { Colors } from '@/constants/theme';
-import { useIsAdmin } from '@/features/admin/api';
+import { useProfile } from '@/features/profile/api';
 import { useOnboardingComplete } from '@/lib/app-storage';
 import { queryClient } from '@/lib/query-client';
 import { AuthProvider, useAuth } from '@/providers/auth-provider';
@@ -23,7 +23,9 @@ SplashScreen.preventAutoHideAsync();
 function RootStack() {
   const { session, isLoading, isPasswordRecovery } = useAuth();
   const onboarded = useOnboardingComplete();
-  const isAdmin = useIsAdmin();
+  const profile = useProfile();
+  // Profil yüklenirken admin ekranından atmamak için bekle; veriye erişim RLS ile korunur
+  const adminGuard = profile.isLoading || profile.data?.role === 'admin';
   const [fontsLoaded, fontError] = useFonts({
     Inter_400Regular,
     Inter_500Medium,
@@ -80,7 +82,7 @@ function RootStack() {
           <Stack.Screen name="account/privacy" />
           <Stack.Screen name="account/delete" />
 
-          <Stack.Protected guard={isAdmin}>
+          <Stack.Protected guard={adminGuard}>
             <Stack.Screen name="admin/listings" />
             <Stack.Screen name="admin/listing-form" />
             <Stack.Screen name="admin/announcements" />

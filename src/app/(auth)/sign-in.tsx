@@ -42,7 +42,7 @@ export default function SignInScreen() {
         <View style={[styles.hero, { paddingTop: insets.top + Spacing.five }]}>
           <Logo height={88} />
           <Text variant="body" align="center" style={styles.tagline}>
-            Firmamızın filosundan kamyon, çekici, dorse, otomobil ve iş makinesi ilanları.
+            Firmamızın filosundan kamyon, çekici, dorse ve ticari araç ilanları.
           </Text>
         </View>
 

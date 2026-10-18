@@ -81,15 +81,15 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "be72ecf3-0dd3-44c0-ba2e-be70935c4cdc"
+        "projectId": "7d9ea35a-17ef-4630-b45f-c105d7caf5ee"
       }
     },
-    "owner": "muimedya",
+    "owner": "neseli-otomotiv",
     "runtimeVersion": {
       "policy": "appVersion"
     },
     "updates": {
-      "url": "https://u.expo.dev/be72ecf3-0dd3-44c0-ba2e-be70935c4cdc"
+      "url": "https://u.expo.dev/7d9ea35a-17ef-4630-b45f-c105d7caf5ee"
     }
   }
 }

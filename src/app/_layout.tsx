@@ -1,42 +1,29 @@
-import { QueryClientProvider } from '@tanstack/react-query';
-import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
-import { useColorScheme } from 'react-native';
 
-import { queryClient } from '@/lib/query-client';
-import { AuthProvider, useAuth } from '@/providers/auth-provider';
+import { AppProviders } from '@/bootstrap';
+import { RootNavigator, ShellProviders } from '@/features/shell';
+import { useAppFonts } from '@/theme';
 
 SplashScreen.preventAutoHideAsync();
 
-function RootStack() {
-  const { isLoading } = useAuth();
+export default function RootLayout() {
+  const [fontsLoaded, fontError] = useAppFonts();
 
   useEffect(() => {
-    if (!isLoading) SplashScreen.hide();
-  }, [isLoading]);
+    if (fontsLoaded || fontError) SplashScreen.hideAsync();
+  }, [fontsLoaded, fontError]);
 
-  if (isLoading) return null;
+  // Fontlar uygulamayla paketlendiğinden hata beklenmez; yine de hata durumunda sistem fontuyla açılır.
+  if (!fontsLoaded && !fontError) return null;
 
+  // Servis kabı (Supabase) + QueryClient + bootstrap (getSession). Hazır olana kadar rotalar render edilmez; onboarding/giriş/sekme
+  // yönlendirmesi bu hazır sonuçtan türer (RootNavigator). SafeAreaProvider'ı Expo Router sağlar.
   return (
-    <Stack screenOptions={{ headerBackButtonDisplayMode: 'minimal' }}>
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="listing/[id]" options={{ title: '' }} />
-      <Stack.Screen name="chat/[id]" options={{ title: 'Mesajlar' }} />
-      <Stack.Screen name="(auth)" options={{ presentation: 'modal', headerShown: false }} />
-    </Stack>
-  );
-}
-
-export default function RootLayout() {
-  const colorScheme = useColorScheme();
-  return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-          <RootStack />
-        </ThemeProvider>
-      </AuthProvider>
-    </QueryClientProvider>
+    <AppProviders>
+      <ShellProviders>
+        <RootNavigator />
+      </ShellProviders>
+    </AppProviders>
   );
 }

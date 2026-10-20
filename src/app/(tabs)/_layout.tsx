@@ -1,45 +1,62 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { Tabs } from 'expo-router/js-tabs';
+import { Tabs, useRouter, type Href } from 'expo-router';
 import type { ComponentProps } from 'react';
-import type { ColorValue } from 'react-native';
 
-import { useTheme } from '@/hooks/use-theme';
+import { TabBar } from '@/components/TabBar';
+import { useUnreadCountQuery } from '@/features/messaging';
+import { useNotificationUnreadCountQuery } from '@/features/notifications';
+import { ROUTE_BY_TAB, TAB_ROUTES } from '@/features/shell';
 
-type IconName = ComponentProps<typeof Ionicons>['name'];
+type TabBarRenderer = NonNullable<ComponentProps<typeof Tabs>['tabBar']>;
 
-function tabIcon(name: IconName, activeName: IconName) {
-  return function TabIcon({ color, focused, size }: { color: ColorValue; focused: boolean; size: number }) {
-    return <Ionicons name={focused ? activeName : name} color={color as string} size={size} />;
-  };
+/** Mesajlar ve Bildirimler rozetleri servisin okunmamış toplamlarıdır (liste satır sayaçlarıyla aynı kaynak); yüklenene/hata verene kadar rozet yok. */
+function TabBarWithCounts({ activeRoute, navigate }: { activeRoute: string; navigate: (routeName: string) => void }) {
+  const unread = useUnreadCountQuery();
+  const notificationsUnread = useNotificationUnreadCountQuery();
+  return (
+    <TabBar
+      active={TAB_ROUTES[activeRoute] ?? 'home'}
+      onSelect={(key) => navigate(ROUTE_BY_TAB[key])}
+      counts={{ messages: unread.data ?? 0, notifications: notificationsUnread.data ?? 0 }}
+    />
+  );
 }
 
-export default function TabsLayout() {
-  const theme = useTheme();
+/**
+ * SDK 58 sekme çubuğu props'u: `navigateToTab(routeKey)`. Henüz açılmamış (tembel) sekmeler `state.routes` içinde olmayabilir;
+ * o durumda sekmeye yol (href) ile gidilir.
+ */
+function RouterTabBar({ state, navigateToTab }: Parameters<TabBarRenderer>[0]) {
+  const router = useRouter();
   return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: theme.primary,
-        tabBarInactiveTintColor: theme.textSecondary,
-        tabBarStyle: { backgroundColor: theme.background, borderTopColor: theme.border },
-        headerStyle: { backgroundColor: theme.background },
-        headerTintColor: theme.text,
-      }}>
-      <Tabs.Screen
-        name="index"
-        options={{ title: 'İlanlar', tabBarIcon: tabIcon('car-sport-outline', 'car-sport') }}
-      />
-      <Tabs.Screen
-        name="favorites"
-        options={{ title: 'Favoriler', tabBarIcon: tabIcon('heart-outline', 'heart') }}
-      />
-      <Tabs.Screen
-        name="messages"
-        options={{ title: 'Mesajlar', tabBarIcon: tabIcon('chatbubbles-outline', 'chatbubbles') }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{ title: 'Profil', tabBarIcon: tabIcon('person-outline', 'person') }}
-      />
+    <TabBarWithCounts
+      activeRoute={state.routes[state.index]?.name ?? 'index'}
+      navigate={(routeName) => {
+        const route = state.routes.find((candidate) => candidate.name === routeName);
+        if (route) navigateToTab(route.key);
+        else router.navigate(TAB_HREF[routeName] ?? '/');
+      }}
+    />
+  );
+}
+
+const TAB_HREF: Record<string, Href> = {
+  index: '/',
+  categories: '/categories',
+  messages: '/messages',
+  notifications: '/notifications',
+  profile: '/profile',
+};
+
+const renderTabBar: TabBarRenderer = (props) => <RouterTabBar {...props} />;
+
+export default function TabsLayout() {
+  return (
+    <Tabs tabBar={renderTabBar} screenOptions={{ headerShown: false }}>
+      <Tabs.Screen name="index" />
+      <Tabs.Screen name="categories" />
+      <Tabs.Screen name="messages" />
+      <Tabs.Screen name="notifications" />
+      <Tabs.Screen name="profile" />
     </Tabs>
   );
 }

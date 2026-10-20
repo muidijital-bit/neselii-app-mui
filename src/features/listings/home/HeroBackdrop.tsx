@@ -2,6 +2,7 @@ import { Image } from 'expo-image';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { useEffect, useState } from 'react';
 import { AccessibilityInfo, Animated, Easing, StyleSheet, View } from 'react-native';
+import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 
 import { colors } from '@/theme';
 
@@ -22,19 +23,45 @@ const COLUMN_OFFSET = [0, 0.55, 0.25, 0.8] as const;
 type Props = {
   /** Kolajda kullanılacak ilan kapakları (gerçek ilanlar). Boşsa yalnız lacivert zemin kalır. */
   imageUris: readonly string[];
+  /** Kolajın başladığı yükseklik: üstündeki alan (durum çubuğu + logo satırı) düz koyu lacivert kalır. */
+  top?: number;
 };
+
+/** Görsellerin lacivert zemine karışarak kaybolduğu geçiş yükseklikleri (üst ve alt). */
+const FADE_TOP = 90;
+const FADE_BOTTOM = 70;
 
 /**
  * Ana sayfa üst alanının hareketli arka planı (2. aşama tasarımı: kamyon görselleri üzerinde koyu örtü). Video verilmediğinde ilan
  * kapakları dört sütunlu bir kolajda yukarıdan aşağıya doğru yavaşça kayar; her sütun farklı sırayla ve hızla akar. "Hareketi azalt"
  * açıksa kolaj sabit durur. Yalnızca dekoratiftir: erişilebilirlik ağacında yer almaz.
  */
-export function HeroBackdrop({ imageUris }: Props) {
+export function HeroBackdrop({ imageUris, top = 0 }: Props) {
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-      {HERO_VIDEO_URL ? <HeroVideo uri={HERO_VIDEO_URL} /> : <Collage imageUris={imageUris} />}
-      <View style={styles.scrim} />
+      <View style={[styles.media, { top }]}>
+        {HERO_VIDEO_URL ? <HeroVideo uri={HERO_VIDEO_URL} /> : <Collage imageUris={imageUris} />}
+        <View style={styles.scrim} />
+        {/* Üstte düz lacivertten, altta lacivert zemine doğru yumuşak geçiş: görseller kenarlarda solarak kaybolur. */}
+        <Fade edge="top" height={FADE_TOP} />
+        <Fade edge="bottom" height={FADE_BOTTOM} />
+      </View>
     </View>
+  );
+}
+
+function Fade({ edge, height }: { edge: 'top' | 'bottom'; height: number }) {
+  const id = `hero-fade-${edge}`;
+  return (
+    <Svg style={[styles.fade, edge === 'top' ? { top: 0 } : { bottom: 0 }, { height }]} preserveAspectRatio="none" viewBox="0 0 1 1">
+      <Defs>
+        <LinearGradient id={id} x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0" stopColor={colors.navy} stopOpacity={edge === 'top' ? 1 : 0} />
+          <Stop offset="1" stopColor={colors.navy} stopOpacity={edge === 'top' ? 0 : 1} />
+        </LinearGradient>
+      </Defs>
+      <Rect x="0" y="0" width="1" height="1" fill={`url(#${id})`} />
+    </Svg>
   );
 }
 
@@ -132,6 +159,8 @@ const styles = StyleSheet.create({
   collage: { ...StyleSheet.absoluteFill, flexDirection: 'row', gap: GAP, paddingHorizontal: GAP, overflow: 'hidden' },
   column: { gap: GAP },
   tile: { borderRadius: 16, backgroundColor: colors.navyRaised },
-  // Tasarımdaki koyu lacivert örtü: görseller seçilir ama metin okunur kalır.
-  scrim: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(10, 34, 64, 0.8)' },
+  media: { position: 'absolute', left: 0, right: 0, bottom: 0, overflow: 'hidden' },
+  // Tasarımdaki koyu lacivert örtü: görseller soluk ama seçilir, üstündeki metin okunur kalır.
+  scrim: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(10, 34, 64, 0.72)' },
+  fade: { position: 'absolute', left: 0, right: 0 },
 });

@@ -100,7 +100,8 @@ export function HomeScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.white} progressViewOffset={insets.top} />}
         testID="home-list">
         <View style={[styles.hero, { paddingTop: insets.top + 12 }]} onLayout={(event) => setHeroHeight(event.nativeEvent.layout.height)}>
-          <HeroBackdrop imageUris={backdropImages} />
+          {/* Görseller logo satırının altından başlar; durum çubuğu ve logo satırı düz koyu lacivert kalır. */}
+          <HeroBackdrop imageUris={backdropImages} top={insets.top + 12 + BRAND_ROW_HEIGHT} />
           <View style={styles.brandRow}>
             <BrandLogo height={36} />
             <Pressable
@@ -206,6 +207,7 @@ export function HomeScreen() {
 }
 
 const H_PAD = 16;
+const BRAND_ROW_HEIGHT = 56;
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.surface },
@@ -217,7 +219,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: H_PAD,
     paddingBottom: 28,
   },
-  brandRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', height: 56 },
+  brandRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', height: BRAND_ROW_HEIGHT },
   bell: {
     width: 46,
     height: 46,

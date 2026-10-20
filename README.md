@@ -37,6 +37,20 @@ Proje: **neseli-app-mui** (`kdydrtqhihamayiigknm`, ap-northeast-1). Şemanın te
 - E-posta bağlantıları uygulamaya `neseliotomotiv://verify-email` ve `neseliotomotiv://reset-password` adresleriyle döner.
   Supabase Dashboard → Authentication → URL Configuration → Redirect URLs listesine `neseliotomotiv://**` eklenmelidir.
 
+## Yönetici (firma) hesapları
+
+Yönetici, uygulamaya normal girişle girer; **Mesajlar** sekmesinde tüm müşterilerin konuşmalarını müşteri adıyla görür ve cevaplar.
+Müşteri mesaj attığında yöneticilere uygulama içi bildirim düşer; sohbet açılınca okundu sayılır.
+
+Yetki yalnızca veritabanından verilir (uygulamadan kimse kendi rolünü değiştiremez, `profiles_protect_role` tetikleyicisi engeller).
+Kişi önce normal kayıt olur, ardından Supabase SQL Editor'de:
+
+```sql
+update public.profiles set role = 'admin'
+ where id = (select id from auth.users where email = 'kisi@ornek.com');
+-- yetkiyi kaldırmak için role = 'user'
+```
+
 ## Mimari
 
 ```

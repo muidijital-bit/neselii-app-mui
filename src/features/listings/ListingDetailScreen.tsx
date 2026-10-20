@@ -15,6 +15,8 @@ import { useFavoriteToggle } from '@/features/saved/useFavorites';
 import { colors, fontFamily, radii, shadows, sizes, spacing, textStyles } from '@/theme';
 
 import { StateMessage } from './ListStates';
+import { useIsAdmin } from '@/features/session/useIsAdmin';
+
 import { callCompany } from './companyPhone';
 import { toDetailModel } from './presentation';
 import { listingContactHref, listingMediaHref } from './routes';
@@ -177,6 +179,7 @@ const STACK_ACTIONS_MIN_FONT_SCALE = 1.3;
 
 function DetailContent({ detail, onBack }: { detail: ListingDetail; onBack: () => void }) {
   const stackActions = useWindowDimensions().fontScale > STACK_ACTIONS_MIN_FONT_SCALE;
+  const isAdmin = useIsAdmin();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [expanded, setExpanded] = useState(false);
@@ -333,21 +336,24 @@ function DetailContent({ detail, onBack }: { detail: ListingDetail; onBack: () =
           <Text style={styles.noticeText}>{shownNotice}</Text>
         </View>
       ) : null}
-      <View style={[styles.bottomBar, stackActions && styles.bottomBarStacked]}>
-        <View style={stackActions ? styles.slotStacked : styles.callSlot}>
-          <Btn
-            label="Hemen Ara"
-            variant="secondary"
-            icon="phone"
-            disabled={sold}
-            onPress={() => callCompany(setNotice)}
-            testID="listing-call"
-          />
+      {/* Yönetici firmanın kendisidir: firmayı arama / firmaya mesaj başlatma eylemleri gösterilmez. */}
+      {isAdmin ? null : (
+        <View style={[styles.bottomBar, stackActions && styles.bottomBarStacked]}>
+          <View style={stackActions ? styles.slotStacked : styles.callSlot}>
+            <Btn
+              label="Hemen Ara"
+              variant="secondary"
+              icon="phone"
+              disabled={sold}
+              onPress={() => callCompany(setNotice)}
+              testID="listing-call"
+            />
+          </View>
+          <View style={stackActions ? styles.slotStacked : styles.messageSlot}>
+            <Btn label="Mesaj Gönder" icon="message-circle" disabled={sold} onPress={() => router.push(listingContactHref(detail.id))} testID="listing-contact" />
+          </View>
         </View>
-        <View style={stackActions ? styles.slotStacked : styles.messageSlot}>
-          <Btn label="Mesaj Gönder" icon="message-circle" disabled={sold} onPress={() => router.push(listingContactHref(detail.id))} testID="listing-contact" />
-        </View>
-      </View>
+      )}
     </Screen>
   );
 }

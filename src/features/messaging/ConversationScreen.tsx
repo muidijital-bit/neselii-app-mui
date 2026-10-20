@@ -11,10 +11,11 @@ import { Image } from 'expo-image';
 
 import { StripePlaceholder } from '@/components/StripePlaceholder';
 import { Icon } from '@/components/icons/Icon';
-import { formatMoney, formatRelativeDate, toAppError, userMessage, type Conversation, type Message } from '@/domain';
+import { formatMoney, formatRelativeDate, initialsOf, toAppError, userMessage, type Conversation, type Message } from '@/domain';
 import { StateMessage } from '@/features/listings/ListStates';
 import { listingHref } from '@/features/listings/routes';
 import { useSession } from '@/features/session/SessionProvider';
+import { useIsAdmin } from '@/features/session/useIsAdmin';
 import { colors, fontFamily, radii, spacing, textStyles } from '@/theme';
 
 import { formatClock } from './presentation';
@@ -133,7 +134,11 @@ export function ConversationScreen() {
     ?.pages.flatMap((page) => page.items)
     .find((conversation) => conversation.id === conversationId);
   const seeded = queryClient.getQueryData<Conversation>(messagingKeys.conversation(userId, conversationId));
-  const listing = (markRead.data ?? seeded ?? cachedConversation)?.listing ?? null;
+  const conversationInfo = markRead.data ?? seeded ?? cachedConversation;
+  const listing = conversationInfo?.listing ?? null;
+  // Yönetici sohbeti müşteri adına açar; müşteri "Neşeli Otomotiv" ile konuşur.
+  const isAdmin = useIsAdmin();
+  const customerName = conversationInfo?.customer?.fullName ?? 'Müşteri';
 
   // Yüklenmiş mesaj varken (eski sayfa/yenileme hatası) sohbet ekranı hata durumuna DÜŞMEZ: TanStack bu durumda da `isError` verir.
   const failed = query.isError && query.data === undefined;
@@ -225,13 +230,13 @@ export function ConversationScreen() {
         ) : null}
         {isEmpty ? (
           <Text style={[textStyles.bodySmall, styles.emptyNote]} testID="conversation-empty">
-            İlan hakkında sorunuzu yazın; Neşeli Otomotiv size buradan cevap verecek.
+            {isAdmin ? `${customerName} henüz mesaj yazmadı.` : 'İlan hakkında sorunuzu yazın; Neşeli Otomotiv size buradan cevap verecek.'}
           </Text>
         ) : null}
         {messages.map((message, index) => (
           <View key={message.id} style={styles.messageGroup}>
             {index === 0 || dayKey(messages[index - 1].sentAt) !== dayKey(message.sentAt) ? <DayChip label={formatRelativeDate(message.sentAt, nowMs)} /> : null}
-            <Bubble message={message} />
+            <Bubble message={message} isAdmin={isAdmin} peerName={isAdmin ? customerName : 'Neşeli Otomotiv'} />
           </View>
         ))}
         {visiblePending.map((entry) => (
@@ -249,11 +254,17 @@ export function ConversationScreen() {
             <Icon name={Platform.OS === 'ios' ? 'chevron-left' : 'arrow-left'} size={Platform.OS === 'ios' ? 26 : 24} color={colors.navy} />
           </Pressable>
           <View style={styles.avatar}>
-            <BrandLogo variant="emblem" height={19} accessibilityLabel="Neşeli Otomotiv" />
+            {isAdmin ? (
+              <Text style={styles.avatarInitials} maxFontSizeMultiplier={1.2}>
+                {initialsOf(customerName) || 'M'}
+              </Text>
+            ) : (
+              <BrandLogo variant="emblem" height={19} accessibilityLabel="Neşeli Otomotiv" />
+            )}
           </View>
           <View style={styles.headerText}>
-            <Text style={styles.company} accessibilityRole="header" numberOfLines={1} maxFontSizeMultiplier={1.3}>
-              Neşeli Otomotiv
+            <Text style={styles.company} accessibilityRole="header" numberOfLines={1} maxFontSizeMultiplier={1.3} testID="conversation-title">
+              {isAdmin ? customerName : 'Neşeli Otomotiv'}
             </Text>
             {listing ? (
               <Text numberOfLines={1} maxFontSizeMultiplier={1.3} style={styles.subtitle} testID="conversation-subtitle">
@@ -309,13 +320,14 @@ const TICK: Record<Message['status'], { icon: 'check' | 'check-check'; color: st
   read: { icon: 'check-check', color: colors.greenTick, label: 'Okundu' },
 };
 
-function Bubble({ message }: { message: Message }) {
-  const mine = message.sender === 'user';
+function Bubble({ message, isAdmin, peerName }: { message: Message; isAdmin: boolean; peerName: string }) {
+  // "Benim" mesajım: müşteride kullanıcı mesajı, yöneticide firma (yönetici) mesajı.
+  const mine = isAdmin ? message.sender === 'company' : message.sender === 'user';
   const tick = TICK[message.status];
   const time = formatClock(message.sentAt);
   return (
     <View style={[styles.bubbleRow, mine ? styles.rowMine : styles.rowTheirs]}>
-      <View style={[styles.bubble, mine ? styles.bubbleMine : styles.bubbleTheirs]} accessible accessibilityLabel={`${mine ? 'Siz' : 'Neşeli Otomotiv'}: ${message.text}, ${time}${mine ? `, ${tick.label}` : ''}`} testID={`message-${message.id}`}>
+      <View style={[styles.bubble, mine ? styles.bubbleMine : styles.bubbleTheirs]} accessible accessibilityLabel={`${mine ? 'Siz' : peerName}: ${message.text}, ${time}${mine ? `, ${tick.label}` : ''}`} testID={`message-${message.id}`}>
         <Text style={[styles.bubbleText, mine ? styles.textMine : styles.textTheirs]}>{message.text}</Text>
         <View style={styles.meta}>
           <Text style={[styles.time, mine ? styles.timeMine : styles.timeTheirs]}>{time}</Text>
@@ -364,6 +376,7 @@ const styles = StyleSheet.create({
   back: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   avatar: { width: 38, height: 38, borderRadius: 19, backgroundColor: colors.navy, alignItems: 'center', justifyContent: 'center' },
   headerText: { flex: 1, minWidth: 0, gap: 3, marginLeft: spacing.xs },
+  avatarInitials: { fontFamily: fontFamily.montserrat700, fontSize: 14, color: colors.white },
   company: { fontFamily: fontFamily.montserrat700, fontSize: 15, lineHeight: 16.5, color: colors.navy },
   subtitle: { fontFamily: fontFamily.inter400, fontSize: 12, lineHeight: 13.2, color: colors.slateLight },
   messages: { flexGrow: 1, paddingHorizontal: spacing.xl, paddingBottom: spacing.lg, gap: 10 },

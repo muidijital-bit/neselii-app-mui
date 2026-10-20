@@ -12,6 +12,8 @@ import { userMessage } from '@/domain';
 import { StateMessage } from '@/features/listings/ListStates';
 import { colors, fontFamily, radii, spacing, textStyles } from '@/theme';
 
+import { useIsAdmin } from '@/features/session/useIsAdmin';
+
 import { toConversationRow, type ConversationRowModel } from './presentation';
 import { conversationHref } from './routes';
 import { useConversationsQuery, useUnreadCountQuery } from './useMessagingQueries';
@@ -25,6 +27,7 @@ const THUMB = 52;
 export function MessagesScreen() {
   const tabBarClearance = useTabBarClearance();
   const router = useRouter();
+  const isAdmin = useIsAdmin();
   const conversations = useConversationsQuery();
   const unread = useUnreadCountQuery();
   const refetchConversations = conversations.refetch;
@@ -43,7 +46,7 @@ export function MessagesScreen() {
   );
 
   const nowMs = Date.now();
-  const rows = useMemo(() => (conversations.data?.pages.flatMap((page) => page.items) ?? []).map((conversation) => toConversationRow(conversation, nowMs)), [conversations.data, nowMs]);
+  const rows = useMemo(() => (conversations.data?.pages.flatMap((page) => page.items) ?? []).map((conversation) => toConversationRow(conversation, nowMs, isAdmin ? 'admin' : 'user')), [conversations.data, nowMs, isAdmin]);
 
   const loadMore = useCallback(() => {
     if (conversations.hasNextPage && !conversations.isFetchingNextPage && !conversations.isFetchNextPageError) void conversations.fetchNextPage();
@@ -60,8 +63,8 @@ export function MessagesScreen() {
     empty = (
       <StateMessage
         icon="message-circle"
-        title="Henüz mesajınız yok"
-        message="Bir ilanın detayından Neşeli Otomotiv'e mesaj gönderdiğinizde görüşmeleriniz burada listelenir."
+        title={isAdmin ? 'Henüz müşteri mesajı yok' : 'Henüz mesajınız yok'}
+        message={isAdmin ? 'Müşteriler ilanlardan mesaj gönderdiğinde konuşmalar burada listelenir.' : "Bir ilanın detayından Neşeli Otomotiv'e mesaj gönderdiğinizde görüşmeleriniz burada listelenir."}
         testID="messages-empty"
       />
     );
@@ -88,7 +91,7 @@ export function MessagesScreen() {
       </View>
       <View style={styles.info}>
         <Icon name="info" size={15} color={colors.blue} />
-        <Text style={styles.infoText}>Tüm görüşmeleriniz Neşeli Otomotiv ile ve bir ilana bağlıdır.</Text>
+        <Text style={styles.infoText}>{isAdmin ? 'Yönetici görünümü: müşterilerden gelen tüm mesajlar burada.' : 'Tüm görüşmeleriniz Neşeli Otomotiv ile ve bir ilana bağlıdır.'}</Text>
       </View>
       <FlatList
         style={styles.list}
@@ -109,7 +112,7 @@ export function MessagesScreen() {
 
 function ConversationRow({ row, onPress }: { row: ConversationRowModel; onPress: () => void }) {
   const hasUnread = row.unreadCount > 0;
-  const label = [row.title, row.preview, row.timeLabel, hasUnread ? `${row.unreadCount} okunmamış mesaj` : null].filter(Boolean).join(', ');
+  const label = [row.title, row.subtitle, row.preview, row.timeLabel, hasUnread ? `${row.unreadCount} okunmamış mesaj` : null].filter(Boolean).join(', ');
   return (
     <Pressable
       accessibilityRole="button"
@@ -135,6 +138,11 @@ function ConversationRow({ row, onPress }: { row: ConversationRowModel; onPress:
             {row.timeLabel}
           </Text>
         </View>
+        {row.subtitle ? (
+          <Text numberOfLines={1} style={styles.rowSubtitle} testID={`conversation-listing-${row.id}`}>
+            {row.subtitle}
+          </Text>
+        ) : null}
         <View style={styles.rowBottom}>
           <Text numberOfLines={1} style={styles.rowPreview} testID={`conversation-preview-${row.id}`}>
             {row.preview}
@@ -189,6 +197,7 @@ const styles = StyleSheet.create({
   rowUnread: { backgroundColor: colors.blueTint },
   rowPressed: { opacity: 0.85 },
   thumb: { width: THUMB, height: THUMB, borderRadius: radii.lg, overflow: 'hidden' },
+  rowSubtitle: { fontFamily: fontFamily.inter500, fontSize: 12, color: colors.slate },
   thumbEmpty: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.lineSoft },
   skeleton: { backgroundColor: colors.lineSoft },
   rowBody: { flex: 1, minWidth: 0, gap: 5 },

@@ -22,10 +22,12 @@ import { call, offsetOf, pageRange, requireUserId, tlToKurus, toIso, toPage, unw
 type MessageRow = Pick<Tables<'messages'>, 'id' | 'conversation_id' | 'body' | 'is_staff' | 'read_at' | 'created_at'>;
 type ConversationRow = Pick<Tables<'conversations'>, 'id' | 'listing_id' | 'last_message' | 'last_message_at' | 'last_message_is_staff'> & {
   listing: Pick<Tables<'listings'>, 'id' | 'title' | 'price' | 'status' | 'cover_url'> | null;
+  customer: Pick<Tables<'profiles'>, 'id' | 'full_name' | 'phone'> | null;
 };
 
 const MESSAGE_COLUMNS = 'id, conversation_id, body, is_staff, read_at, created_at';
-const CONVERSATION_COLUMNS = 'id, listing_id, last_message, last_message_at, last_message_is_staff, listing:listings(id, title, price, status, cover_url)';
+const CONVERSATION_COLUMNS =
+  'id, listing_id, last_message, last_message_at, last_message_is_staff, listing:listings(id, title, price, status, cover_url), customer:profiles!conversations_user_id_fkey(id, full_name, phone)';
 
 /**
  * Sohbet yalnızca kullanıcı ↔ Neşeli Otomotiv (firma mesajı `is_staff`, sunucu tetikleyicisi atar); kullanıcı + ilan başına tek sohbet.
@@ -45,7 +47,8 @@ export function createSupabaseMessaging(sb: Supabase): MessagingService {
       sender: row.is_staff ? 'company' : 'user',
       text: row.body,
       sentAt: toIso(row.created_at),
-      status: row.is_staff ? 'read' : row.read_at ? 'read' : 'delivered',
+      // Karşı taraf okuyunca `read`: müşteri mesajını yönetici, yönetici mesajını müşteri okur (`mark_conversation_read`).
+      status: row.read_at ? 'read' : 'delivered',
     };
   };
 
@@ -61,6 +64,7 @@ export function createSupabaseMessaging(sb: Supabase): MessagingService {
         }
       : // İlan yayından kalktıysa RLS ilanı gizler; sohbet yine listelenir.
         { id: asListingId(row.listing_id), title: 'Yayından kalkmış ilan', price: { amountKurus: 0, currency: 'TRY' }, status: 'withdrawn', coverImageUri: null },
+    customer: row.customer ? { id: row.customer.id, fullName: row.customer.full_name?.trim() || 'Müşteri', phone: row.customer.phone } : null,
     lastMessage: row.last_message
       ? {
           id: asMessageId(`last-${row.id}`),
@@ -82,8 +86,9 @@ export function createSupabaseMessaging(sb: Supabase): MessagingService {
     return new Map(rows.flatMap((row) => (row.conversation_id ? [[row.conversation_id, row.unread_count ?? 0] as const] : [])));
   };
 
-  const fetchConversation = async (userId: string, id: string): Promise<Conversation> => {
-    const row = unwrapMaybe(await sb.from('conversations').select(CONVERSATION_COLUMNS).eq('id', id).eq('user_id', userId).maybeSingle()) as unknown as ConversationRow | null;
+  const fetchConversation = async (id: string): Promise<Conversation> => {
+    // Kullanıcı filtresi yok: RLS müşteriye yalnız kendi sohbetlerini, yöneticiye hepsini gösterir.
+    const row = unwrapMaybe(await sb.from('conversations').select(CONVERSATION_COLUMNS).eq('id', id).maybeSingle()) as unknown as ConversationRow | null;
     if (!row) throw appError.notFound(`conversation ${id}`);
     const unread = await unreadFor([row.id]);
     return toConversation(row, unread.get(row.id) ?? 0);
@@ -97,11 +102,12 @@ export function createSupabaseMessaging(sb: Supabase): MessagingService {
   return {
     listConversations: (input?: PageInput) =>
       call(async () => {
-        const userId = await requireUserId(sb);
+        await requireUserId(sb);
         const offset = offsetOf(input?.cursor);
         const [from, to] = pageRange(offset);
         const rows = unwrap(
-          await sb.from('conversations').select(CONVERSATION_COLUMNS).eq('user_id', userId).order('last_message_at', { ascending: false }).order('id').range(from, to),
+          // Kullanıcı filtresi yok: RLS müşteriye yalnız kendi sohbetlerini, yöneticiye tüm müşterilerinkini verir.
+          await sb.from('conversations').select(CONVERSATION_COLUMNS).order('last_message_at', { ascending: false }).order('id').range(from, to),
         ) as unknown as ConversationRow[];
         const unread = await unreadFor(rows.map((row) => row.id));
         return toPage(rows, offset, (row) => toConversation(row, unread.get(row.id) ?? 0));
@@ -111,16 +117,16 @@ export function createSupabaseMessaging(sb: Supabase): MessagingService {
       call(async () => {
         const userId = await requireUserId(sb);
         const existing = unwrapMaybe(await sb.from('conversations').select('id').eq('listing_id', listingId).eq('user_id', userId).maybeSingle());
-        if (existing) return fetchConversation(userId, existing.id);
+        if (existing) return fetchConversation(existing.id);
         const listing = unwrapMaybe(await sb.from('listings').select('id').eq('id', listingId).maybeSingle());
         if (!listing) throw appError.notFound(`listing ${listingId}`);
         // Sohbetlerde UPDATE politikası yok: upsert yerine insert. Eşzamanlı ikinci istek benzersizlik ihlali (23505) alır ve mevcut kaydı okur.
         const inserted = await sb.from('conversations').insert({ listing_id: listingId, user_id: userId }).select('id').single();
         if (inserted.error && inserted.error.code === '23505') {
           const raced = unwrap(await sb.from('conversations').select('id').eq('listing_id', listingId).eq('user_id', userId).single());
-          return fetchConversation(userId, raced.id);
+          return fetchConversation(raced.id);
         }
-        return fetchConversation(userId, unwrap(inserted).id);
+        return fetchConversation(unwrap(inserted).id);
       }),
 
     listMessages: ({ conversationId, cursor }: ListMessagesInput) =>
@@ -165,9 +171,9 @@ export function createSupabaseMessaging(sb: Supabase): MessagingService {
 
     markConversationRead: (conversationId: ConversationId) =>
       call(async () => {
-        const userId = await requireUserId(sb);
+        await requireUserId(sb);
         await markRead(conversationId);
-        return fetchConversation(userId, conversationId);
+        return fetchConversation(conversationId);
       }),
 
     countUnread: () =>

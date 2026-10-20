@@ -30,15 +30,22 @@ export async function profileFor(sb: Supabase, user: User): Promise<UserProfile>
     phone: typeof metadata.phone === 'string' && metadata.phone.trim() !== '' ? metadata.phone : null,
     emailVerified: Boolean(user.email_confirmed_at),
     memberSince: toIso(user.created_at),
+    role: 'user',
   };
-  const { data, error } = await sb.from('profiles').select('full_name, phone, created_at').eq('id', user.id).maybeSingle();
+  const { data, error } = await sb.from('profiles').select('full_name, phone, created_at, role').eq('id', user.id).maybeSingle();
   if (error) {
     const mapped = toSupabaseError(error);
     if (mapped.kind === 'offline') return fallback;
     throw mapped;
   }
   if (!data) return fallback;
-  return { ...fallback, fullName: data.full_name ?? fallback.fullName, phone: data.phone ?? fallback.phone, memberSince: toIso(data.created_at) };
+  return {
+    ...fallback,
+    fullName: data.full_name ?? fallback.fullName,
+    phone: data.phone ?? fallback.phone,
+    memberSince: toIso(data.created_at),
+    role: data.role === 'admin' ? 'admin' : 'user',
+  };
 }
 
 type PendingAccount = { readonly email: string; readonly password: string; readonly fullName: string; readonly phone: string | null };
@@ -52,6 +59,7 @@ const pendingSession = ({ email, fullName, phone }: PendingAccount): Session => 
     phone,
     emailVerified: false,
     memberSince: new Date().toISOString(),
+    role: 'user',
   },
 });
 

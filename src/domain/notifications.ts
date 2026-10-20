@@ -2,7 +2,8 @@ import type { IsoDateTime } from './common';
 import { asAnnouncementId, asConversationId, asListingId, type AnnouncementId, type ConversationId, type ListingId, type NotificationId } from './ids';
 
 /** Bildirim türleri (tasarım ekran 11 + akış diyagramı): yeni ilan, kayıtlı arama eşleşmesi, fiyat/durum değişikliği, mesaj cevabı, duyuru. */
-export type NotificationKind = 'new-listing' | 'saved-search-match' | 'price-change' | 'status-change' | 'message-reply' | 'announcement';
+/** `new-message`: yöneticiye müşteriden yeni mesaj. */
+export type NotificationKind = 'new-listing' | 'saved-search-match' | 'price-change' | 'status-change' | 'message-reply' | 'new-message' | 'announcement';
 
 /**
  * Dokunulunca nereye gidileceği. Tip güvenli: ilan bildirimi `ListingId`, mesaj bildirimi `ConversationId` taşır;

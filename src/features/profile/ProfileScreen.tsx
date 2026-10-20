@@ -58,6 +58,12 @@ export function ProfileScreen() {
               <Text style={styles.name} numberOfLines={2} testID="profile-name">
                 {user.fullName}
               </Text>
+              {user.role === 'admin' ? (
+                <View style={styles.adminBadge} testID="profile-admin-badge">
+                  <Icon name="shield" size={12} color={colors.greenText} />
+                  <Text style={styles.adminBadgeText}>Yönetici</Text>
+                </View>
+              ) : null}
               <Text style={styles.email} numberOfLines={1} testID="profile-email">
                 {user.email}
               </Text>
@@ -176,6 +182,8 @@ const styles = StyleSheet.create({
   avatar: { width: 56, height: 56, borderRadius: radii.pill, backgroundColor: colors.navy, alignItems: 'center', justifyContent: 'center' },
   initials: { fontFamily: fontFamily.montserrat700, fontSize: 18, lineHeight: 21.6, color: colors.white },
   summaryText: { flex: 1, minWidth: 0, gap: spacing.xs },
+  adminBadge: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, height: 22, borderRadius: 11, backgroundColor: colors.greenTint },
+  adminBadgeText: { fontFamily: fontFamily.inter600, fontSize: 11, color: colors.greenText },
   name: { fontFamily: fontFamily.montserrat700, fontSize: 17, lineHeight: 20.4, color: colors.navy },
   email: { fontFamily: fontFamily.inter400, fontSize: 13, lineHeight: 15.6, color: colors.slate },
   member: { fontFamily: fontFamily.inter400, fontSize: 12, lineHeight: 14.4, color: colors.slateLight },

@@ -1,6 +1,7 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { asConversationId } from '@/domain';
+import { notificationKeys } from '@/features/notifications/useNotificationsQueries';
 import { useSession } from '@/features/session/SessionProvider';
 import { useServices } from '@/services';
 
@@ -68,7 +69,12 @@ export function useMarkConversationRead() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (conversationId: string) => messaging.markConversationRead(asConversationId(conversationId)),
+    // Sunucu sohbete ait mesaj bildirimlerini de okundu yapar: bildirim listesi ve rozeti de yenilenir.
     onSuccess: () =>
-      Promise.all([queryClient.invalidateQueries({ queryKey: messagingKeys.conversations(userId) }), queryClient.invalidateQueries({ queryKey: messagingKeys.unread(userId) })]),
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: messagingKeys.conversations(userId) }),
+        queryClient.invalidateQueries({ queryKey: messagingKeys.unread(userId) }),
+        queryClient.invalidateQueries({ queryKey: notificationKeys.all(userId) }),
+      ]),
   });
 }

@@ -3,6 +3,8 @@ import { formatRelativeDate, type Conversation } from '@/domain';
 export type ConversationRowModel = {
   readonly id: string;
   readonly title: string;
+  /** Yöneticide ilan başlığı (başlık müşteri adıdır); müşteride yok. */
+  readonly subtitle?: string;
   readonly preview: string;
   readonly timeLabel: string;
   readonly unreadCount: number;
@@ -32,18 +34,25 @@ export function conversationTime(iso: string, nowMs: number): string {
 /** 99'dan büyük sayaç `99+` görünür (rozet taşmaz); erişilebilir etikette gerçek sayı kullanılır. */
 export const unreadBadgeText = (count: number) => (count > 99 ? '99+' : String(count));
 
-/** Satır önizlemesi: kullanıcının kendi mesajı `Siz: …` ile başlar; sohbet henüz boşsa açıklayıcı metin. */
-export function previewText(conversation: Pick<Conversation, 'lastMessage'>): string {
+/** Sohbete kimin gözüyle bakıldığı: müşteri (`user`) ya da firma yöneticisi (`admin`). */
+export type Viewer = 'user' | 'admin';
+
+/** Satır önizlemesi: bakanın kendi mesajı `Siz: …` ile başlar (müşteride kullanıcı, yöneticide firma mesajı); sohbet boşsa açıklayıcı metin. */
+export function previewText(conversation: Pick<Conversation, 'lastMessage'>, viewer: Viewer = 'user'): string {
   const last = conversation.lastMessage;
   if (!last) return 'Görüşme başlatıldı';
-  return last.sender === 'user' ? `Siz: ${last.text}` : last.text;
+  const mine = viewer === 'admin' ? last.sender === 'company' : last.sender === 'user';
+  return mine ? `Siz: ${last.text}` : last.text;
 }
 
-export function toConversationRow(conversation: Conversation, nowMs: number): ConversationRowModel {
+export function toConversationRow(conversation: Conversation, nowMs: number, viewer: Viewer = 'user'): ConversationRowModel {
+  const admin = viewer === 'admin';
   return {
     id: conversation.id,
-    title: conversation.listing.title,
-    preview: previewText(conversation),
+    // Yönetici gelen kutusunda satır müşteri adıyla, altında ilan başlığıyla görünür.
+    title: admin ? (conversation.customer?.fullName ?? 'Müşteri') : conversation.listing.title,
+    ...(admin ? { subtitle: conversation.listing.title } : {}),
+    preview: previewText(conversation, viewer),
     timeLabel: conversationTime(conversation.lastMessage?.sentAt ?? conversation.updatedAt, nowMs),
     unreadCount: conversation.unreadCount,
     unreadLabel: unreadBadgeText(conversation.unreadCount),

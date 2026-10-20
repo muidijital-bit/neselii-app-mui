@@ -34,6 +34,7 @@ const KIND: Record<string, NotificationKind> = {
   price_change: 'price-change',
   status_change: 'status-change',
   message_reply: 'message-reply',
+  new_message: 'new-message',
   announcement: 'announcement',
 };
 
@@ -68,7 +69,7 @@ function targetOf(row: Row, kind: NotificationKind, announcements: Map<string, A
     const announcement = announcements.get(row.announcement_id);
     return { type: 'announcement', announcementId: asAnnouncementId(row.announcement_id), title: announcement?.title ?? row.title, body: announcement?.body ?? row.body ?? '' };
   }
-  if (kind === 'message-reply' && row.conversation_id) return { type: 'conversation', conversationId: asConversationId(row.conversation_id) };
+  if ((kind === 'message-reply' || kind === 'new-message') && row.conversation_id) return { type: 'conversation', conversationId: asConversationId(row.conversation_id) };
   if (row.listing_id) return { type: 'listing', listingId: asListingId(row.listing_id) };
   if (row.conversation_id) return { type: 'conversation', conversationId: asConversationId(row.conversation_id) };
   return null;

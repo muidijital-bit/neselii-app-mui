@@ -31,9 +31,18 @@ export type ConversationListing = {
   readonly coverImageUri: string | null;
 };
 
+/** Sohbeti başlatan müşteri (yönetici gelen kutusunda gösterilir). */
+export type ConversationCustomer = {
+  readonly id: string;
+  readonly fullName: string;
+  readonly phone: string | null;
+};
+
 export type Conversation = {
   readonly id: ConversationId;
   readonly listing: ConversationListing;
+  /** Müşteri bilgisi; müşteri kendi sohbetlerinde de alır, yönetici tüm müşterilerinkini görür. */
+  readonly customer: ConversationCustomer | null;
   readonly lastMessage: Message | null;
   readonly unreadCount: number;
   readonly updatedAt: IsoDateTime;

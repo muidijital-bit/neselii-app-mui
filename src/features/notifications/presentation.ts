@@ -18,6 +18,7 @@ const KIND_STYLE: Record<NotificationKind, { icon: IconName; background: string;
   'new-listing': { icon: 'tag', background: colors.greenTint, color: colors.greenPressed },
   'saved-search-match': { icon: 'tag', background: colors.greenTint, color: colors.greenPressed },
   'message-reply': { icon: 'message-circle', background: colors.bluePale, color: colors.blue },
+  'new-message': { icon: 'message-circle', background: colors.greenTint, color: colors.greenPressed },
   'price-change': { icon: 'trending-down', background: colors.warningTint, color: colors.warningText },
   'status-change': { icon: 'refresh-cw', background: colors.lineSoft, color: colors.inkMuted },
   announcement: { icon: 'megaphone', background: colors.blueTint, color: colors.blueText },

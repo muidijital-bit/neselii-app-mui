@@ -117,7 +117,7 @@ export function NotificationPreferencesScreen() {
 
   return (
     <Frame>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} testID="preferences-scroll">
+      <ScrollView style={styles.scrollArea} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} testID="preferences-scroll">
         {failure ? (
           <View style={styles.notice} accessibilityRole="alert" accessibilityLiveRegion="polite" testID="preferences-failure">
             <Icon name="info" size={18} color={colors.blue} />
@@ -152,7 +152,7 @@ export function NotificationPreferencesScreen() {
 
 function Frame({ children }: { children: ReactNode }) {
   return (
-    <Screen testID="preferences-screen">
+    <Screen background={colors.white} testID="preferences-screen">
       <View style={styles.header}>
         <PageHeader title="Bildirim Tercihleri" testID="preferences-back" />
       </View>
@@ -183,6 +183,8 @@ function SettingsNotice({ message, testID }: { message: string; testID: string }
 }
 
 const styles = StyleSheet.create({
+  // Ekran zemini beyaz (durum çubuğu ve başlık beyaz görünür); yalnızca içerik alanı gri.
+  scrollArea: { flex: 1, backgroundColor: colors.surface },
   header: { backgroundColor: colors.white },
   content: { padding: spacing.xl, gap: 10 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },

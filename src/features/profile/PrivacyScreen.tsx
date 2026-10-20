@@ -44,9 +44,9 @@ const MISSING_TEXTS = ['Gizlilik politikası', 'KVKK aydınlatma metni', 'Kullan
 export function PrivacyScreen() {
   const router = useRouter();
   return (
-    <Screen edges={['top', 'left', 'right', 'bottom']} testID="privacy-screen">
+    <Screen background={colors.white} edges={['top', 'left', 'right', 'bottom']} testID="privacy-screen">
       <PageHeader title="Gizlilik ve Güvenlik" testID="privacy-back" />
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} testID="privacy-scroll">
+      <ScrollView style={styles.scrollArea} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} testID="privacy-scroll">
         {SECTIONS.map(({ key, icon, title, body }) => (
           <View key={key} style={styles.card} testID={`privacy-section-${key}`}>
             <View style={styles.cardHead}>
@@ -101,6 +101,8 @@ export function PrivacyScreen() {
 
 // Tamamlayıcı ekran: profil (12) ile aynı değerler — içerik 16 iç boşluk / 14 aralık, kartlar beyaz r14 kenarlı; uyarı kartı `warningTint` zeminli.
 const styles = StyleSheet.create({
+  // Ekran zemini beyaz (durum çubuğu ve başlık beyaz görünür); yalnızca içerik alanı gri.
+  scrollArea: { flex: 1, backgroundColor: colors.surface },
   content: { padding: spacing.xl, gap: 14 },
   card: { gap: spacing.lg, padding: spacing.xl, backgroundColor: colors.white, borderRadius: radii.card, borderWidth: 1, borderColor: colors.lineSoft },
   pending: { gap: spacing.lg, padding: spacing.xl, backgroundColor: colors.warningTint, borderRadius: radii.card, borderWidth: 1, borderColor: colors.warningText },

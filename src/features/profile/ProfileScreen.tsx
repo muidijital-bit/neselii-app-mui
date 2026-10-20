@@ -36,13 +36,13 @@ export function ProfileScreen() {
   const initials = user ? initialsOf(user.fullName) : '';
 
   return (
-    <Screen edges={['top', 'left', 'right']} testID="tab-screen-profile">
+    <Screen background={colors.white} edges={['top', 'left', 'right']} testID="tab-screen-profile">
       <View style={styles.header}>
         <Text style={styles.title} accessibilityRole="header">
           Profil
         </Text>
       </View>
-      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: tabBarClearance }]} showsVerticalScrollIndicator={false} testID="profile-scroll">
+      <ScrollView style={styles.scrollArea} contentContainerStyle={[styles.content, { paddingBottom: tabBarClearance }]} showsVerticalScrollIndicator={false} testID="profile-scroll">
         {user ? (
           <View style={styles.summary} testID="profile-summary" accessible accessibilityLabel={`${user.fullName}, ${user.email}${memberSince ? `, Üyelik: ${memberSince}` : ''}`}>
             <View style={styles.avatar}>
@@ -167,6 +167,8 @@ function MenuRow({
 // Değerler design/claude-design/AppScreen.dc.html (12): üst çubuk 56, içerik 16 iç boşluk / 14 aralık, kartlar beyaz r14 kenarlı,
 // satırlar 56 yüksek (16 / 14 iç boşluk, 14 aralık), avatar 56.
 const styles = StyleSheet.create({
+  // Ekran zemini beyaz (durum çubuğu ve başlık beyaz görünür); yalnızca içerik alanı gri.
+  scrollArea: { flex: 1, backgroundColor: colors.surface },
   header: { minHeight: 56, justifyContent: 'center', paddingHorizontal: spacing.xl, backgroundColor: colors.white, borderBottomWidth: 1, borderBottomColor: colors.lineSoft },
   title: { ...textStyles.titlePage, color: colors.navy },
   content: { padding: spacing.xl, gap: 14 },

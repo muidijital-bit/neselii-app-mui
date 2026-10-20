@@ -42,9 +42,9 @@ export function DeleteAccountScreen() {
   };
 
   return (
-    <Screen edges={['top', 'left', 'right', 'bottom']} testID="delete-account-screen">
+    <Screen background={colors.white} edges={['top', 'left', 'right', 'bottom']} testID="delete-account-screen">
       <PageHeader title="Hesabımı Sil" testID="delete-account-back" />
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" testID="delete-account-scroll">
+      <ScrollView style={styles.scrollArea} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" testID="delete-account-scroll">
         <View style={styles.card} testID="delete-account-scope">
           <Text style={styles.cardTitle} accessibilityRole="header">
             Silinecekler
@@ -99,6 +99,8 @@ export function DeleteAccountScreen() {
 
 // Tamamlayıcı ekran: profil (12) ile aynı değerler — içerik 16 iç boşluk / 14 aralık, kartlar beyaz r14 kenarlı; düğme 52 (Btn).
 const styles = StyleSheet.create({
+  // Ekran zemini beyaz (durum çubuğu ve başlık beyaz görünür); yalnızca içerik alanı gri.
+  scrollArea: { flex: 1, backgroundColor: colors.surface },
   content: { padding: spacing.xl, gap: 14 },
   card: { gap: spacing.lg, padding: spacing.xl, backgroundColor: colors.white, borderRadius: radii.card, borderWidth: 1, borderColor: colors.lineSoft },
   cardTitle: { ...textStyles.titleSection, color: colors.navy },

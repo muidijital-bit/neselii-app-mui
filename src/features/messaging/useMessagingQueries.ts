@@ -1,6 +1,7 @@
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient, type InfiniteData } from '@tanstack/react-query';
+import { useCallback, useEffect, useRef } from 'react';
 
-import { asConversationId } from '@/domain';
+import { appError, asConversationId, type Conversation, type Page } from '@/domain';
 import { notificationKeys } from '@/features/notifications/useNotificationsQueries';
 import { useSession } from '@/features/session/SessionProvider';
 import { useServices } from '@/services';
@@ -21,7 +22,11 @@ export const messagingKeys = {
   messages: (userId: string | null, conversationId: string) => [...messagingKeys.all(userId), 'messages', conversationId] as const,
   /** Tek sohbet özeti (ilan kartı): "Mesaj Gönder" akışı açılışta doldurur, sohbet ekranı ilk karede kullanır. */
   conversation: (userId: string | null, conversationId: string) => [...messagingKeys.all(userId), 'conversation', conversationId] as const,
+  /** Sohbet gizleme mutasyonları (eşzamanlı silmelerde yalnız sonuncusu listeyi sunucuyla eşitler). */
+  hide: ['messaging', 'hide'] as const,
 };
+
+type ConversationsData = InfiniteData<Page<Conversation>, string | undefined>;
 
 /** Sohbet listesi (09): `updatedAt` azalan, 20'şerli sayfalar. */
 export function useConversationsQuery() {
@@ -77,4 +82,101 @@ export function useMarkConversationRead() {
         queryClient.invalidateQueries({ queryKey: notificationKeys.all(userId) }),
       ]),
   });
+}
+
+type HideVariables = {
+  readonly conversationId: string;
+  /** Mutasyonu başlatan kullanıcı: geri alma/eşitleme yalnızca KENDİ önbelleğine yazılır. */
+  readonly userId: string;
+  /** Eylem anındaki oturum kanıtı (`beginOperation`): çıkış/kullanıcı değişiminden sonra servis çağrılmaz. */
+  readonly isCurrent: () => boolean;
+};
+
+type HideContext = { readonly removed: { readonly conversation: Conversation; readonly page: number; readonly index: number } | null };
+
+function findConversation(data: ConversationsData | undefined, conversationId: string): HideContext['removed'] {
+  for (const [page, { items }] of (data?.pages ?? []).entries()) {
+    const index = items.findIndex((item) => item.id === conversationId);
+    if (index !== -1) return { conversation: items[index], page, index };
+  }
+  return null;
+}
+
+/**
+ * Sohbeti listeden kaldırır (müşteride kendi listesinden, yöneticide firma gelen kutusundan; kayıt silinmez). İYİMSER: satır hemen
+ * kaybolur ve sekme rozeti satırın okunmamışı kadar düşer; servis hata verirse yalnız bu satır yerine döner ve rozet geri eklenir
+ * (eşzamanlı başka silme ezilmez). Hata (geri almadan sonra) `onError` ile ekrana iletilir. Son işlem bitince liste, rozet ve bildirimler (sunucu
+ * sohbetin mesaj bildirimlerini okundu yapar) eşitlenir.
+ */
+export function useHideConversation({ onError }: { readonly onError?: (error: unknown) => void } = {}) {
+  // `mutate` düzeyi geri çağırmalar ardışık çağrılarda yalnız sonuncu için çalışır; hata bildirimi mutasyon düzeyinden en güncel geri çağırmaya gider.
+  const onErrorRef = useRef(onError);
+  useEffect(() => {
+    onErrorRef.current = onError;
+  });
+  const { messaging } = useServices();
+  const { beginOperation } = useSession();
+  const { userId } = useQueryScope();
+  const queryClient = useQueryClient();
+
+  const mutation = useMutation<void, unknown, HideVariables, HideContext>({
+    mutationKey: messagingKeys.hide,
+    mutationFn: ({ conversationId, isCurrent }) => {
+      if (!isCurrent()) return Promise.reject(appError.unauthenticated());
+      return messaging.hideConversation(asConversationId(conversationId));
+    },
+    onMutate: async ({ conversationId, userId: owner }) => {
+      const key = messagingKeys.conversations(owner);
+      await queryClient.cancelQueries({ queryKey: key });
+      const current = queryClient.getQueryData<ConversationsData>(key);
+      const removed = findConversation(current, conversationId);
+      if (!current || !removed) return { removed: null };
+      queryClient.setQueryData<ConversationsData>(key, {
+        ...current,
+        pages: current.pages.map((page) => ({ ...page, items: page.items.filter((item) => item.id !== conversationId) })),
+      });
+      const unread = removed.conversation.unreadCount;
+      if (unread > 0) queryClient.setQueryData<number>(messagingKeys.unread(owner), (count) => (count === undefined ? count : Math.max(0, count - unread)));
+      return { removed };
+    },
+    onError: (error, { conversationId, userId: owner, isCurrent }, context) => {
+      // Başka oturumun ekranına eski hesabın hatası yazılmaz (eski kullanıcının önbelleği aşağıda yine geri alınır).
+      if (isCurrent()) onErrorRef.current?.(error);
+      const removed = context?.removed;
+      if (!removed) return;
+      const key = messagingKeys.conversations(owner);
+      queryClient.setQueryData<ConversationsData>(key, (current) => {
+        if (!current || current.pages.some((page) => page.items.some((item) => item.id === conversationId))) return current;
+        const pages = current.pages.map((page, pageIndex) => {
+          if (pageIndex !== Math.min(removed.page, current.pages.length - 1)) return page;
+          const items = [...page.items];
+          items.splice(Math.min(removed.index, items.length), 0, removed.conversation);
+          return { ...page, items };
+        });
+        return { ...current, pages };
+      });
+      const unread = removed.conversation.unreadCount;
+      if (unread > 0) queryClient.setQueryData<number>(messagingKeys.unread(owner), (count) => (count === undefined ? count : count + unread));
+    },
+    onSettled: (_data, _error, { userId: owner }) => {
+      // Son işlem eşitler: eşzamanlı iyimser silme sunucu yanıtıyla geri sıçramasın.
+      if (queryClient.isMutating({ mutationKey: messagingKeys.hide }) > 1) return;
+      return Promise.all([
+        queryClient.invalidateQueries({ queryKey: messagingKeys.conversations(owner) }),
+        queryClient.invalidateQueries({ queryKey: messagingKeys.unread(owner) }),
+        queryClient.invalidateQueries({ queryKey: notificationKeys.all(owner) }),
+      ]);
+    },
+  });
+
+  const { mutate } = mutation;
+  /** Oturum yoksa hiçbir şey yapmaz. */
+  const hide = useCallback(
+    (conversationId: string) => {
+      if (!userId) return;
+      mutate({ conversationId, userId, isCurrent: beginOperation() });
+    },
+    [mutate, userId, beginOperation],
+  );
+  return { hide, isPending: mutation.isPending };
 }

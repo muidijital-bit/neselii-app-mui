@@ -1,6 +1,7 @@
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient, type InfiniteData } from '@tanstack/react-query';
+import { useCallback, useEffect, useRef } from 'react';
 
-import { appError, asNotificationId } from '@/domain';
+import { appError, asNotificationId, type AppNotification, type Page } from '@/domain';
 import { useSession } from '@/features/session/SessionProvider';
 import { useServices } from '@/services';
 
@@ -19,7 +20,11 @@ export const notificationKeys = {
   all: (userId: string | null) => ['notifications', userId] as const,
   list: (userId: string | null) => [...notificationKeys.all(userId), 'list'] as const,
   unread: (userId: string | null) => [...notificationKeys.all(userId), 'unread'] as const,
+  /** Bildirim silme mutasyonları (eşzamanlı silmelerde yalnız sonuncusu listeyi sunucuyla eşitler). */
+  remove: ['notifications', 'remove'] as const,
 };
+
+type NotificationsData = InfiniteData<Page<AppNotification>, string | undefined>;
 
 /** Bildirim listesi (11): en yeni önce, 20'şerli sayfalar. */
 export function useNotificationsQuery() {
@@ -91,4 +96,101 @@ export function useMarkAllNotificationsRead() {
     onSettled: () =>
       Promise.all([queryClient.invalidateQueries({ queryKey: notificationKeys.list(userId) }), queryClient.invalidateQueries({ queryKey: notificationKeys.unread(userId) })]),
   });
+}
+
+type RemoveVariables = {
+  readonly ids: readonly string[];
+  /** Mutasyonu başlatan kullanıcı: geri alma/eşitleme yalnızca KENDİ önbelleğine yazılır. */
+  readonly userId: string;
+  /** Eylem anındaki oturum kanıtı (`beginOperation`): çıkış/kullanıcı değişiminden sonra servis çağrılmaz. */
+  readonly isCurrent: () => boolean;
+};
+
+type RemovedNotification = { readonly notification: AppNotification; readonly page: number; readonly index: number };
+type RemoveContext = { readonly removed: readonly RemovedNotification[] };
+
+function findNotifications(data: NotificationsData | undefined, ids: ReadonlySet<string>): RemovedNotification[] {
+  return (data?.pages ?? []).flatMap((page, pageIndex) =>
+    page.items.flatMap((notification, index) => (ids.has(notification.id) ? [{ notification, page: pageIndex, index }] : [])),
+  );
+}
+
+/**
+ * Bildirimleri kalıcı olarak siler. İYİMSER: satırlar hemen kaybolur ve okunmamış sayacı silinen okunmamışlar kadar düşer; servis hata
+ * verirse yalnız bu satırlar eski yerlerine döner ve sayaç geri eklenir (eşzamanlı başka silme ezilmez). Hata (geri almadan sonra) `onError` ile ekrana iletilir.
+ * Son işlem bitince liste ve sayaç sunucuyla eşitlenir.
+ */
+export function useRemoveNotifications({ onError }: { readonly onError?: (error: unknown) => void } = {}) {
+  // `mutate` düzeyi geri çağırmalar ardışık çağrılarda yalnız sonuncu için çalışır; hata bildirimi mutasyon düzeyinden en güncel geri çağırmaya gider.
+  const onErrorRef = useRef(onError);
+  useEffect(() => {
+    onErrorRef.current = onError;
+  });
+  const { notifications } = useServices();
+  const { beginOperation } = useSession();
+  const { userId } = useQueryScope();
+  const queryClient = useQueryClient();
+
+  const mutation = useMutation<void, unknown, RemoveVariables, RemoveContext>({
+    mutationKey: notificationKeys.remove,
+    mutationFn: ({ ids, isCurrent }) => {
+      if (!isCurrent()) return Promise.reject(appError.unauthenticated());
+      return notifications.remove(ids.map(asNotificationId));
+    },
+    onMutate: async ({ ids, userId: owner }) => {
+      const key = notificationKeys.list(owner);
+      await queryClient.cancelQueries({ queryKey: key });
+      const current = queryClient.getQueryData<NotificationsData>(key);
+      const idSet = new Set(ids);
+      const removed = findNotifications(current, idSet);
+      if (!current || removed.length === 0) return { removed: [] };
+      queryClient.setQueryData<NotificationsData>(key, {
+        ...current,
+        pages: current.pages.map((page) => ({ ...page, items: page.items.filter((item) => !idSet.has(item.id)) })),
+      });
+      const unread = removed.filter((entry) => !entry.notification.read).length;
+      if (unread > 0) queryClient.setQueryData<number>(notificationKeys.unread(owner), (count) => (count === undefined ? count : Math.max(0, count - unread)));
+      return { removed };
+    },
+    onError: (error, { userId: owner, isCurrent }, context) => {
+      // Başka oturumun ekranına eski hesabın hatası yazılmaz (eski kullanıcının önbelleği aşağıda yine geri alınır).
+      if (isCurrent()) onErrorRef.current?.(error);
+      const removed = context?.removed ?? [];
+      if (removed.length === 0) return;
+      queryClient.setQueryData<NotificationsData>(notificationKeys.list(owner), (current) => {
+        if (!current) return current;
+        const present = new Set(current.pages.flatMap((page) => page.items.map((item) => item.id as string)));
+        const pages = current.pages.map((page) => ({ ...page, items: [...page.items] }));
+        // Sırayla (sayfa, konum) yerine koyulur: önce eklenenler sonrakilerin konumunu korur.
+        for (const entry of removed) {
+          if (present.has(entry.notification.id)) continue;
+          const target = pages[Math.min(entry.page, pages.length - 1)];
+          if (!target) continue;
+          target.items.splice(Math.min(entry.index, target.items.length), 0, entry.notification);
+        }
+        return { ...current, pages };
+      });
+      const unread = removed.filter((entry) => !entry.notification.read).length;
+      if (unread > 0) queryClient.setQueryData<number>(notificationKeys.unread(owner), (count) => (count === undefined ? count : count + unread));
+    },
+    onSettled: (_data, _error, { userId: owner }) => {
+      // Son işlem eşitler: hızlı ardışık silmelerde iyimser kaldırılan satırlar sunucu yanıtıyla geri sıçramasın.
+      if (queryClient.isMutating({ mutationKey: notificationKeys.remove }) > 1) return;
+      return Promise.all([
+        queryClient.invalidateQueries({ queryKey: notificationKeys.list(owner) }),
+        queryClient.invalidateQueries({ queryKey: notificationKeys.unread(owner) }),
+      ]);
+    },
+  });
+
+  const { mutate } = mutation;
+  /** Oturum yoksa hiçbir şey yapmaz. */
+  const remove = useCallback(
+    (ids: readonly string[]) => {
+      if (!userId || ids.length === 0) return;
+      mutate({ ids, userId, isCurrent: beginOperation() });
+    },
+    [mutate, userId, beginOperation],
+  );
+  return { remove, isPending: mutation.isPending };
 }

@@ -1,7 +1,10 @@
 import { Linking } from 'react-native';
 
-/** Firma telefonu (`.env.local` → `EXPO_PUBLIC_COMPANY_PHONE`, ör. `+903120000000`). Boşsa arama düğmeleri açıklama gösterir. */
-export const COMPANY_PHONE = process.env.EXPO_PUBLIC_COMPANY_PHONE?.replace(/[^+\d]/g, '') ?? '';
+/** Main tasarımındaki firma telefonu (0 (312) 335 06 66); `.env.local` → `EXPO_PUBLIC_COMPANY_PHONE` doluysa o kullanılır. */
+const DEFAULT_COMPANY_PHONE = '+903123350666';
+
+/** Firma telefonu: env değeri (ör. `+903120000000`) ya da main'deki varsayılan numara. */
+export const COMPANY_PHONE = process.env.EXPO_PUBLIC_COMPANY_PHONE?.replace(/[^+\d]/g, '') || DEFAULT_COMPANY_PHONE;
 
 export const COMPANY_PHONE_MISSING = 'Firma telefon numarası henüz eklenmedi; şimdilik arama başlatılamıyor.';
 

@@ -1,118 +1,120 @@
 import { useRouter } from 'expo-router';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 
-import { Badge } from '@/components/Badge';
-import { CategoryGlyph } from '@/components/CategoryGlyph';
-import { Screen } from '@/components/Screen';
-import { useTabBarClearance } from '@/components/TabBar';
-import { Icon } from '@/components/icons/Icon';
-import { userMessage, type Category } from '@/domain';
-import { colors, fontFamily, radii, spacing, textStyles } from '@/theme';
+import type { Category } from '@/domain';
+import { FocusStatusBar } from '@/ui/FocusStatusBar';
+import { Icon } from '@/ui/Icon';
+import { ScreenHeader } from '@/ui/ScreenHeader';
+import { StateView } from '@/ui/StateView';
+import { useTabBarSpace } from '@/ui/TabBar';
+import { Text } from '@/ui/Text';
+import { Divider, IconTile } from '@/ui/Ui';
+import { enterFadeUp, useEntranceWindow } from '@/ui/motion';
+import { Colors, Radius, Spacing } from '@/ui/theme';
+import { usePullRefresh } from '@/ui/usePullRefresh';
 
-import { StateMessage } from './ListStates';
+import { CATEGORY_ICONS } from './presentation';
 import { categoryResultsHref } from './routes';
 import { useCategoriesQuery } from './useListingsQueries';
 
-const ROW_HEIGHT = 72;
+/** Giriş animasyonu alan en fazla satır (ekrana ilk sığanlar); kalanlar animasyonsuz gelir. */
+const ANIMATED_ROWS = 10;
 
-/** Kategoriler (04): sekiz kategori satırı; dokunma, yalnızca seçilen kategoriyi taşıyan sonuç rotasını doğrudan açar (027); Filtre eylemi sonuç ekranındadır. */
+/**
+ * Kategoriler sekmesi (main tasarımı): kategori satırları sayılarıyla; dokunma, yalnızca seçilen kategoriyi taşıyan sonuç rotasını açar.
+ * Üstteki yenileme göstergesi YALNIZ kullanıcı aşağı çektiğinde görünür (`usePullRefresh`): arka plandaki yeniden çekme (bayat veri,
+ * filtre/ana sayfanın aynı sorguyu bağlaması) göstergeyi açmaz. İlk yüklemede liste içinde tek bir gösterge vardır.
+ */
 export function CategoriesScreen() {
-  const tabBarClearance = useTabBarClearance();
   const router = useRouter();
   const categories = useCategoriesQuery();
+  const tabBarSpace = useTabBarSpace();
+  const { refetch } = categories;
+  const { pulling, onRefresh } = usePullRefresh(refetch);
+  const entering = useEntranceWindow(categories.data !== undefined);
 
-  let body;
-  if (categories.isPending) {
-    body = <CategorySkeletons />;
-  } else if (categories.isError) {
-    body = <StateMessage icon="info" title="Kategoriler yüklenemedi" message={userMessage(categories.error)} actionLabel="Tekrar dene" onAction={() => void categories.refetch()} testID="categories-error" />;
-  } else if (categories.data.length === 0) {
-    body = <StateMessage icon="search-x" title="Kategori bulunamadı" message="Şu an gösterilecek kategori yok." testID="categories-empty" />;
-  } else {
-    body = (
+  return (
+    <View style={styles.container} testID="tab-screen-categories">
+      <FocusStatusBar style="dark" />
+      <ScreenHeader title="Kategoriler" back={false} />
       <FlatList
-        data={categories.data}
+        data={categories.data ?? []}
         keyExtractor={(category) => category.id}
-        renderItem={({ item }) => <CategoryRow category={item} onPress={() => router.push(categoryResultsHref(item.id))} />}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: tabBarClearance }}
+        ItemSeparatorComponent={() => <Divider />}
+        onRefresh={onRefresh}
+        refreshing={pulling}
+        contentContainerStyle={[styles.list, { paddingBottom: tabBarSpace }]}
         testID="categories-list"
+        renderItem={({ item, index }) => (
+          <Animated.View entering={entering && index < ANIMATED_ROWS ? enterFadeUp(index) : undefined}>
+            <CategoryRow category={item} onPress={() => router.push(categoryResultsHref(item.id))} />
+          </Animated.View>
+        )}
+        ListEmptyComponent={
+          categories.isPending ? (
+            <View style={styles.flexFill} testID="categories-loading">
+              <StateView loading />
+            </View>
+          ) : categories.isError ? (
+            <View style={styles.flexFill} testID="categories-error">
+              <StateView icon="wifi-off" title="Kategoriler yüklenemedi" actions={[{ title: 'Tekrar dene', onPress: () => void categories.refetch() }]} />
+            </View>
+          ) : (
+            <View style={styles.flexFill} testID="categories-empty">
+              <StateView icon="grid" title="Kategori bulunamadı" message="Şu an gösterilecek kategori yok." />
+            </View>
+          )
+        }
       />
-    );
-  }
-
-  return (
-    <Screen background={colors.white} edges={['top', 'left', 'right']} testID="tab-screen-categories">
-      <View style={styles.header}>
-        <Text style={[textStyles.titlePage, styles.title]} accessibilityRole="header">
-          Kategoriler
-        </Text>
-      </View>
-      <View style={styles.body}>{body}</View>
-    </Screen>
-  );
-}
-
-function CategoryRow({ category, onPress }: { category: Category; onPress: () => void }) {
-  const subs = category.subcategories.join(' · ');
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={`${category.name}, ${category.listingCount} ilan, ${category.subcategories.join(', ')}`}
-      onPress={onPress}
-      style={({ pressed }) => [styles.row, pressed && { backgroundColor: colors.surface }]}
-      testID={`category-row-${category.id}`}>
-      <View style={styles.iconBox}>
-        <CategoryGlyph category={category} size={22} color={colors.navy} />
-      </View>
-      <View style={styles.rowText}>
-        <Text style={styles.rowName}>{category.name}</Text>
-        <Text style={styles.rowSubs} numberOfLines={1}>
-          {subs}
-        </Text>
-      </View>
-      <View>
-        <Badge variant="count" label={String(category.listingCount)} />
-      </View>
-      <Icon name="chevron-right" size={18} color={colors.slateFaint} />
-    </Pressable>
-  );
-}
-
-function CategorySkeletons() {
-  return (
-    <View accessible accessibilityLabel="Kategoriler yükleniyor" accessibilityState={{ busy: true }} testID="categories-loading">
-      {Array.from({ length: 8 }, (_, index) => (
-        <View key={index} style={styles.row}>
-          <View style={[styles.iconBox, { backgroundColor: colors.lineSoft }]} />
-          <View style={styles.rowText}>
-            <View style={[styles.bar, { width: 110, height: 15 }]} />
-            <View style={[styles.bar, { width: 190, height: 13 }]} />
-          </View>
-        </View>
-      ))}
     </View>
   );
 }
 
+function CategoryRow({ category, onPress }: { category: Category; onPress: () => void }) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`${category.name}, ${category.listingCount} ilan, ${category.subcategories.join(', ')}`}
+      style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+      onPress={onPress}
+      testID={`category-row-${category.id}`}>
+      <IconTile icon={CATEGORY_ICONS[category.id] ?? 'grid'} />
+      <View style={styles.flex}>
+        <Text variant="subheading">{category.name}</Text>
+        <Text variant="small" numberOfLines={1}>
+          {category.subcategories.join(' · ')}
+        </Text>
+      </View>
+      <View style={styles.count}>
+        <Text variant="smallSemibold" color="heading">
+          {category.listingCount}
+        </Text>
+      </View>
+      <Icon name="chevron-right" size={22} color="textTertiary" />
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
-  header: { minHeight: 56, justifyContent: 'center', paddingHorizontal: spacing.xl, borderBottomWidth: 1, borderBottomColor: colors.lineSoft, backgroundColor: colors.white },
-  title: { color: colors.navy },
-  body: { flex: 1, backgroundColor: colors.white },
+  container: { flex: 1, backgroundColor: Colors.surface },
+  list: { flexGrow: 1 },
+  flexFill: { flex: 1 },
+  flex: { flex: 1, gap: 2 },
   row: {
-    height: ROW_HEIGHT,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
-    paddingLeft: spacing.xl,
-    paddingRight: spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.lineSoft,
-    backgroundColor: colors.white,
+    gap: Spacing.three,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.three,
   },
-  iconBox: { width: 44, height: 44, borderRadius: radii.xl, backgroundColor: colors.blueTint, alignItems: 'center', justifyContent: 'center' },
-  rowText: { flex: 1, minWidth: 0, gap: spacing.xs },
-  rowName: { fontFamily: fontFamily.montserrat600, fontSize: 15, lineHeight: 18, color: colors.navy },
-  rowSubs: { fontFamily: fontFamily.inter400, fontSize: 13, lineHeight: 15.6, color: colors.slateLight },
-  bar: { borderRadius: radii.xs, backgroundColor: colors.lineSoft },
+  pressed: { backgroundColor: Colors.background },
+  count: {
+    minWidth: 40,
+    alignItems: 'center',
+    backgroundColor: Colors.surfaceHighlight,
+    borderRadius: Radius.sm,
+    paddingHorizontal: Spacing.two,
+    paddingVertical: Spacing.one,
+  },
 });

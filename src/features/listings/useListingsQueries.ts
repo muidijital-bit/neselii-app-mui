@@ -25,10 +25,32 @@ export const listingsKeys = {
   feed: (userId: string | null, categoryId: CategoryId | null) => [...listingsKeys.all(userId), 'feed', categoryId ?? 'all'] as const,
 };
 
+/** Uzun süre taze sayılır: duvar yalnızca görsel süsüdür, ilan değişse de açılışta yeniden çekmeye gerek yoktur. */
+const PHOTO_WALL_STALE_MS = 30 * 60_000;
+
+/**
+ * Tanıtım, giriş ve ana sayfadaki akan fotoğraf duvarının görselleri (main tasarımı): yayındaki en pahalı ilanların kapakları.
+ * Oturum GEREKMEZ (yayındaki ilanlar ve medyaları RLS ile herkese açıktır); anahtara kullanıcı girmez.
+ */
+export function usePhotoWallQuery() {
+  const { listings } = useServices();
+  return useQuery({
+    queryKey: ['listings', 'public', 'photo-wall'] as const,
+    queryFn: async () => {
+      const page = await listings.searchListings({ search: { ...EMPTY_SEARCH, sort: 'price-desc' } });
+      return Array.from(new Set(page.items.flatMap((listing) => (listing.coverImageUri ? [listing.coverImageUri] : []))));
+    },
+    staleTime: PHOTO_WALL_STALE_MS,
+  });
+}
+
+/** Kategori listesi seyrek değişir: 5 dk taze sayılır (sekme/filtre/ana sayfa arası geçişte gereksiz yeniden çekme olmaz; çekince yenilenir). */
+const CATEGORIES_STALE_MS = 5 * 60_000;
+
 export function useCategoriesQuery() {
   const { listings } = useServices();
   const { enabled, userId } = useQueryScope();
-  return useQuery({ queryKey: listingsKeys.categories(userId), queryFn: () => listings.listCategories(), enabled });
+  return useQuery({ queryKey: listingsKeys.categories(userId), queryFn: () => listings.listCategories(), enabled, staleTime: CATEGORIES_STALE_MS });
 }
 
 /** Ana sayfa "Öne Çıkan İlanlar" karuseli. */

@@ -1,200 +1,244 @@
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { useRouter, type Href } from 'expo-router';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import type { ReactNode } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import Animated from 'react-native-reanimated';
 
-import { Screen } from '@/components/Screen';
-import { useTabBarClearance } from '@/components/TabBar';
-import { Icon, type IconName } from '@/components/icons/Icon';
-import { formatMemberSince, initialsOf } from '@/domain';
-import { FormError } from '@/features/auth/AuthForm';
 import { useSignOut } from '@/features/auth/useSignOut';
+import { PageHeader } from '@/features/notifications/PageHeader';
+import { useOnboarding } from '@/features/onboarding';
+import { AdminBadge } from '@/features/session/AdminBadge';
 import { useFavoritesQuery } from '@/features/saved/useFavorites';
 import { useSavedSearchesQuery } from '@/features/saved/useSavedSearches';
 import { useSession } from '@/features/session/SessionProvider';
-import { colors, fontFamily, radii, spacing, textStyles } from '@/theme';
+import { FocusStatusBar } from '@/ui/FocusStatusBar';
+import { formatMonthYear, initials } from '@/ui/format';
+import { Icon, type IconName } from '@/ui/Icon';
+import { enterFadeUp } from '@/ui/motion';
+import { useTabBarSpace } from '@/ui/TabBar';
+import { Text } from '@/ui/Text';
+import { Card, Divider } from '@/ui/Ui';
+import { Colors, Radius, Spacing } from '@/ui/theme';
 
 import { EDIT_PROFILE_HREF, PROFILE_TARGETS } from './routes';
 
+// Test araçları (main ile aynı): geliştirme sürümünde ve Expo Go'da görünür, TestFlight/App Store sürümünde gizli.
+const showTestTools = __DEV__ || Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
+
 /**
- * Profil (12): kullanıcı özeti (baş harfler, ad, e-posta, üyelik ayı) ve menü. Özet OTURUMDAKİ kullanıcıdan okunur (tek kaynak); profil
- * düzenleme kaydı oturumu günceller, böylece kayıt buraya anında yansır. Menü: Profil Bilgilerim (016) → düzenleme; Favori İlanlarım /
- * Kayıtlı Aramalarım (017), Bildirim Tercihleri (018), Gizlilik ve Güvenlik / Hesabımı Sil (019) → o görevlerin ekranları;
- * Çıkış Yap (007) → çıkış (hata görünür, "Çıkışı tekrar dene"). Profilde ilan ekleme/düzenleme/yönetim seçeneği yoktur.
- * Favori İlanlarım / Kayıtlı Aramalarım satırlarındaki sayılar (tasarım 12) kart, ilan detayı ve liste ekranlarıyla AYNI listeden türer
- * (`useFavoritesQuery` / `useSavedSearchesQuery`); liste yüklenemediyse ya da henüz yüklenmediyse sayı gösterilmez (sahte sayı yok).
+ * Profil (main tasarımı): kullanıcı kartı (baş harfler, ad, e-posta, üyelik ayı) ve menü kartları. Özet OTURUMDAKİ kullanıcıdan okunur (tek kaynak);
+ * profil düzenleme kaydı oturumu günceller, böylece kayıt buraya anında yansır. Yöneticide adın altında "Yönetici" rozeti görünür.
+ * Main'deki firma paneli (ilan/duyuru yönetimi) bu uygulamada yoktur. "Tanıtımı yeniden göster (test)" satırı yalnız geliştirme sürümünde /
+ * Expo Go'da görünür: tanıtım bayrağını sıfırlar, oturum açık kalır; yönlendirme tanıtımı açar ve tanıtım bitince ana sayfaya döner.
+ * Kartlar ilk açılışta kademeli, hafifçe yükselerek gelir (hareketi azalt açıkken anında).
+ * Favori İlanlarım / Kayıtlı Aramalarım sayıları kart, ilan detayı ve liste ekranlarıyla AYNI listeden türer (`useFavoritesQuery` /
+ * `useSavedSearchesQuery`); liste yüklenemediyse ya da henüz yüklenmediyse sayı gösterilmez (sahte sayı yok).
+ * Çıkış Yap → `useSignOut` (hata görünür, "Çıkışı tekrar dene").
  */
 export function ProfileScreen() {
-  const tabBarClearance = useTabBarClearance();
+  const tabBarSpace = useTabBarSpace();
   const { session } = useSession();
   const user = session?.user ?? null;
   const router = useRouter();
   const { signOut, signingOut, failure } = useSignOut();
+  const onboarding = useOnboarding();
   const favoriteCount = useFavoritesQuery().data?.length ?? null;
   const savedSearchCount = useSavedSearchesQuery().data?.length ?? null;
 
   const go = (href: Href) => () => router.push(href);
-  const memberSince = user ? formatMemberSince(user.memberSince) : '';
-  const initials = user ? initialsOf(user.fullName) : '';
+  const name = user ? user.fullName || user.email.split('@')[0] || '' : '';
+  const memberSince = user && Number.isFinite(Date.parse(user.memberSince)) ? formatMonthYear(user.memberSince) : '';
 
   return (
-    <Screen background={colors.white} edges={['top', 'left', 'right']} testID="tab-screen-profile">
-      <View style={styles.header}>
-        <Text style={styles.title} accessibilityRole="header">
-          Profil
-        </Text>
-      </View>
-      <ScrollView style={styles.scrollArea} contentContainerStyle={[styles.content, { paddingBottom: tabBarClearance }]} showsVerticalScrollIndicator={false} testID="profile-scroll">
+    <View style={styles.container} testID="tab-screen-profile">
+      <FocusStatusBar style="dark" />
+      <PageHeader title="Profil" back={false} right={<AdminBadge testID="profile-header-admin-badge" />} />
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: tabBarSpace }]} testID="profile-scroll">
         {user ? (
-          <View style={styles.summary} testID="profile-summary" accessible accessibilityLabel={`${user.fullName}, ${user.email}${memberSince ? `, Üyelik: ${memberSince}` : ''}`}>
-            <View style={styles.avatar}>
-              {initials ? (
-                <Text style={styles.initials} testID="profile-initials" maxFontSizeMultiplier={1.2}>
-                  {initials}
+          <EnterCard index={0} style={styles.userCard}>
+            <View style={styles.summary} testID="profile-summary" accessible accessibilityLabel={`${name}, ${user.email}${memberSince ? `, Üyelik: ${memberSince}` : ''}`}>
+              <View style={styles.avatar}>
+                <Text variant="heading" style={styles.avatarText} testID="profile-initials" maxFontSizeMultiplier={1.2}>
+                  {initials(name)}
                 </Text>
-              ) : (
-                <Icon name="user-round" size={26} color={colors.white} />
-              )}
-            </View>
-            <View style={styles.summaryText}>
-              <Text style={styles.name} numberOfLines={2} testID="profile-name">
-                {user.fullName}
-              </Text>
-              {user.role === 'admin' ? (
-                <View style={styles.adminBadge} testID="profile-admin-badge">
-                  <Icon name="shield" size={12} color={colors.greenText} />
-                  <Text style={styles.adminBadgeText}>Yönetici</Text>
-                </View>
-              ) : null}
-              <Text style={styles.email} numberOfLines={1} testID="profile-email">
-                {user.email}
-              </Text>
-              {memberSince ? (
-                <Text style={styles.member} testID="profile-member-since">
-                  {`Üyelik: ${memberSince}`}
+              </View>
+              <View style={styles.flex}>
+                <Text variant="heading" numberOfLines={1} testID="profile-name">
+                  {name}
                 </Text>
-              ) : null}
+                {user.role === 'admin' ? (
+                  <View style={styles.adminBadge} testID="profile-admin-badge">
+                    <Icon name="shield" size={14} color="success" />
+                    <Text variant="smallSemibold" color="success">
+                      Yönetici
+                    </Text>
+                  </View>
+                ) : null}
+                <Text variant="body" color="textSecondary" numberOfLines={1} testID="profile-email">
+                  {user.email}
+                </Text>
+                {memberSince ? (
+                  <Text variant="small" testID="profile-member-since">
+                    Üyelik: {memberSince}
+                  </Text>
+                ) : null}
+              </View>
             </View>
-          </View>
+          </EnterCard>
         ) : null}
 
-        <View style={styles.card}>
-          <MenuRow icon="user-round" label="Profil Bilgilerim" onPress={go(EDIT_PROFILE_HREF)} testID="profile-menu-edit" />
-          <MenuRow icon="heart" label={PROFILE_TARGETS.favorites.title} value={favoriteCount} onPress={go(PROFILE_TARGETS.favorites.href)} testID="profile-menu-favorites" />
+        <EnterCard index={1}>
+          <MenuRow icon="user" title="Profil Bilgilerim" onPress={go(EDIT_PROFILE_HREF)} testID="profile-menu-edit" />
+          <Divider />
+          <MenuRow icon="heart" title={PROFILE_TARGETS.favorites.title} value={favoriteCount} onPress={go(PROFILE_TARGETS.favorites.href)} testID="profile-menu-favorites" />
+          <Divider />
           <MenuRow
             icon="bookmark"
-            label={PROFILE_TARGETS.savedSearches.title}
+            title={PROFILE_TARGETS.savedSearches.title}
             value={savedSearchCount}
             onPress={go(PROFILE_TARGETS.savedSearches.href)}
             testID="profile-menu-saved-searches"
           />
+          <Divider />
           <MenuRow
             icon="bell"
-            label={PROFILE_TARGETS.notificationPreferences.title}
+            title={PROFILE_TARGETS.notificationPreferences.title}
             onPress={go(PROFILE_TARGETS.notificationPreferences.href)}
-            last
             testID="profile-menu-notification-preferences"
           />
-        </View>
+        </EnterCard>
 
-        <FormError message={failure ? `Çıkış yapılamadı. ${failure.message ?? ''}`.trim() : null} testID="profile-sign-out-error" />
-        <View style={styles.card}>
-          <MenuRow icon="shield" label={PROFILE_TARGETS.privacy.title} onPress={go(PROFILE_TARGETS.privacy.href)} testID="profile-menu-privacy" />
+        {failure ? (
+          <Text variant="small" color="danger" style={styles.error} accessibilityRole="alert" accessibilityLiveRegion="polite" testID="profile-sign-out-error">
+            {`Çıkış yapılamadı. ${failure.message ?? ''}`.trim()}
+          </Text>
+        ) : null}
+        <EnterCard index={2}>
+          <MenuRow icon="shield" title={PROFILE_TARGETS.privacy.title} onPress={go(PROFILE_TARGETS.privacy.href)} testID="profile-menu-privacy" />
+          <Divider />
           <MenuRow
             icon="log-out"
-            label={failure ? 'Çıkışı tekrar dene' : 'Çıkış Yap'}
-            onPress={() => void signOut()}
-            busy={signingOut}
+            title={failure ? 'Çıkışı tekrar dene' : 'Çıkış Yap'}
             chevron={false}
-            last
+            busy={signingOut}
+            onPress={() => void signOut()}
             testID="profile-sign-out"
           />
-        </View>
+        </EnterCard>
 
-        <View style={styles.card}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={PROFILE_TARGETS.deleteAccount.title}
+        {showTestTools ? (
+          <EnterCard index={3}>
+            <MenuRow
+              icon="refresh-cw"
+              title="Tanıtımı yeniden göster (test)"
+              chevron={false}
+              onPress={() => void onboarding.reset()}
+              testID="profile-reset-onboarding"
+            />
+          </EnterCard>
+        ) : null}
+
+        <EnterCard index={4}>
+          <MenuRow
+            icon="trash-2"
+            tone="danger"
+            title={PROFILE_TARGETS.deleteAccount.title}
+            subtitle="Hesabınız ve size ait tüm veriler kalıcı olarak silinir."
             onPress={go(PROFILE_TARGETS.deleteAccount.href)}
-            style={({ pressed }) => [styles.deleteRow, pressed && styles.pressed]}
-            testID="profile-menu-delete-account">
-            <Icon name="trash-2" size={20} color={colors.danger} />
-            <View style={styles.deleteText}>
-              <Text style={styles.deleteTitle}>{PROFILE_TARGETS.deleteAccount.title}</Text>
-              <Text style={styles.deleteNote}>Hesabınız ve size ait tüm veriler kalıcı olarak silinir.</Text>
-            </View>
-            <Icon name="chevron-right" size={18} color={colors.slateFaint} />
-          </Pressable>
-        </View>
+            testID="profile-menu-delete-account"
+          />
+        </EnterCard>
       </ScrollView>
-    </Screen>
+    </View>
   );
 }
 
-function MenuRow({
-  icon,
-  label,
-  value = null,
-  onPress,
-  last = false,
-  chevron = true,
-  busy = false,
-  testID,
-}: {
+/** İlk açılışta kademeli, hafifçe yükselerek gelen kart (`index` gecikme sırası). */
+function EnterCard({ index, style, children }: { index: number; style?: StyleProp<ViewStyle>; children: ReactNode }) {
+  return (
+    <Animated.View entering={enterFadeUp(index)}>
+      <Card style={style}>{children}</Card>
+    </Animated.View>
+  );
+}
+
+type MenuRowProps = {
   icon: IconName;
-  label: string;
-  /** Satır sonundaki sayı (tasarım 12: Montserrat 600 13, `slate`); `null` = gösterilmez. */
+  title: string;
+  subtitle?: string;
+  /** Satır sonundaki sayı; `null`/yok = gösterilmez. */
   value?: number | null;
-  onPress: () => void;
-  last?: boolean;
+  tone?: 'default' | 'danger';
   chevron?: boolean;
   busy?: boolean;
+  onPress: () => void;
   testID: string;
-}) {
+};
+
+/** `@/ui/Ui` MenuRow ile birebir aynı görünüm; ek olarak testID, sayı testID'si ve meşgul (çıkış sürerken) durumu. */
+function MenuRow({ icon, title, subtitle, value = null, tone = 'default', chevron = true, busy = false, onPress, testID }: MenuRowProps) {
+  const danger = tone === 'danger';
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={busy ? `${label}, yükleniyor` : value === null ? label : `${label}, ${value}`}
+      accessibilityLabel={busy ? `${title}, yükleniyor` : value === null ? title : `${title}, ${value}`}
       accessibilityState={{ disabled: busy, busy }}
       disabled={busy}
       onPress={onPress}
-      style={({ pressed }) => [styles.row, !last && styles.rowDivider, pressed && styles.pressed]}
+      style={({ pressed }) => [styles.menuRow, pressed && styles.pressed]}
       testID={testID}>
-      <Icon name={icon} size={20} color={colors.blue} />
-      <Text style={styles.rowLabel}>{label}</Text>
-      {value === null ? null : (
-        <Text style={styles.rowValue} testID={`${testID}-count`}>
+      <Icon name={icon} size={24} color={danger ? 'danger' : 'heading'} />
+      <View style={styles.menuText}>
+        <Text variant="bodyMedium" color={danger ? 'danger' : 'text'} style={styles.menuTitle}>
+          {title}
+        </Text>
+        {subtitle ? <Text variant="small">{subtitle}</Text> : null}
+      </View>
+      {value !== null ? (
+        <Text variant="bodySemibold" color="textSecondary" testID={`${testID}-count`}>
           {value}
         </Text>
-      )}
-      {busy ? <ActivityIndicator size="small" color={colors.blue} testID={`${testID}-busy`} /> : chevron ? <Icon name="chevron-right" size={18} color={colors.slateFaint} /> : null}
+      ) : null}
+      {busy ? <ActivityIndicator size="small" color={Colors.navy} testID={`${testID}-busy`} /> : chevron ? <Icon name="chevron-right" size={22} color="textTertiary" /> : null}
     </Pressable>
   );
 }
 
-// Değerler design/claude-design/AppScreen.dc.html (12): üst çubuk 56, içerik 16 iç boşluk / 14 aralık, kartlar beyaz r14 kenarlı,
-// satırlar 56 yüksek (16 / 14 iç boşluk, 14 aralık), avatar 56.
 const styles = StyleSheet.create({
-  // Ekran zemini beyaz (durum çubuğu ve başlık beyaz görünür); yalnızca içerik alanı gri.
-  scrollArea: { flex: 1, backgroundColor: colors.surface },
-  header: { minHeight: 56, justifyContent: 'center', paddingHorizontal: spacing.xl, backgroundColor: colors.white, borderBottomWidth: 1, borderBottomColor: colors.lineSoft },
-  title: { ...textStyles.titlePage, color: colors.navy },
-  content: { padding: spacing.xl, gap: 14 },
-  summary: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: spacing.xl, backgroundColor: colors.white, borderRadius: radii.card, borderWidth: 1, borderColor: colors.lineSoft },
-  avatar: { width: 56, height: 56, borderRadius: radii.pill, backgroundColor: colors.navy, alignItems: 'center', justifyContent: 'center' },
-  initials: { fontFamily: fontFamily.montserrat700, fontSize: 18, lineHeight: 21.6, color: colors.white },
-  summaryText: { flex: 1, minWidth: 0, gap: spacing.xs },
-  adminBadge: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, height: 22, borderRadius: 11, backgroundColor: colors.greenTint },
-  adminBadgeText: { fontFamily: fontFamily.inter600, fontSize: 11, color: colors.greenText },
-  name: { fontFamily: fontFamily.montserrat700, fontSize: 17, lineHeight: 20.4, color: colors.navy },
-  email: { fontFamily: fontFamily.inter400, fontSize: 13, lineHeight: 15.6, color: colors.slate },
-  member: { fontFamily: fontFamily.inter400, fontSize: 12, lineHeight: 14.4, color: colors.slateLight },
-  card: { backgroundColor: colors.white, borderRadius: radii.card, borderWidth: 1, borderColor: colors.lineSoft, overflow: 'hidden' },
-  row: { minHeight: 56, flexDirection: 'row', alignItems: 'center', gap: 14, paddingLeft: spacing.xl, paddingRight: 14, backgroundColor: colors.white },
-  rowValue: { fontFamily: fontFamily.montserrat600, fontSize: 13, lineHeight: 15.6, color: colors.slate },
-  rowDivider: { borderBottomWidth: 1, borderBottomColor: colors.lineSoft },
-  rowLabel: { flex: 1, fontFamily: fontFamily.inter500, fontSize: 15, lineHeight: 19.5, color: colors.ink },
-  pressed: { backgroundColor: colors.surface },
-  deleteRow: { minHeight: 64, flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: spacing.lg, paddingLeft: spacing.xl, paddingRight: 14, backgroundColor: colors.white },
-  deleteText: { flex: 1, gap: 3 },
-  deleteTitle: { fontFamily: fontFamily.inter600, fontSize: 15, lineHeight: 19.5, color: colors.danger },
-  deleteNote: { fontFamily: fontFamily.inter400, fontSize: 12, lineHeight: 16.2, color: colors.slateLight },
+  container: { flex: 1, backgroundColor: Colors.background },
+  content: { padding: Spacing.three, gap: Spacing.three },
+  flex: { flex: 1, gap: 2 },
+  userCard: { padding: Spacing.four },
+  summary: { flexDirection: 'row', alignItems: 'center', gap: Spacing.four },
+  avatar: {
+    width: 72,
+    height: 72,
+    borderRadius: Radius.pill,
+    backgroundColor: Colors.navy,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarText: { color: Colors.white, fontSize: 24 },
+  adminBadge: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.one,
+    borderRadius: Radius.sm,
+    paddingHorizontal: Spacing.two + 2,
+    paddingVertical: Spacing.half,
+    marginVertical: Spacing.half,
+    backgroundColor: Colors.successSoft,
+  },
+  error: { marginHorizontal: Spacing.one },
+  menuRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.three,
+    paddingHorizontal: Spacing.four,
+    paddingVertical: Spacing.four - Spacing.one,
+  },
+  menuText: { flex: 1 },
+  menuTitle: { fontSize: 17 },
+  pressed: { backgroundColor: Colors.background },
 });

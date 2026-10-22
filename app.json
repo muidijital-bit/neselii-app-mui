@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Neşeli Otomotiv",
+    "name": "Neşeli Kamyon Tır Pazarı",
     "slug": "neselii-app-mui",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -8,13 +8,16 @@
     "scheme": "neseliotomotiv",
     "userInterfaceStyle": "light",
     "ios": {
-      "icon": "./assets/expo.icon",
+      "icon": "./assets/images/icon.png",
       "bundleIdentifier": "com.neseliotomotiv.app",
-      "supportsTablet": false
+      "supportsTablet": false,
+      "config": {
+        "usesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#0a2240",
+        "backgroundColor": "#0A213F",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
@@ -31,9 +34,9 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#0a2240",
+          "backgroundColor": "#0A213F",
           "image": "./assets/images/splash-icon.png",
-          "imageWidth": 76
+          "imageWidth": 240
         }
       ],
       "expo-sqlite",
@@ -50,11 +53,27 @@
       ],
       "./plugins/withoutPushEntitlement",
       "expo-video",
-      "expo-image"
+      "expo-image",
+      "expo-font",
+      "expo-status-bar",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "owner": "neseli-otomotiv",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/7d9ea35a-17ef-4630-b45f-c105d7caf5ee"
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "7d9ea35a-17ef-4630-b45f-c105d7caf5ee"
+      }
     }
   }
 }

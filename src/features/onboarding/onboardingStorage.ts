@@ -4,6 +4,7 @@ import { STORAGE_KEYS } from '@/services';
 export type OnboardingStorage = {
   getItem(key: string): Promise<string | null>;
   setItem(key: string, value: string): Promise<void>;
+  removeItem(key: string): Promise<void>;
 };
 
 const COMPLETED = '1';
@@ -15,4 +16,9 @@ export async function readOnboardingCompleted(storage: OnboardingStorage): Promi
 
 export async function writeOnboardingCompleted(storage: OnboardingStorage): Promise<void> {
   await storage.setItem(STORAGE_KEYS.onboarding, COMPLETED);
+}
+
+/** Anahtarı siler: sonraki okuma "tamamlanmadı" döner (profildeki test satırı "Tanıtımı yeniden göster"). */
+export async function clearOnboardingCompleted(storage: OnboardingStorage): Promise<void> {
+  await storage.removeItem(STORAGE_KEYS.onboarding);
 }

@@ -1,38 +1,38 @@
-import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Btn } from '@/components/Btn';
-import { Screen } from '@/components/Screen';
-import { Icon } from '@/components/icons/Icon';
-import { FormError } from '@/features/auth/AuthForm';
 import { PageHeader } from '@/features/notifications/PageHeader';
-import { colors, fontFamily, radii, spacing, textStyles } from '@/theme';
+import { Button } from '@/ui/Button';
+import { FocusStatusBar } from '@/ui/FocusStatusBar';
+import { Icon, type IconName } from '@/ui/Icon';
+import { Text } from '@/ui/Text';
+import { Card } from '@/ui/Ui';
+import { Colors, Spacing } from '@/ui/theme';
 
 import { useDeleteAccount } from './useDeleteAccount';
 
-const WILL_BE_DELETED = [
-  'Hesabınız (ad soyad, e-posta, telefon)',
+const DELETED = [
+  'Hesap bilgileriniz (ad soyad, e-posta, telefon)',
   'Favori ilanlarınız ve kayıtlı aramalarınız',
-  'İlan sohbetleriniz ve mesajlarınız',
+  'İlan görüşmeleriniz ve mesajlarınız',
   'Bildirimleriniz ve bildirim tercihleriniz',
 ] as const;
 
-const LIMITS = [
-  'Hesabınız ve bağlı kayıtlarınız sunucudan kalıcı olarak silinir. İşlem geri alınamaz.',
-  'Aynı e-postayla daha sonra yeniden kayıt olabilirsiniz; eski kayıtlarınız geri gelmez.',
-  'İlk açılış (tanıtım) tercihiniz bu cihazda korunur: silindikten sonra giriş ekranına dönersiniz.',
+const NOTES = [
+  'İşlem geri alınamaz. Silinen veriler kurtarılamaz.',
+  'Aynı e-posta adresiyle daha sonra yeniden kayıt olabilirsiniz; ancak eski verileriniz geri gelmez.',
+  'Silme işleminden sonra giriş ekranına yönlendirilirsiniz.',
 ] as const;
 
 /**
- * Hesabımı Sil (12'den açılır; kaynakta tam tasarım yok — docs/PRODUCT.md "tamamlayıcı ekranlar"): profil ekranıyla aynı başlık, kart ve
- * buton bileşenleri. Silme sunucudaki `delete_my_account` işleviyle yapılır; hesaba bağlı kayıtlar yabancı anahtar zinciriyle silinir.
- * ONAYSIZ SİLİNMEZ: "Hesabımı Sil" yalnızca onay adımını açar; silme ikinci, ayrı
- * "Evet, hesabımı sil" dokunuşuyla başlar. Vazgeçmek hiçbir şeyi değiştirmez. Başarıda oturum kapanır ve giriş ekranına dönülür (bkz.
- * `useDeleteAccount`); hatada hesap yerinde kalır, açık hata ve "Tekrar dene" görünür.
+ * Hesabımı Sil (main tasarımı). Silme sunucudaki `delete_my_account` işleviyle yapılır; hesaba bağlı kayıtlar yabancı anahtar zinciriyle silinir.
+ * ONAYSIZ SİLİNMEZ: alttaki "Hesabımı Kalıcı Olarak Sil" yalnızca onay adımını açar (main'deki onay penceresinin metniyle, ekran içinde);
+ * silme ikinci, ayrı "Hesabımı Sil" dokunuşuyla başlar. Vazgeçmek hiçbir şeyi değiştirmez. Başarıda oturum kapanır ve giriş ekranına dönülür
+ * (bkz. `useDeleteAccount`); hatada hesap yerinde kalır, açık hata ve "Tekrar dene" görünür.
  */
 export function DeleteAccountScreen() {
-  const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { deleteAccount, deleting, failure, clearFailure } = useDeleteAccount();
   const [confirming, setConfirming] = useState(false);
 
@@ -42,71 +42,87 @@ export function DeleteAccountScreen() {
   };
 
   return (
-    <Screen background={colors.white} edges={['top', 'left', 'right', 'bottom']} testID="delete-account-screen">
+    <View style={styles.container} testID="delete-account-screen">
+      <FocusStatusBar style="dark" />
       <PageHeader title="Hesabımı Sil" testID="delete-account-back" />
-      <ScrollView style={styles.scrollArea} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" testID="delete-account-scroll">
-        <View style={styles.card} testID="delete-account-scope">
-          <Text style={styles.cardTitle} accessibilityRole="header">
-            Silinecekler
-          </Text>
-          {WILL_BE_DELETED.map((item) => (
-            <View key={item} style={styles.bulletRow}>
-              <Icon name="trash-2" size={16} color={colors.danger} />
-              <Text style={[textStyles.bodySmall, styles.bulletText]}>{item}</Text>
-            </View>
-          ))}
-        </View>
-
-        <View style={styles.card} testID="delete-account-limits">
-          <Text style={styles.cardTitle} accessibilityRole="header">
-            Bilmeniz gerekenler
-          </Text>
-          {LIMITS.map((item) => (
-            <View key={item} style={styles.bulletRow}>
-              <Icon name="info" size={16} color={colors.blue} />
-              <Text style={[textStyles.bodySmall, styles.bulletText]}>{item}</Text>
-            </View>
-          ))}
-        </View>
-
-        {confirming ? (
-          <View style={styles.confirm} accessibilityLiveRegion="polite" testID="delete-account-confirm">
-            <Text style={styles.confirmTitle} accessibilityRole="header">
-              Hesabınızı silmek istediğinize emin misiniz?
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" testID="delete-account-scroll">
+        <View testID="delete-account-scope">
+          <Card style={styles.card}>
+            <Text variant="heading" accessibilityRole="header">
+              Silinecekler
             </Text>
-            <Text style={[textStyles.bodySmall, styles.bulletText]}>Hesabınız ve hesabınıza bağlı tüm kayıtlar kalıcı olarak silinir. Bu işlem geri alınamaz.</Text>
-            <FormError message={failure ? `Hesap silinemedi. ${failure.message ?? ''}`.trim() : null} testID="delete-account-error" />
-            <Btn
-              label={failure ? 'Tekrar dene' : 'Evet, hesabımı sil'}
+            {DELETED.map((item) => (
+              <Row key={item} icon="trash-2" color="danger" text={item} />
+            ))}
+          </Card>
+        </View>
+        <View testID="delete-account-limits">
+          <Card style={styles.card}>
+            <Text variant="heading" accessibilityRole="header">
+              Bilmeniz gerekenler
+            </Text>
+            {NOTES.map((item) => (
+              <Row key={item} icon="info" color="heading" text={item} />
+            ))}
+          </Card>
+        </View>
+        {confirming ? (
+          <View accessibilityLiveRegion="polite" testID="delete-account-confirm">
+            <Card style={[styles.card, styles.confirm]}>
+              <Text variant="heading" color="danger" accessibilityRole="header">
+                Hesabınız kalıcı olarak silinecek
+              </Text>
+              <Text variant="body" color="textSecondary">
+                Bu işlem geri alınamaz. Devam etmek istiyor musunuz?
+              </Text>
+              {failure ? (
+                <Text variant="small" color="danger" accessibilityRole="alert" testID="delete-account-error">
+                  {`Hesap silinemedi. ${failure.message ?? ''}`.trim()}
+                </Text>
+              ) : null}
+            </Card>
+          </View>
+        ) : null}
+      </ScrollView>
+      <View style={[styles.footer, { paddingBottom: insets.bottom + Spacing.three }]}>
+        {confirming ? (
+          <>
+            <Button
+              title={failure ? 'Tekrar dene' : 'Hesabımı Sil'}
               variant="danger"
               icon="trash-2"
-              onPress={() => void deleteAccount()}
               loading={deleting}
+              onPress={() => void deleteAccount()}
               testID="delete-account-confirm-button"
             />
-            <Btn label="Vazgeç" variant="secondary" onPress={cancelConfirm} disabled={deleting} testID="delete-account-cancel" />
-          </View>
+            <Button title="Vazgeç" variant="outline" disabled={deleting} onPress={cancelConfirm} testID="delete-account-cancel" />
+          </>
         ) : (
-          <View style={styles.actions}>
-            <Btn label="Hesabımı Sil" variant="danger" icon="trash-2" onPress={() => setConfirming(true)} testID="delete-account-start" />
-            <Btn label="Vazgeç" variant="secondary" onPress={() => (router.canGoBack() ? router.back() : router.replace('/profile'))} testID="delete-account-dismiss" />
-          </View>
+          <Button title="Hesabımı Kalıcı Olarak Sil" variant="danger" icon="trash-2" onPress={() => setConfirming(true)} testID="delete-account-start" />
         )}
-      </ScrollView>
-    </Screen>
+      </View>
+    </View>
   );
 }
 
-// Tamamlayıcı ekran: profil (12) ile aynı değerler — içerik 16 iç boşluk / 14 aralık, kartlar beyaz r14 kenarlı; düğme 52 (Btn).
+function Row({ icon, color, text }: { icon: IconName; color: 'danger' | 'heading'; text: string }) {
+  return (
+    <View style={styles.row}>
+      <Icon name={icon} size={22} color={color} style={styles.rowIcon} />
+      <Text variant="body" color="textSecondary" style={styles.flex}>
+        {text}
+      </Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  // Ekran zemini beyaz (durum çubuğu ve başlık beyaz görünür); yalnızca içerik alanı gri.
-  scrollArea: { flex: 1, backgroundColor: colors.surface },
-  content: { padding: spacing.xl, gap: 14 },
-  card: { gap: spacing.lg, padding: spacing.xl, backgroundColor: colors.white, borderRadius: radii.card, borderWidth: 1, borderColor: colors.lineSoft },
-  cardTitle: { ...textStyles.titleSection, color: colors.navy },
-  bulletRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.lg },
-  bulletText: { flex: 1, color: colors.inkMuted },
-  actions: { gap: spacing.lg },
-  confirm: { gap: spacing.lg, padding: spacing.xl, backgroundColor: colors.white, borderRadius: radii.card, borderWidth: 1, borderColor: colors.danger },
-  confirmTitle: { fontFamily: fontFamily.montserrat700, fontSize: 16, lineHeight: 19.2, color: colors.danger },
+  container: { flex: 1, backgroundColor: Colors.background },
+  content: { padding: Spacing.three, gap: Spacing.three },
+  flex: { flex: 1 },
+  card: { padding: Spacing.four, gap: Spacing.three },
+  confirm: { borderColor: Colors.danger, borderWidth: 1.5 },
+  row: { flexDirection: 'row', gap: Spacing.three },
+  rowIcon: { marginTop: 1 },
+  footer: { paddingHorizontal: Spacing.three, paddingTop: Spacing.three, gap: Spacing.two + 4, backgroundColor: Colors.background },
 });

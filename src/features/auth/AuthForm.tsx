@@ -1,37 +1,79 @@
-import { useController, type Control, type FieldPath, type FieldValues } from 'react-hook-form';
-import { StyleSheet, Text, View } from 'react-native';
+import { useEffect, type Ref } from 'react';
+import { useController, type Control, type FieldPath, type FieldValues, type UseFormSubscribe } from 'react-hook-form';
+import { StyleSheet, View, type TextInput as TextInputInstance, type TextInputProps } from 'react-native';
 
-import { Field } from '@/components/Field';
-import { colors, fontFamily, spacing, textStyles } from '@/theme';
+import { passwordStrength } from '@/domain';
+import { Text } from '@/ui/Text';
+import { TextField as UiTextField } from '@/ui/TextField';
+import { Colors, Radius, Spacing } from '@/ui/theme';
 
 import { useScrollFocusedIntoView } from './FormScroll';
+
+type FieldType = 'text' | 'password' | 'tel' | 'email';
 
 type TextFieldProps<T extends FieldValues> = {
   control: Control<T>;
   name: FieldPath<T>;
   label: string;
-  type?: 'text' | 'password' | 'tel' | 'email';
+  type?: FieldType;
   placeholder?: string;
-  /** Hata yokken gösterilen onay ipucu (ör. "Şifreler eşleşiyor"); verilirse alan `ok` görünür. */
+  /** Hata yokken gösterilen onay ipucu (ör. "Şifreler eşleşiyor"); yardımcı metin yerine geçer. */
   okHint?: string | null;
+  /** Hata ve onay ipucu yokken alanın altında duran nötr bilgi metni. */
+  hint?: string;
+  /** Şema hatası yokken gösterilen anlık hata (ör. tasarımdaki gibi yazarken "Şifreler eşleşmiyor."). */
+  liveError?: string;
   autoComplete?: 'email' | 'name' | 'tel' | 'password' | 'new-password' | 'off';
   returnKeyType?: 'next' | 'done';
+  /** "İleri" alanında sonraki alana `focus()`, son alanda gönderim. */
   onSubmitEditing?: () => void;
+  /** Giriş kutusu (önceki alanın "İleri" tuşu buna odaklanır). */
+  ref?: Ref<TextInputInstance>;
   testID: string;
 };
 
+/** Alan türüne göre klavye/otomatik doldurma özellikleri. */
+function inputTraits(type: FieldType, autoComplete: TextFieldProps<FieldValues>['autoComplete']): TextInputProps {
+  switch (type) {
+    case 'email':
+      return { keyboardType: 'email-address', autoCapitalize: 'none', autoCorrect: false, textContentType: 'emailAddress' };
+    case 'password':
+      return { autoCapitalize: 'none', autoCorrect: false, textContentType: autoComplete === 'new-password' ? 'newPassword' : 'password' };
+    case 'tel':
+      return { keyboardType: 'phone-pad', textContentType: 'telephoneNumber' };
+    default:
+      return {};
+  }
+}
+
 /**
- * React Hook Form alanı → ortak `Field`. Değer RHF belleğinde durur (kalıcı depoya yazılmaz); hata iletisi şemadan gelen sabit
- * metindir.
+ * React Hook Form alanı → ortak `@/ui/TextField`. Değer RHF belleğinde durur (kalıcı depoya yazılmaz); hata iletisi şemadan gelen sabit
+ * metindir. `testID` giriş kutusuna verilir.
  */
-export function TextField<T extends FieldValues>({ control, name, label, type = 'text', placeholder, okHint, autoComplete, returnKeyType, onSubmitEditing, testID }: TextFieldProps<T>) {
+export function TextField<T extends FieldValues>({
+  control,
+  name,
+  label,
+  type = 'text',
+  placeholder,
+  okHint,
+  hint,
+  liveError,
+  autoComplete,
+  returnKeyType,
+  onSubmitEditing,
+  ref,
+  testID,
+}: TextFieldProps<T>) {
   const { field, fieldState } = useController({ control, name });
-  const error = fieldState.error?.message;
+  const error = fieldState.error?.message ?? liveError;
   const scrollIntoView = useScrollFocusedIntoView();
   return (
-    <Field
+    <UiTextField
+      {...inputTraits(type, autoComplete)}
+      ref={ref}
       label={label}
-      type={type}
+      password={type === 'password'}
       placeholder={placeholder}
       value={field.value as string}
       onChangeText={field.onChange}
@@ -39,43 +81,61 @@ export function TextField<T extends FieldValues>({ control, name, label, type = 
       onFocus={scrollIntoView}
       autoComplete={autoComplete}
       returnKeyType={returnKeyType}
+      // "İleri"de klavye kapanmasın (odak sonraki alana geçer); son alanda varsayılan: klavye kapanır + gönderim.
+      submitBehavior={returnKeyType === 'next' ? 'submit' : undefined}
       onSubmitEditing={onSubmitEditing}
-      status={error ? 'error' : okHint ? 'ok' : undefined}
-      hint={error ?? okHint ?? undefined}
+      error={error}
+      helper={okHint ?? hint}
+      accessibilityLabel={error ? `${label}, hata` : label}
       testID={testID}
     />
   );
 }
 
-/** Formun genel hata bandı (alan altı hata dışındaki: yanlış bilgi, çevrimdışı, servis hatası). */
-export function FormError({ message, testID = 'form-error' }: { message: string | null; testID?: string }) {
-  if (!message) return null;
-  return (
-    <View style={styles.error} accessibilityRole="alert" accessibilityLiveRegion="assertive" testID={testID}>
-      <Text style={[textStyles.bodySmall, styles.errorText]}>{message}</Text>
-    </View>
+/**
+ * Kullanıcı herhangi bir alanı değiştirdiği anda formun genel hatası (ör. "E-posta veya şifre hatalı.") kalkar. Alan boşalınca buton
+ * pasifleştiği için `handleSubmit(…, clearFailure)` yolu çalışmaz; bu yüzden değer aboneliği kullanılır (effect içinde türetilmiş durum yok).
+ * Yalnız kullanıcı girişi (`type: 'change'`) sayılır; `reset`/`setValue` hatayı silmez.
+ */
+export function useClearFailureOnEdit<T extends FieldValues>(subscribe: UseFormSubscribe<T>, clearFailure: () => void) {
+  useEffect(
+    () =>
+      subscribe({
+        formState: { values: true },
+        callback: ({ type }) => {
+          if (type === 'change') clearFailure();
+        },
+      }),
+    [subscribe, clearFailure],
   );
 }
 
-/** Dört çubuklu şifre gücü göstergesi (tasarım ekran 02). */
-export function StrengthMeter({ level, label }: { level: number; label: string }) {
+/** Formun genel hata metni (alan altı hata dışındaki: yanlış bilgi, çevrimdışı, servis hatası). */
+export function FormError({ message, testID = 'form-error' }: { message: string | null; testID?: string }) {
+  if (!message) return null;
   return (
-    <View style={styles.meterRow} accessible accessibilityLabel={label ? `Şifre gücü: ${label}` : 'Şifre gücü'} testID="password-strength">
-      <View style={styles.bars}>
-        {[1, 2, 3, 4].map((step) => (
-          <View key={step} style={[styles.bar, { backgroundColor: step <= level ? colors.green : colors.line }]} />
-        ))}
-      </View>
-      {label ? <Text style={[textStyles.tag, styles.meterLabel]}>{`Şifre gücü: ${label}`}</Text> : null}
+    <Text variant="small" color="danger" accessibilityRole="alert" accessibilityLiveRegion="assertive" testID={testID}>
+      {message}
+    </Text>
+  );
+}
+
+// Seviye (0-4) → dolu çubuk rengi; main'deki `PasswordStrengthBar` ile aynı eşleme.
+const STRENGTH_COLORS = [Colors.danger, Colors.danger, Colors.warning, Colors.green, Colors.green];
+
+/** Dört çubuklu şifre gücü göstergesi. Seviye `@/domain` kuralından gelir; görünüm `@/ui/TextField` içindeki çubukla aynıdır. */
+export function StrengthMeter({ password }: { password: string }) {
+  const { level, label } = passwordStrength(password);
+  return (
+    <View style={styles.row} accessible accessibilityLabel={label ? `Şifre gücü: ${label}` : 'Şifre gücü'} testID="password-strength">
+      {[0, 1, 2, 3].map((i) => (
+        <View key={i} style={[styles.segment, { backgroundColor: i < level ? STRENGTH_COLORS[level] : Colors.disabled }]} />
+      ))}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  meterRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  bars: { flex: 1, flexDirection: 'row', gap: spacing.xs },
-  bar: { flex: 1, height: 4, borderRadius: 2 },
-  meterLabel: { fontFamily: fontFamily.inter500, fontSize: 12, color: colors.greenPressed },
-  error: { padding: 12, borderRadius: 10, borderWidth: 1, borderColor: colors.danger, backgroundColor: colors.white },
-  errorText: { color: colors.danger },
+  row: { flexDirection: 'row', gap: Spacing.two, marginTop: -Spacing.one },
+  segment: { flex: 1, height: 5, borderRadius: Radius.pill },
 });

@@ -1,15 +1,16 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Screen } from '@/components/Screen';
 import { asListingId, toAppError, userMessage, type AppError } from '@/domain';
-import { StateMessage } from '@/features/listings/ListStates';
 import { useSession } from '@/features/session/SessionProvider';
 import { useServices } from '@/services';
-import { colors } from '@/theme';
+import { FocusStatusBar } from '@/ui/FocusStatusBar';
+import { Colors } from '@/ui/theme';
 
+import { MessagingState } from './MessagingState';
 import { conversationHref } from './routes';
 import { messagingKeys } from './useMessagingQueries';
 
@@ -19,6 +20,7 @@ import { messagingKeys } from './useMessagingQueries';
  */
 export function ListingContactScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { listingId = '' } = useLocalSearchParams<{ listingId?: string }>();
   const { messaging } = useServices();
   const { session } = useSession();
@@ -51,18 +53,17 @@ export function ListingContactScreen() {
   const notFound = listingId === '' || error?.kind === 'notFound';
 
   return (
-    <Screen background={colors.white} testID="listing-contact-screen">
+    <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]} testID="listing-contact-screen">
+      <FocusStatusBar style="dark" />
       {notFound ? (
-        <StateMessage icon="info" title="İlan bulunamadı" message="Bu ilan yayından kalkmış ya da mevcut değil; bu ilan için görüşme başlatılamaz." actionLabel="Geri dön" actionIcon="arrow-left" onAction={goBack} testID="listing-contact-missing" />
+        <MessagingState icon="info" title="İlan bulunamadı" message="Bu ilan yayından kalkmış ya da mevcut değil; bu ilan için görüşme başlatılamaz." actionLabel="Geri dön" actionIcon="arrow-left" onAction={goBack} testID="listing-contact-missing" />
       ) : error ? (
-        <StateMessage icon="info" title="Görüşme açılamadı" message={userMessage(error)} actionLabel="Tekrar dene" onAction={() => setAttempt((n) => n + 1)} testID="listing-contact-error" />
+        <MessagingState icon="info" title="Görüşme açılamadı" message={userMessage(error)} actionLabel="Tekrar dene" actionIcon="refresh-cw" onAction={() => setAttempt((n) => n + 1)} testID="listing-contact-error" />
       ) : (
-        <View style={styles.center} accessible accessibilityLabel="Görüşme hazırlanıyor" accessibilityState={{ busy: true }} testID="listing-contact-loading">
-          <ActivityIndicator color={colors.blue} />
-        </View>
+        <MessagingState loading loadingLabel="Görüşme hazırlanıyor" testID="listing-contact-loading" />
       )}
-    </Screen>
+    </View>
   );
 }
 
-const styles = StyleSheet.create({ center: { flex: 1, alignItems: 'center', justifyContent: 'center' } });
+const styles = StyleSheet.create({ container: { flex: 1, backgroundColor: Colors.background } });

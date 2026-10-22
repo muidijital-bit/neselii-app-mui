@@ -1,21 +1,21 @@
 import { StyleSheet, View } from 'react-native';
 
-import { Btn } from '@/components/Btn';
+import { Button } from '@/ui/Button';
 
 import { FormError } from './AuthForm';
 import { useSignOut } from './useSignOut';
 
-/** Çıkış düğmesi + açık hata bandı. Hata varsa düğme "Tekrar dene" olur (oturum hâlâ açıktır). */
+/** Çıkış düğmesi + açık hata metni. Hata varsa düğme "Çıkışı tekrar dene" olur (oturum hâlâ açıktır). */
 export function SignOutButton({ onDark = false, testID = 'sign-out' }: { onDark?: boolean; testID?: string }) {
   const { signOut, signingOut, failure } = useSignOut();
   return (
     <View style={styles.root}>
       <FormError message={failure ? `Çıkış yapılamadı. ${failure.message ?? ''}`.trim() : null} testID={`${testID}-error`} />
-      <Btn
-        label={failure ? 'Çıkışı tekrar dene' : 'Çıkış yap'}
-        variant={onDark ? 'onDark' : 'secondary'}
+      <Button
+        title={failure ? 'Çıkışı tekrar dene' : 'Çıkış yap'}
+        variant={onDark ? 'outlineDark' : 'outline'}
         icon="log-out"
-        onPress={signOut}
+        onPress={() => void signOut()}
         loading={signingOut}
         testID={testID}
       />

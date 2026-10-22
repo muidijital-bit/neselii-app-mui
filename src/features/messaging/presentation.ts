@@ -1,4 +1,5 @@
 import { formatRelativeDate, type Conversation } from '@/domain';
+import { timeAgo } from '@/ui/format';
 
 export type ConversationRowModel = {
   readonly id: string;
@@ -22,6 +23,14 @@ const turkeyDay = (ms: number) => Math.floor((ms + TURKEY_OFFSET_MS) / DAY_MS);
 export function formatClock(iso: string): string {
   const date = new Date(Date.parse(iso) + TURKEY_OFFSET_MS);
   return `${String(date.getUTCHours()).padStart(2, '0')}:${String(date.getUTCMinutes()).padStart(2, '0')}`;
+}
+
+/** Sohbet balonu gün ayracı (main tasarımı): `Bugün`, `Dün`, daha eskisi göreli (`3 gün önce`). Gün sınırı Türkiye gününe göre. */
+export function dayLabel(iso: string, nowMs: number): string {
+  const diff = turkeyDay(nowMs) - turkeyDay(Date.parse(iso));
+  if (diff <= 0) return 'Bugün';
+  if (diff === 1) return 'Dün';
+  return timeAgo(iso, nowMs);
 }
 
 /** Bugünün mesajı saatle (`14:15`), daha eskisi ilan tarihiyle aynı göreli biçimde (`Dün`, `2 gün önce`, `12 Eki`) gösterilir. */
@@ -53,7 +62,8 @@ export function toConversationRow(conversation: Conversation, nowMs: number, vie
     title: admin ? (conversation.customer?.fullName ?? 'Müşteri') : conversation.listing.title,
     ...(admin ? { subtitle: conversation.listing.title } : {}),
     preview: previewText(conversation, viewer),
-    timeLabel: conversationTime(conversation.lastMessage?.sentAt ?? conversation.updatedAt, nowMs),
+    // Main tasarımı: liste zamanı göreli ("5 dakika önce", "dün").
+    timeLabel: timeAgo(conversation.lastMessage?.sentAt ?? conversation.updatedAt, nowMs),
     unreadCount: conversation.unreadCount,
     unreadLabel: unreadBadgeText(conversation.unreadCount),
     imageUri: conversation.listing.coverImageUri ?? undefined,

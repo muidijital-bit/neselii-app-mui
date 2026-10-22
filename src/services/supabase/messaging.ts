@@ -94,6 +94,12 @@ export function createSupabaseMessaging(sb: Supabase): MessagingService {
     return toConversation(row, unread.get(row.id) ?? 0);
   };
 
+  /** Oturumdaki kullanıcı yönetici mi (gizleme sütunu buna göre seçilir: yönetici `staff_hidden_at`, müşteri `user_hidden_at`). */
+  const isAdmin = async (userId: string): Promise<boolean> => {
+    const row = unwrapMaybe(await sb.from('profiles').select('role').eq('id', userId).maybeSingle());
+    return row?.role === 'admin';
+  };
+
   const markRead = async (conversationId: string) => {
     const { error } = await sb.rpc('mark_conversation_read', { p_conversation_id: conversationId });
     if (error) throw error;
@@ -102,12 +108,20 @@ export function createSupabaseMessaging(sb: Supabase): MessagingService {
   return {
     listConversations: (input?: PageInput) =>
       call(async () => {
-        await requireUserId(sb);
+        const userId = await requireUserId(sb);
         const offset = offsetOf(input?.cursor);
         const [from, to] = pageRange(offset);
+        // Bu tarafın gizlediği sohbetler listede yok (yalnız listeden; `fetchConversation` gizliyi de açar). Yeni mesaj gizlemeyi sunucuda kaldırır.
+        const hiddenColumn = (await isAdmin(userId)) ? 'staff_hidden_at' : 'user_hidden_at';
         const rows = unwrap(
           // Kullanıcı filtresi yok: RLS müşteriye yalnız kendi sohbetlerini, yöneticiye tüm müşterilerinkini verir.
-          await sb.from('conversations').select(CONVERSATION_COLUMNS).order('last_message_at', { ascending: false }).order('id').range(from, to),
+          await sb
+            .from('conversations')
+            .select(CONVERSATION_COLUMNS)
+            .is(hiddenColumn, null)
+            .order('last_message_at', { ascending: false })
+            .order('id')
+            .range(from, to),
         ) as unknown as ConversationRow[];
         const unread = await unreadFor(rows.map((row) => row.id));
         return toPage(rows, offset, (row) => toConversation(row, unread.get(row.id) ?? 0));
@@ -181,6 +195,16 @@ export function createSupabaseMessaging(sb: Supabase): MessagingService {
         await requireUserId(sb);
         const rows = unwrap(await sb.from('conversation_unread').select('unread_count'));
         return rows.reduce((sum, row) => sum + (row.unread_count ?? 0), 0);
+      }),
+
+    hideConversation: (conversationId: ConversationId) =>
+      call(async () => {
+        await requireUserId(sb);
+        // Sunucu çağıranın rolüne göre ilgili gizleme sütununu yazar, bu taraftaki okunmamışları ve mesaj bildirimlerini okundu yapar.
+        // Okunmamış görünümü (`conversation_unread`) yalnız bu tarafın okunmamışlarını saydığından sekme rozeti de düşer.
+        const { error } = await sb.rpc('hide_conversation', { p_conversation_id: conversationId });
+        if (error?.code === 'P0002') throw appError.notFound(`conversation ${conversationId}`);
+        if (error) throw error;
       }),
 
     subscribe: (conversationId: ConversationId, listener: (event: MessagingEvent) => void): Unsubscribe => {

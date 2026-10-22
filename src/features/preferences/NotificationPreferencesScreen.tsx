@@ -1,14 +1,16 @@
-import { useRef, useState, type ReactNode } from 'react';
-import { ActivityIndicator, Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Fragment, useRef, useState, type ReactNode } from 'react';
+import { Linking, ScrollView, StyleSheet, View } from 'react-native';
 
-import { Btn } from '@/components/Btn';
-import { Screen } from '@/components/Screen';
-import { Icon } from '@/components/icons/Icon';
 import { userMessage, type NotificationPreferences } from '@/domain';
-import { StateMessage } from '@/features/listings/ListStates';
 import { PageHeader } from '@/features/notifications/PageHeader';
 import { useSystemPermissions } from '@/permissions';
-import { colors, fontFamily, radii, spacing } from '@/theme';
+import { Button } from '@/ui/Button';
+import { FocusStatusBar } from '@/ui/FocusStatusBar';
+import { Icon } from '@/ui/Icon';
+import { StateView } from '@/ui/StateView';
+import { Text } from '@/ui/Text';
+import { Card, Divider, SectionLabel } from '@/ui/Ui';
+import { Colors, Radius, Spacing } from '@/ui/theme';
 
 import { PreferenceRow } from './PreferenceRow';
 import { TYPE_ROWS, locationRowView, systemRowView } from './preferenceModel';
@@ -24,7 +26,7 @@ async function openSystemSettings(): Promise<void> {
 }
 
 /**
- * Bildirim Tercihleri (12b), Profil → Bildirim Tercihleri.
+ * Bildirim Tercihleri (main tasarımı), Profil → Bildirim Tercihleri.
  *  - SİSTEM / "Anlık bildirimler": görünüm YALNIZCA cihazdan okunan bildirim iznine bağlıdır; reddedilmiş/sorulmamış izin anahtarı açık göstermez.
  *    İzin yoksa dokunuş sistem izin penceresini açar (yeniden sorulamıyorsa sistem ayarlarına gider); verilmişse dokunuş ayarları açar.
  *  - BİLDİRİM TÜRLERİ: uygulama içi tercihler (servis). Sistem izninden bağımsız saklanır.
@@ -56,8 +58,8 @@ export function NotificationPreferencesScreen() {
   if (preferences.isPending && preferences.fetchStatus !== 'idle') {
     return (
       <Frame>
-        <View style={styles.center} accessibilityState={{ busy: true }} accessibilityLabel="Tercihler yükleniyor" testID="preferences-loading">
-          <ActivityIndicator color={colors.blue} />
+        <View style={styles.state} accessible accessibilityState={{ busy: true }} accessibilityLabel="Tercihler yükleniyor" testID="preferences-loading">
+          <StateView loading />
         </View>
       </Frame>
     );
@@ -65,14 +67,13 @@ export function NotificationPreferencesScreen() {
   if (!preferences.data) {
     return (
       <Frame>
-        <StateMessage
-          icon="info"
-          title="Tercihler yüklenemedi"
-          message={preferences.error ? userMessage(preferences.error) : 'Lütfen daha sonra tekrar deneyin.'}
-          actionLabel="Tekrar dene"
-          onAction={() => void preferences.refetch()}
-          testID="preferences-error"
-        />
+        <View style={styles.state} testID="preferences-error">
+          <StateView
+            title="Tercihler yüklenemedi"
+            message={preferences.error ? userMessage(preferences.error) : 'Lütfen daha sonra tekrar deneyin.'}
+            actions={[{ title: 'Tekrar dene', icon: 'refresh-cw', onPress: () => void preferences.refetch() }]}
+          />
+        </View>
       </Frame>
     );
   }
@@ -117,34 +118,41 @@ export function NotificationPreferencesScreen() {
 
   return (
     <Frame>
-      <ScrollView style={styles.scrollArea} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} testID="preferences-scroll">
+      <ScrollView contentContainerStyle={styles.content} testID="preferences-scroll">
         {failure ? (
-          <View style={styles.notice} accessibilityRole="alert" accessibilityLiveRegion="polite" testID="preferences-failure">
-            <Icon name="info" size={18} color={colors.blue} />
-            <Text style={styles.noticeText}>{failure}</Text>
+          <View style={[styles.notice, styles.noticeRow, styles.failure]} accessibilityRole="alert" accessibilityLiveRegion="polite" testID="preferences-failure">
+            <Icon name="alert-circle" size={20} color="danger" />
+            <Text variant="small" color="danger" style={styles.flex}>
+              {failure}
+            </Text>
           </View>
         ) : null}
 
-        <GroupTitle>SİSTEM</GroupTitle>
-        <View style={styles.card}>
+        <SectionLabel>Sistem</SectionLabel>
+        <Card>
           <PreferenceRow label="Anlık bildirimler" sub={system.sub} on={system.on} onPress={toggleSystem} busy={acting} testID="preferences-system" />
-        </View>
+        </Card>
         {system.denied ? <SettingsNotice message="Bildirim izni kapalı. Bildirimleri açmak için cihaz ayarlarını kullanabilirsiniz." testID="preferences-system-settings" /> : null}
 
-        <GroupTitle>BİLDİRİM TÜRLERİ</GroupTitle>
-        <View style={styles.card}>
-          {TYPE_ROWS.map((row) => (
-            <PreferenceRow key={row.key} label={row.label} sub={row.sub} on={current[row.key]} onPress={() => toggleType(row.key)} busy={acting} testID={`preferences-${row.key}`} />
+        <SectionLabel>Bildirim türleri</SectionLabel>
+        <Card>
+          {TYPE_ROWS.map((row, index) => (
+            <Fragment key={row.key}>
+              {index > 0 ? <Divider /> : null}
+              <PreferenceRow label={row.label} sub={row.sub} on={current[row.key]} onPress={() => toggleType(row.key)} busy={acting} testID={`preferences-${row.key}`} />
+            </Fragment>
           ))}
-        </View>
+        </Card>
 
-        <GroupTitle>KONUM</GroupTitle>
-        <View style={styles.card}>
+        <SectionLabel>Konum</SectionLabel>
+        <Card>
           <PreferenceRow label="Yakındaki ilanları önce göster" sub={location.sub} on={location.on} onPress={toggleLocation} busy={acting} testID="preferences-nearby" />
-        </View>
+        </Card>
         {location.denied ? <SettingsNotice message="Konum izni kapalı. Yakındaki ilanlar için cihaz ayarlarından konum iznini açabilirsiniz." testID="preferences-location-settings" /> : null}
 
-        <Text style={styles.footnote}>İzinler ilk açılışta sorulur; buradan dilediğiniz zaman değiştirebilirsiniz.</Text>
+        <Text variant="small" style={styles.footer}>
+          İzinler ilk açılışta sorulur; buradan dilediğiniz zaman değiştirebilirsiniz.
+        </Text>
       </ScrollView>
     </Frame>
   );
@@ -152,46 +160,37 @@ export function NotificationPreferencesScreen() {
 
 function Frame({ children }: { children: ReactNode }) {
   return (
-    <Screen background={colors.white} testID="preferences-screen">
-      <View style={styles.header}>
-        <PageHeader title="Bildirim Tercihleri" testID="preferences-back" />
-      </View>
+    <View style={styles.container} testID="preferences-screen">
+      <FocusStatusBar style="dark" />
+      <PageHeader title="Bildirim Tercihleri" testID="preferences-back" />
       {children}
-    </Screen>
-  );
-}
-
-function GroupTitle({ children }: { children: string }) {
-  return (
-    <Text style={styles.groupTitle} accessibilityRole="header">
-      {children}
-    </Text>
+    </View>
   );
 }
 
 /** İzin reddedildiğinde: açıklama + sistem ayarlarına bağlantı (yeniden sorulamayan izin yalnızca oradan açılır). */
 function SettingsNotice({ message, testID }: { message: string; testID: string }) {
   return (
-    <View style={styles.notice} testID={testID}>
+    <View style={[styles.notice, styles.settingsNotice]} testID={testID}>
       <View style={styles.noticeRow}>
-        <Icon name="info" size={18} color={colors.blue} />
-        <Text style={styles.noticeText}>{message}</Text>
+        <Icon name="info" size={20} />
+        <Text variant="small" color="text" style={styles.flex}>
+          {message}
+        </Text>
       </View>
-      <Btn label="Ayarları Aç" variant="secondary" onPress={() => void openSystemSettings()} testID={`${testID}-open`} />
+      <Button title="Ayarları Aç" variant="outline" icon="settings" onPress={() => void openSystemSettings()} testID={`${testID}-open`} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  // Ekran zemini beyaz (durum çubuğu ve başlık beyaz görünür); yalnızca içerik alanı gri.
-  scrollArea: { flex: 1, backgroundColor: colors.surface },
-  header: { backgroundColor: colors.white },
-  content: { padding: spacing.xl, gap: 10 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  groupTitle: { fontFamily: fontFamily.inter600, fontSize: 11, lineHeight: 11, letterSpacing: 11 * 0.08, color: colors.slate, marginTop: 8, marginHorizontal: 4 },
-  card: { backgroundColor: colors.white, borderRadius: radii.card, borderWidth: 1, borderColor: colors.lineSoft, overflow: 'hidden' },
-  footnote: { marginTop: 6, marginHorizontal: 4, fontFamily: fontFamily.inter400, fontSize: 12, lineHeight: 12 * 1.45, color: colors.slateLight },
-  notice: { gap: 10, padding: 12, borderRadius: radii.xl, backgroundColor: colors.blueTint },
-  noticeRow: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
-  noticeText: { flex: 1, fontFamily: fontFamily.inter400, fontSize: 13, lineHeight: 19, color: colors.blue },
+  container: { flex: 1, backgroundColor: Colors.background },
+  state: { flex: 1 },
+  flex: { flex: 1 },
+  content: { paddingHorizontal: Spacing.three, paddingBottom: Spacing.five },
+  footer: { marginTop: Spacing.four, marginHorizontal: Spacing.one },
+  notice: { marginTop: Spacing.three, padding: Spacing.three, borderRadius: Radius.md, backgroundColor: Colors.surfaceHighlight },
+  noticeRow: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.two + 2 },
+  failure: { backgroundColor: Colors.dangerSoft },
+  settingsNotice: { gap: Spacing.three },
 });

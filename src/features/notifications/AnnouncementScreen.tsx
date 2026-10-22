@@ -1,12 +1,13 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useMemo } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useMemo, type ReactNode } from 'react';
+import { ScrollView, StyleSheet, View } from 'react-native';
 
-import { Screen } from '@/components/Screen';
-import { Icon } from '@/components/icons/Icon';
 import { toAppError, userMessage, type AppNotification } from '@/domain';
-import { StateMessage } from '@/features/listings/ListStates';
-import { colors, radii, spacing, textStyles } from '@/theme';
+import { FocusStatusBar } from '@/ui/FocusStatusBar';
+import { StateView } from '@/ui/StateView';
+import { Text } from '@/ui/Text';
+import { IconTile } from '@/ui/Ui';
+import { Colors, Spacing } from '@/ui/theme';
 
 import { PageHeader } from './PageHeader';
 import { notificationTime } from './presentation';
@@ -51,7 +52,7 @@ export function AnnouncementScreen() {
 
   // Sıra önemli: hata, "yükleniyor"dan ÖNCE değerlendirilir. Sonraki sayfa isteği başarısız olduğunda `hasNextPage` true kalır ama otomatik yükleme
   // durur (`isFetchNextPageError`); bu durumda sonsuz yükleniyor değil, hata ve doğru yeniden deneme (sonraki sayfa) görünür.
-  let body;
+  let body: ReactNode;
   if (id === '') {
     body = <Missing />;
   } else if (found) {
@@ -59,33 +60,43 @@ export function AnnouncementScreen() {
   } else if (query.isError && !isFetchingNextPage && !query.isFetching) {
     const unauthenticated = toAppError(query.error).kind === 'unauthenticated';
     body = (
-      <StateMessage
-        icon="info"
-        title={unauthenticated ? 'Oturum gerekli' : 'Duyuru yüklenemedi'}
-        message={userMessage(query.error)}
-        actionLabel={unauthenticated ? 'Geri dön' : 'Tekrar dene'}
-        actionIcon={unauthenticated ? 'arrow-left' : 'refresh-cw'}
-        onAction={() => {
-          if (unauthenticated) {
-            if (router.canGoBack()) router.back();
-            else router.replace('/');
-          } else if (isFetchNextPageError) void fetchNextPage();
-          else void query.refetch();
-        }}
-        testID="announcement-error"
-      />
+      <View style={styles.state} testID="announcement-error">
+        <StateView
+          icon="alert-circle"
+          title={unauthenticated ? 'Oturum gerekli' : 'Duyuru yüklenemedi'}
+          message={userMessage(query.error)}
+          actions={[
+            {
+              title: unauthenticated ? 'Geri dön' : 'Tekrar dene',
+              icon: unauthenticated ? 'arrow-left' : 'refresh-cw',
+              onPress: () => {
+                if (unauthenticated) {
+                  if (router.canGoBack()) router.back();
+                  else router.replace('/');
+                } else if (isFetchNextPageError) void fetchNextPage();
+                else void query.refetch();
+              },
+            },
+          ]}
+        />
+      </View>
     );
   } else if (query.isPending || isFetchingNextPage || query.isFetching || hasNextPage) {
-    body = <Loading />;
+    body = (
+      <View style={styles.state} accessible accessibilityLabel="Duyuru yükleniyor" accessibilityState={{ busy: true }} testID="announcement-loading">
+        <StateView loading />
+      </View>
+    );
   } else {
     body = <Missing />;
   }
 
   return (
-    <Screen background={colors.white} edges={['top', 'left', 'right', 'bottom']} testID="announcement-screen">
+    <View style={styles.container} testID="announcement-screen">
+      <FocusStatusBar style="dark" />
       <PageHeader title="Duyuru" testID="announcement-back" />
-      <ScrollView contentContainerStyle={styles.body}>{body}</ScrollView>
-    </Screen>
+      {body}
+    </View>
   );
 }
 
@@ -93,57 +104,32 @@ function AnnouncementContent({ announcement }: { announcement: Announcement }) {
   const { notification, title, text } = announcement;
   const time = notificationTime(notification.createdAt, Date.now());
   return (
-    <View style={styles.content} testID="announcement-content">
-      <View style={styles.iconBox}>
-        <Icon name="megaphone" size={26} color={colors.blueText} />
-      </View>
-      <Text style={styles.title} accessibilityRole="header" testID="announcement-title">
+    <ScrollView contentContainerStyle={styles.content} testID="announcement-content">
+      <IconTile icon="mci:bullhorn-outline" size={72} />
+      <Text variant="title" accessibilityRole="header" testID="announcement-title">
         {title}
       </Text>
-      <Text style={styles.meta} testID="announcement-meta">
-        {time === '' ? notification.body : `${notification.body} · ${time}`}
+      <Text variant="small" testID="announcement-meta">
+        {time === '' ? 'Genel duyuru' : `Genel duyuru · ${time}`}
       </Text>
-      <Text style={styles.text} testID="announcement-text">
+      <Text variant="body" style={styles.body} testID="announcement-text">
         {text}
       </Text>
-    </View>
-  );
-}
-
-function Loading() {
-  return (
-    <View accessible accessibilityLabel="Duyuru yükleniyor" accessibilityState={{ busy: true }} style={styles.content} testID="announcement-loading">
-      <View style={[styles.iconBox, styles.skeleton]} />
-      <View style={[styles.bar, { width: '70%', height: 22 }]} />
-      <View style={[styles.bar, { width: '40%', height: 12 }]} />
-      <View style={[styles.bar, { width: '95%', height: 14 }]} />
-      <View style={[styles.bar, { width: '90%', height: 14 }]} />
-    </View>
+    </ScrollView>
   );
 }
 
 function Missing() {
-  const router = useRouter();
   return (
-    <StateMessage
-      icon="search-x"
-      title="Duyuru bulunamadı"
-      message="Bu duyuru kaldırılmış olabilir ya da bağlantı hatalı. Bildirimlerinize dönebilirsiniz."
-      actionLabel="Bildirimlere dön"
-      actionIcon="arrow-left"
-      onAction={() => router.navigate('/notifications')}
-      testID="announcement-missing"
-    />
+    <View style={styles.state} testID="announcement-missing">
+      <StateView icon="alert-circle" title="Duyuru bulunamadı" />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  body: { flexGrow: 1, padding: spacing.xl },
-  content: { gap: spacing.lg },
-  iconBox: { width: 56, height: 56, borderRadius: radii.card, backgroundColor: colors.blueTint, alignItems: 'center', justifyContent: 'center' },
-  title: { ...textStyles.titleLarge, color: colors.navy },
-  meta: { ...textStyles.caption, color: colors.slateLight },
-  text: { ...textStyles.bodyRelaxed, color: colors.ink },
-  skeleton: { backgroundColor: colors.lineSoft },
-  bar: { borderRadius: radii.xs, backgroundColor: colors.lineSoft },
+  container: { flex: 1, backgroundColor: Colors.surface },
+  state: { flex: 1 },
+  content: { padding: Spacing.three, gap: Spacing.three },
+  body: { fontSize: 17, lineHeight: 27 },
 });

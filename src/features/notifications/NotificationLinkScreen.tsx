@@ -2,10 +2,10 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
-import { Screen } from '@/components/Screen';
 import { useOnboarding } from '@/features/onboarding';
 import { useSession } from '@/features/session/SessionProvider';
-import { colors } from '@/theme';
+import { FocusStatusBar } from '@/ui/FocusStatusBar';
+import { Colors } from '@/ui/theme';
 
 import { NOTIFICATION_UNAVAILABLE_HREF } from './routes';
 import { resolveNotificationTarget, targetFromLinkParams } from './targets';
@@ -42,12 +42,11 @@ export function NotificationLinkScreen() {
   }, [completed, params, pendingTarget, router, session]);
 
   return (
-    <Screen background={colors.white} testID="notification-link-screen">
-      <View style={styles.center}>
-        <ActivityIndicator color={colors.blue} accessibilityLabel="Bildirim açılıyor" />
-      </View>
-    </Screen>
+    <View style={styles.center} testID="notification-link-screen">
+      <FocusStatusBar style="dark" />
+      <ActivityIndicator color={Colors.navy} accessibilityLabel="Bildirim açılıyor" />
+    </View>
   );
 }
 
-const styles = StyleSheet.create({ center: { flex: 1, alignItems: 'center', justifyContent: 'center' } });
+const styles = StyleSheet.create({ center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.surface } });

@@ -1,28 +1,28 @@
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useRef, useState, type ComponentRef } from 'react';
-import { ActivityIndicator, Animated, type GestureResponderEvent, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View, Share } from 'react-native';
+import { useRef, useState } from 'react';
+import { FlatList, Pressable, ScrollView, Share, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Btn } from '@/components/Btn';
-import { Screen } from '@/components/Screen';
-import { StripePlaceholder } from '@/components/StripePlaceholder';
-import { Icon, type IconName } from '@/components/icons/Icon';
-import { AppError, userMessage, type ListingDetail } from '@/domain';
-import { colors, fontFamily, radii, spacing, textStyles } from '@/theme';
+import { AppError, userMessage, type ListingDetail, type MediaItem } from '@/domain';
+import { Button } from '@/ui/Button';
+import { FocusStatusBar } from '@/ui/FocusStatusBar';
+import { Icon } from '@/ui/Icon';
+import { ListingImage } from '@/ui/ListingImage';
+import { Text } from '@/ui/Text';
+import { Colors, Radius, Spacing } from '@/ui/theme';
 
+import { DetailStateView } from './DetailStateView';
 import { GalleryVideo } from './GalleryVideo';
-import { useStageGestures, type TapZone } from './galleryGestures';
-import { counterLabel, parseStartIndex, resolveSelected, toGalleryEntries, type GalleryEntry } from './galleryModel';
+import { parseStartIndex } from './galleryModel';
 import { useListingQuery } from './useListingsQueries';
 
-const STAGE_HEIGHT = 300;
-const THUMB = 56;
-const THUMB_GAP = 8;
-const THUMB_PADDING = 16;
+const THUMB = 84;
 
 /**
- * Fotoğraf & video (08). Tek kaynak `listingId` rota parametresidir (isteğe bağlı `index`: 0 tabanlı başlangıç). Gövde ID ile anahtarlanır;
- * ilan erişilemez olunca (notFound / withdrawn / unauthenticated) galeri ve video bileşeni kaldırılır, böylece oynatma da durur.
+ * Fotoğraf & video (main tasarımı). Tek kaynak `listingId` rota parametresidir (isteğe bağlı `index`: galeri sırasında 0 tabanlı başlangıç;
+ * galeri sırası önce fotoğraflar, en sonda video). Gövde ID ile anahtarlanır; ilan erişilemez olunca (notFound / withdrawn /
+ * unauthenticated) galeri ve video bileşeni kaldırılır, böylece oynatma da durur.
  */
 export function MediaGalleryScreen() {
   const { listingId, index } = useLocalSearchParams<{ listingId?: string | string[]; index?: string | string[] }>();
@@ -38,34 +38,46 @@ function useGoBack() {
 function MediaGalleryBody({ listingId, startParam }: { listingId: string; startParam: string | string[] | undefined }) {
   const query = useListingQuery(listingId);
   const goBack = useGoBack();
+  const back = (testID: string) => ({ title: 'Geri dön', onPress: goBack, testID });
 
-  if (listingId === '') return <Message icon="search-x" title="İlan bulunamadı" message="Aradığınız ilan kaldırılmış olabilir ya da bağlantı hatalı." onBack={goBack} testID="media-not-found" />;
-  if (query.isPending) return <Loading onBack={goBack} />;
+  const notFound = (
+    <DetailStateView
+      icon="alert-circle"
+      title="İlan bulunamadı"
+      message="İlan yayından kaldırılmış olabilir."
+      actions={[back('media-not-found-back')]}
+      testID="media-not-found"
+    />
+  );
+
+  if (listingId === '') return notFound;
+  if (query.isPending) return <DetailStateView loading loadingLabel="Medya yükleniyor" testID="media-loading" />;
   // Detay ekranıyla aynı kural: yalnızca geçici hatalarda önbellekteki ilan korunur; varlık/erişim sonuçları eski medyayı da kaldırır.
   const error = query.isError ? query.error : null;
   const kind = error instanceof AppError ? error.kind : null;
-  if (kind === 'notFound') return <Message icon="search-x" title="İlan bulunamadı" message="Aradığınız ilan kaldırılmış olabilir ya da bağlantı hatalı." onBack={goBack} testID="media-not-found" />;
-  if (kind === 'unauthenticated') return <Message icon="info" title="Oturum gerekli" message={userMessage(error)} onBack={goBack} testID="media-unauthenticated" />;
+  if (kind === 'notFound') return notFound;
+  if (kind === 'unauthenticated') {
+    return <DetailStateView icon="alert-circle" title="Oturum gerekli" message={userMessage(error)} actions={[back('media-unauthenticated-back')]} testID="media-unauthenticated" />;
+  }
   if (error && !query.data) {
     return (
-      <Message
-        icon="info"
+      <DetailStateView
+        icon="alert-circle"
         title={kind === 'offline' ? 'Bağlantı yok' : 'Medya yüklenemedi'}
         message={userMessage(error)}
-        onBack={goBack}
-        onRetry={() => void query.refetch()}
+        actions={[{ title: 'Tekrar dene', onPress: () => void query.refetch(), testID: 'media-error-action' }, { ...back('media-error-back'), variant: 'outline' }]}
         testID="media-error"
       />
     );
   }
-  if (!query.data) return <Loading onBack={goBack} />;
+  if (!query.data) return <DetailStateView loading loadingLabel="Medya yükleniyor" testID="media-loading" />;
   if (query.data.status === 'withdrawn') {
     return (
-      <Message
-        icon="eye-off"
+      <DetailStateView
+        icon="alert-circle"
         title="Bu ilan yayından kaldırıldı"
         message="İlan yayından kaldırıldığı için fotoğraf ve videolar görüntülenemiyor."
-        onBack={goBack}
+        actions={[back('media-withdrawn-back')]}
         testID="media-withdrawn"
       />
     );
@@ -73,322 +85,204 @@ function MediaGalleryBody({ listingId, startParam }: { listingId: string; startP
   return <Gallery detail={query.data} startParam={startParam} onBack={goBack} />;
 }
 
-function TopBar({ onClose, counter, onUnavailable }: { onClose: () => void; counter?: string; onUnavailable?: (what: 'download' | 'share') => void }) {
+function Gallery({ detail, startParam, onBack }: { detail: ListingDetail; startParam: string | string[] | undefined; onBack: () => void }) {
+  const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  const pager = useRef<FlatList<MediaItem>>(null);
+  const thumbs = useRef<FlatList<MediaItem>>(null);
+
+  // Fotoğraflar önce, video en sonda
+  const media = [...detail.media.filter((m) => m.kind === 'photo'), ...detail.media.filter((m) => m.kind === 'video')];
+  const photoCount = media.filter((m) => m.kind === 'photo').length;
+  const [current, setCurrent] = useState(() => parseStartIndex(startParam, media.length));
+  const [notice, setNotice] = useState<string | null>(null);
+  const active = media[current];
+
+  const goTo = (i: number) => {
+    setCurrent(i);
+    setNotice(null);
+    pager.current?.scrollToIndex({ index: i, animated: true });
+  };
+
+  const onPageChange = (i: number) => {
+    if (i === current) return;
+    setCurrent(i);
+    setNotice(null);
+    thumbs.current?.scrollToIndex({ index: i, animated: true, viewPosition: 0.5 });
+  };
+
+  // Paylaş: sistem paylaşım menüsü (ilan başlığı + seçili medya adresi).
+  const share = () => {
+    if (!active) return;
+    Share.share({ message: active.uri ? `${detail.title}\n${active.uri}` : detail.title }).catch(() => setNotice('Paylaşım açılamadı.'));
+  };
+
   return (
-    <View style={styles.topBar}>
-      <TopButton icon="x" label="Kapat" onPress={onClose} testID="media-close" />
-      {counter ? (
-        <Text style={styles.counter} accessibilityRole="header" testID="media-counter">
-          {counter}
+    <View style={styles.container} testID="media-screen">
+      <FocusStatusBar style="light" />
+      <View style={[styles.header, { paddingTop: insets.top + Spacing.two }]}>
+        <Pressable hitSlop={12} accessibilityRole="button" accessibilityLabel="Kapat" onPress={onBack} testID="media-close">
+          <Icon name="x" size={30} color="white" />
+        </Pressable>
+        <Text variant="heading" style={styles.white} accessibilityRole="header" testID="media-counter">
+          {active?.kind === 'video' ? 'Video' : `${Math.min(current + 1, photoCount)} / ${photoCount}`}
         </Text>
-      ) : null}
-      <View style={styles.topRight}>
-        {onUnavailable ? (
-          <>
-            <TopButton icon="download" label="İndir" onPress={() => onUnavailable('download')} testID="media-download" />
-            <TopButton icon="share-2" label="Paylaş" onPress={() => onUnavailable('share')} testID="media-share" />
-          </>
+        <Pressable hitSlop={12} accessibilityRole="button" accessibilityLabel="Paylaş" onPress={share} testID="media-share">
+          <Icon name="share-2" size={26} color="white" />
+        </Pressable>
+      </View>
+
+      <FlatList
+        ref={pager}
+        data={media}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        initialScrollIndex={media.length ? Math.min(current, media.length - 1) : undefined}
+        getItemLayout={(_d, i) => ({ length: width, offset: width * i, index: i })}
+        keyExtractor={(m) => m.id}
+        onMomentumScrollEnd={(e) => onPageChange(Math.round(e.nativeEvent.contentOffset.x / width))}
+        style={styles.pager}
+        testID="media-stage"
+        renderItem={({ item, index: i }) => (
+          <View style={[styles.page, { width }]}>
+            {item.kind === 'video' ? <VideoPage uri={item.uri} active={i === current} /> : <PhotoPage uri={item.uri} />}
+          </View>
+        )}
+        ListEmptyComponent={
+          <View style={[styles.page, { width }]} testID="media-empty">
+            <Icon name="camera-off" size={48} color={Colors.navyBorder} />
+            <Text variant="body" style={styles.muted}>
+              Bu ilana henüz fotoğraf eklenmedi.
+            </Text>
+          </View>
+        }
+      />
+
+      <View style={styles.caption}>
+        <Text variant="subheading" align="center" style={styles.white} testID="media-title">
+          {detail.title}
+        </Text>
+        <Text variant="small" align="center" style={styles.muted}>
+          {active?.kind === 'video' ? (media.length > 1 ? 'Kaydırarak gezinin' : '') : media.length > 1 ? 'Kaydırarak gezinin · iki parmakla yakınlaştırın' : 'İki parmakla yakınlaştırın'}
+        </Text>
+        {notice ? (
+          <Text variant="small" align="center" style={styles.muted} accessibilityRole="alert" accessibilityLiveRegion="polite" testID="media-notice">
+            {notice}
+          </Text>
         ) : null}
       </View>
+
+      <FlatList
+        ref={thumbs}
+        data={media}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        keyExtractor={(m) => `thumb-${m.id}`}
+        getItemLayout={(_d, i) => ({ length: THUMB + Spacing.two, offset: (THUMB + Spacing.two) * i, index: i })}
+        contentContainerStyle={[styles.thumbs, { paddingBottom: insets.bottom + Spacing.three }]}
+        style={styles.thumbList}
+        testID="media-thumbs"
+        renderItem={({ item, index: i }) => {
+          const thumbUri = item.thumbnailUri ?? item.uri;
+          return (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={item.kind === 'video' ? 'Video' : `Fotoğraf ${i + 1}`}
+              accessibilityState={{ selected: i === current }}
+              onPress={() => goTo(i)}
+              style={[styles.thumb, i === current && styles.thumbActive]}
+              testID={`media-thumb-${i}`}>
+              {item.kind === 'video' ? (
+                <View style={styles.videoThumb}>
+                  <Icon name="play" size={24} color="green" />
+                  <Text variant="caption" style={styles.white}>
+                    Video
+                  </Text>
+                </View>
+              ) : thumbUri ? (
+                <Image source={thumbUri} style={styles.thumbImage} contentFit="cover" />
+              ) : (
+                <View style={styles.videoThumb}>
+                  <Icon name="camera" size={22} color={Colors.navyBorder} />
+                </View>
+              )}
+            </Pressable>
+          );
+        }}
+      />
     </View>
   );
 }
 
-function TopButton({ icon, label, onPress, testID }: { icon: IconName; label: string; onPress: () => void; testID: string }) {
-  return (
-    <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={styles.topButton} testID={testID}>
-      <Icon name={icon} size={icon === 'x' ? 24 : 21} color={colors.white} />
-    </Pressable>
-  );
-}
-
-function Loading({ onBack }: { onBack: () => void }) {
-  return (
-    <Screen background={colors.black} statusBar="light" testID="media-screen">
-      <TopBar onClose={onBack} />
-      <View style={styles.center} accessible accessibilityLabel="Medya yükleniyor" accessibilityState={{ busy: true }} testID="media-loading">
-        <ActivityIndicator size="large" color={colors.white} />
-      </View>
-    </Screen>
-  );
-}
-
-function Message({
-  icon,
-  title,
-  message,
-  onBack,
-  onRetry,
-  testID,
-}: {
-  icon: IconName;
-  title: string;
-  message: string;
-  onBack: () => void;
-  onRetry?: () => void;
-  testID: string;
-}) {
-  return (
-    <Screen background={colors.black} statusBar="light" testID="media-screen">
-      <TopBar onClose={onBack} />
-      <View style={styles.center} testID={testID}>
-        <Icon name={icon} size={30} color={colors.slateFaint} />
-        <Text style={styles.messageTitle} accessibilityRole="header">
-          {title}
-        </Text>
-        <Text style={styles.messageText}>{message}</Text>
-        <View style={styles.messageActions}>
-          {onRetry ? <Btn label="Tekrar dene" icon="refresh-cw" onPress={onRetry} testID={`${testID}-action`} /> : null}
-          <Btn label="Geri dön" variant="onDark" icon="arrow-left" onPress={onBack} testID={`${testID}-back`} />
-        </View>
-      </View>
-    </Screen>
-  );
-}
-
-function Gallery({ detail, startParam, onBack }: { detail: ListingDetail; startParam: string | string[] | undefined; onBack: () => void }) {
-  const entries = toGalleryEntries(detail.media);
-  const [selectedId, setSelectedId] = useState<string | null>(() => detail.media[parseStartIndex(startParam, detail.media.length)]?.id ?? null);
-  const [notice, setNotice] = useState<string | null>(null);
-  const current = resolveSelected(entries, selectedId);
-
-  const select = (entry: GalleryEntry) => {
-    setSelectedId(entry.item.id);
-    setNotice(null);
-  };
-  const step = (delta: 1 | -1) => {
-    if (!current) return;
-    const next = entries[current.index + delta];
-    if (next) select(next);
-  };
-  // Paylaş: sistem paylaşım menüsü (medya adresi + ilan başlığı/numarası). İndirme henüz yok; kullanıcıya açıkça söylenir.
-  const unavailable = (what: 'download' | 'share') => {
-    if (what === 'download') {
-      setNotice('İndirme henüz desteklenmiyor; hiçbir dosya kaydedilmedi.');
-      return;
-    }
-    const uri = current?.item.uri ?? undefined;
-    const message = `${detail.title} · İlan no: ${detail.listingNumber}`;
-    Share.share(uri ? { message: `${message}\n${uri}`, url: uri } : { message }).catch(() => setNotice('Paylaşım açılamadı.'));
-  };
-
-  if (!current) {
-    return (
-      <Screen background={colors.black} statusBar="light" testID="media-screen">
-        <TopBar onClose={onBack} />
-        <View style={styles.center} testID="media-empty">
-          <Icon name="image" size={30} color={colors.slateFaint} />
-          <Text style={styles.messageTitle} accessibilityRole="header">
-            Fotoğraf veya video yok
-          </Text>
-          <Text style={styles.messageText}>Bu ilan için henüz fotoğraf ya da video eklenmemiş.</Text>
-          <View style={styles.messageActions}>
-            <Btn label="Geri dön" variant="onDark" icon="arrow-left" onPress={onBack} testID="media-empty-back" />
-          </View>
-        </View>
-      </Screen>
-    );
-  }
-
-  return (
-    <Screen background={colors.black} statusBar="light" edges={['top', 'bottom', 'left', 'right']} testID="media-screen">
-      <TopBar onClose={onBack} counter={counterLabel(current, entries)} onUnavailable={unavailable} />
-      <View style={styles.body}>
-        <Stage key={current.item.id} entry={current} onBack={onBack} onPrev={() => step(-1)} onNext={() => step(1)} canPrev={current.index > 0} canNext={current.index < entries.length - 1} />
-        <View style={styles.captionBox}>
-          <Text style={styles.caption} numberOfLines={2} testID="media-title">
-            {detail.title}
-          </Text>
-          <Text style={styles.hint}>{current.item.kind === 'photo' ? 'Kaydırarak gezinin · çift dokunarak yakınlaştırın' : 'Kaydırarak gezinin'}</Text>
-          {notice ? (
-            <Text style={styles.notice} accessibilityRole="alert" accessibilityLiveRegion="polite" testID="media-notice">
-              {notice}
-            </Text>
-          ) : null}
-        </View>
-      </View>
-      <Thumbs entries={entries} currentId={current.item.id} onSelect={select} />
-    </Screen>
-  );
-}
-
-/** Seçili medya sahnesi; `key` = medya kimliği olduğundan seçim değişince video bileşeni kaldırılır (oynatma durur). */
-function Stage({
-  entry,
-  onBack,
-  onPrev,
-  onNext,
-  canPrev,
-  canNext,
-}: {
-  entry: GalleryEntry;
-  onBack: () => void;
-  onPrev: () => void;
-  onNext: () => void;
-  canPrev: boolean;
-  canNext: boolean;
-}) {
+/** Fotoğraf sayfası: iki parmakla yakınlaştırma (main: `ScrollView` zoom); yüklenemezse yeniden deneme. */
+function PhotoPage({ uri }: { uri: string | null }) {
   const { width } = useWindowDimensions();
+  const size = { width, height: width * 0.78 };
   const [attempt, setAttempt] = useState(0);
-  const [photoFailed, setPhotoFailed] = useState(false);
-  const retry = () => {
-    setPhotoFailed(false);
-    setAttempt((n) => n + 1);
-  };
-  const { item } = entry;
-  const placeholder = (
-    <>
-      <StripePlaceholder width={width} height={STAGE_HEIGHT} stripe={8} colorA={colors.ink} colorB={colors.darkStripeA} />
-      {item.kind === 'photo' ? (
-        <View style={styles.placeholderLabel} pointerEvents="none">
-          <Text style={styles.mono}>{`araç fotoğrafı · ${entry.index + 1}`}</Text>
-        </View>
-      ) : null}
-    </>
-  );
+  const [failed, setFailed] = useState(false);
 
-  const photo = item.kind === 'photo';
-  const gestures = useStageGestures({ size: { width, height: STAGE_HEIGHT }, canPrev, canNext, onPrev, onNext, zoomable: photo });
-  const zoomLayer = { transform: [{ translateX: gestures.tx }, { translateY: gestures.ty }, { scale: gestures.scale }] };
-  const photoReady = photo && !photoFailed;
-
-  let content: React.ReactNode;
-  if (item.kind === 'video') {
-    content = <GalleryVideo key={attempt} uri={item.uri} onRetry={retry} onBack={onBack} stage={placeholder} testID="media-video" />;
-  } else if (item.uri === null) {
-    content = placeholder;
-  } else if (photoFailed) {
-    content = (
-      <>
-        {placeholder}
-        <View style={styles.photoError} testID="media-photo-error">
-          <Text style={styles.errorTitle}>Fotoğraf yüklenemedi</Text>
-          <View style={styles.photoErrorActions}>
-            <Btn label="Tekrar dene" icon="refresh-cw" onPress={retry} testID="media-photo-retry" />
-          </View>
-        </View>
-      </>
-    );
-  } else {
-    content = (
-      <>
-        {placeholder}
-        <Image
-          key={attempt}
-          source={{ uri: item.uri }}
-          style={StyleSheet.absoluteFill}
-          contentFit="contain"
-          accessibilityIgnoresInvertColors
-          onError={() => setPhotoFailed(true)}
-          testID="media-photo"
+  if (!uri) return <ListingImage uri={null} dark iconSize={48} style={size} />;
+  if (failed) {
+    return (
+      <View style={[styles.failed, size]} testID="media-photo-error">
+        <Icon name="camera-off" size={48} color={Colors.navyBorder} />
+        <Text variant="body" style={styles.muted}>
+          Fotoğraf yüklenemedi.
+        </Text>
+        <Button
+          title="Tekrar dene"
+          icon="refresh-cw"
+          variant="outlineDark"
+          onPress={() => {
+            setFailed(false);
+            setAttempt((n) => n + 1);
+          }}
+          testID="media-photo-retry"
         />
-      </>
+      </View>
     );
   }
-
-  const zone = (name: TapZone, offset: number) => (event: GestureResponderEvent) =>
-    gestures.handleTap(name, { x: offset + (event.nativeEvent?.locationX ?? 0), y: event.nativeEvent?.locationY ?? STAGE_HEIGHT / 2 });
-
   return (
-    <View style={[styles.stage, { height: STAGE_HEIGHT }]} testID="media-stage" {...gestures.panHandlers}>
-      <Animated.View
-        style={[StyleSheet.absoluteFill, zoomLayer]}
-        accessibilityValue={photo ? { text: gestures.zoomed ? 'Yakınlaştırıldı' : 'Normal boyut' } : undefined}
-        testID="media-surface">
-        {content}
-      </Animated.View>
-      {photoReady ? (
-        <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
-          <Pressable accessibilityRole="button" accessibilityLabel="Önceki" onPress={zone('left', 0)} style={[styles.zone, styles.zoneLeft]} testID="media-prev" />
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={gestures.zoomed ? 'Uzaklaştır' : 'Yakınlaştır'}
-            accessibilityHint="Çift dokunarak yakınlaştırır veya geri alır"
-            accessibilityActions={[{ name: 'activate', label: gestures.zoomed ? 'Uzaklaştır' : 'Yakınlaştır' }]}
-            onAccessibilityAction={() => gestures.toggleZoom()}
-            onPress={zone('center', width * 0.3)}
-            style={[styles.zone, styles.zoneCenter]}
-            testID="media-zoom"
-          />
-          <Pressable accessibilityRole="button" accessibilityLabel="Sonraki" onPress={zone('right', width * 0.7)} style={[styles.zone, styles.zoneRight]} testID="media-next" />
-        </View>
-      ) : null}
-    </View>
-  );
-}
-
-function Thumbs({ entries, currentId, onSelect }: { entries: readonly GalleryEntry[]; currentId: string; onSelect: (entry: GalleryEntry) => void }) {
-  const scroll = useRef<ComponentRef<typeof ScrollView>>(null);
-  const currentIndex = entries.findIndex((e) => e.item.id === currentId);
-  const { width } = useWindowDimensions();
-
-  useEffect(() => {
-    const x = THUMB_PADDING + currentIndex * (THUMB + THUMB_GAP) - (width - THUMB) / 2;
-    scroll.current?.scrollTo({ x: Math.max(0, x), animated: true });
-  }, [currentIndex, width]);
-
-  return (
-    <ScrollView ref={scroll} horizontal removeClippedSubviews={false} showsHorizontalScrollIndicator={false} style={styles.thumbs} contentContainerStyle={styles.thumbsContent} testID="media-thumbs">
-      {entries.map((entry) => {
-        const selected = entry.item.id === currentId;
-        const video = entry.item.kind === 'video';
-        return (
-          <Pressable
-            key={entry.item.id}
-            accessibilityRole="button"
-            accessibilityLabel={video ? 'Video' : `Fotoğraf ${entry.photoNumber}`}
-            accessibilityState={{ selected }}
-            onPress={() => onSelect(entry)}
-            style={[styles.thumb, selected && styles.thumbSelected]}
-            testID={`media-thumb-${entry.index}`}>
-            <StripePlaceholder width={THUMB} height={THUMB} stripe={5} colorA={colors.darkStripeA} colorB={colors.darkStripeB} style={StyleSheet.absoluteFill} />
-            {entry.item.thumbnailUri ? <Image source={{ uri: entry.item.thumbnailUri }} style={StyleSheet.absoluteFill} contentFit="cover" accessibilityIgnoresInvertColors /> : null}
-            {selected ? null : <View style={styles.thumbDim} pointerEvents="none" />}
-            {video ? (
-              <>
-                <Icon name="play" size={16} color={colors.greenBright} />
-                <Text style={styles.thumbVideo}>Video</Text>
-              </>
-            ) : (
-              <Text style={styles.thumbNumber}>{entry.photoNumber}</Text>
-            )}
-          </Pressable>
-        );
-      })}
+    <ScrollView maximumZoomScale={3} minimumZoomScale={1} centerContent showsHorizontalScrollIndicator={false} showsVerticalScrollIndicator={false}>
+      <Image key={attempt} source={uri} style={size} contentFit="contain" accessibilityIgnoresInvertColors onError={() => setFailed(true)} testID="media-photo" />
     </ScrollView>
   );
 }
 
+/** Video sayfası: hata sonrası "Tekrar dene" oynatıcıyı `key` ile yeniden oluşturur. */
+function VideoPage({ uri, active }: { uri: string | null; active: boolean }) {
+  const [attempt, setAttempt] = useState(0);
+  return <GalleryVideo key={attempt} uri={uri} active={active} onRetry={() => setAttempt((n) => n + 1)} testID="media-video" />;
+}
+
 const styles = StyleSheet.create({
-  topBar: { height: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 6 },
-  topButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  topRight: { minWidth: 88, flexDirection: 'row', justifyContent: 'flex-end' },
-  counter: { fontFamily: fontFamily.montserrat600, fontSize: 16, lineHeight: 16, color: colors.white },
-  body: { flex: 1, minHeight: 0, justifyContent: 'center', gap: 18 },
-  stage: { overflow: 'hidden', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.ink },
-  placeholderLabel: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center' },
-  mono: { ...textStyles.mono, fontSize: 11, lineHeight: 13.2, color: colors.slatePale },
-  zone: { position: 'absolute', top: 0, bottom: 0 },
-  zoneLeft: { left: 0, width: '30%' },
-  zoneCenter: { left: '30%', width: '40%' },
-  zoneRight: { right: 0, width: '30%' },
-  captionBox: { alignItems: 'center', gap: 6, paddingHorizontal: 24 },
-  caption: { fontFamily: fontFamily.montserrat600, fontSize: 14, lineHeight: 18.2, color: colors.lineSoft, textAlign: 'center' },
-  hint: { fontFamily: fontFamily.inter400, fontSize: 12, color: colors.slateFaint },
-  notice: { fontFamily: fontFamily.inter500, fontSize: 12, lineHeight: 17, color: colors.bluePale, textAlign: 'center' },
-  thumbs: { flexGrow: 0 },
-  thumbsContent: { gap: THUMB_GAP, paddingTop: spacing.lg, paddingBottom: spacing.xl, paddingHorizontal: THUMB_PADDING },
-  thumb: { width: THUMB, height: THUMB, borderRadius: radii.md, borderWidth: 2, borderColor: 'transparent', overflow: 'hidden', alignItems: 'center', justifyContent: 'center', gap: 2 },
-  thumbSelected: { borderColor: colors.white },
-  // Tasarımdaki `opacity: .7` yerine örtü: Android'de seçim değişince opaklığı değişen küçük resimler çizilmiyordu.
-  thumbDim: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.3)' },
-  thumbNumber: { fontFamily: fontFamily.inter600, fontSize: 11, lineHeight: 11, color: colors.line },
-  thumbVideo: { fontFamily: fontFamily.inter600, fontSize: 9, lineHeight: 9, color: colors.line },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.lg, paddingHorizontal: spacing['3xl'] },
-  messageTitle: { fontFamily: fontFamily.montserrat700, fontSize: 16, lineHeight: 20, color: colors.white, textAlign: 'center' },
-  messageText: { fontFamily: fontFamily.inter400, fontSize: 13, lineHeight: 19, color: colors.slateFaint, textAlign: 'center' },
-  messageActions: { alignSelf: 'stretch', gap: spacing.md, marginTop: spacing.md },
-  photoError: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center', gap: 12, padding: 24, backgroundColor: 'rgba(17,22,31,0.86)' },
-  photoErrorActions: { alignSelf: 'stretch' },
-  errorTitle: { fontFamily: fontFamily.montserrat700, fontSize: 16, lineHeight: 20, color: colors.white },
+  container: { flex: 1, backgroundColor: Colors.black },
+  white: { color: Colors.white },
+  muted: { color: '#9AA4B2' },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.four,
+    paddingBottom: Spacing.three,
+  },
+  pager: { flexGrow: 0, marginTop: 'auto' },
+  page: { alignItems: 'center', justifyContent: 'center', gap: Spacing.three, minHeight: 280 },
+  failed: { alignItems: 'center', justifyContent: 'center', gap: Spacing.three },
+  caption: { gap: Spacing.one, paddingHorizontal: Spacing.four, paddingTop: Spacing.four },
+  thumbList: { flexGrow: 0, marginTop: 'auto' },
+  thumbs: { gap: Spacing.two, paddingHorizontal: Spacing.four },
+  thumb: {
+    width: THUMB,
+    height: THUMB,
+    borderRadius: Radius.md,
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: 'transparent',
+    backgroundColor: '#161D29',
+  },
+  thumbActive: { borderColor: Colors.white },
+  thumbImage: { width: '100%', height: '100%' },
+  videoThumb: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 2 },
 });

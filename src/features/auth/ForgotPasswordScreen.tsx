@@ -1,81 +1,100 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Link } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-native';
+import { useForm, useWatch } from 'react-hook-form';
+import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, View } from 'react-native';
 
-import { Btn } from '@/components/Btn';
-import { Screen } from '@/components/Screen';
 import { useServices } from '@/services';
-import { colors, fontFamily, spacing, textStyles } from '@/theme';
+import { Button } from '@/ui/Button';
+import { FocusStatusBar } from '@/ui/FocusStatusBar';
+import { Icon } from '@/ui/Icon';
+import { Text } from '@/ui/Text';
+import { Colors, Radius, Spacing } from '@/ui/theme';
 
-import { FormError, TextField } from './AuthForm';
+import { FormError, TextField, useClearFailureOnEdit } from './AuthForm';
 import { FormScroll } from './FormScroll';
 import { PageHeader } from './PageHeader';
 import { forgotPasswordSchema, type ForgotPasswordValues } from './authSchemas';
 import { useAuthSubmit } from './useAuthSubmit';
 
 /**
- * Şifre sıfırlama isteği (tasarım 06). Kayıtlı hesaba Supabase sıfırlama bağlantısı gönderilir; bilinen/bilinmeyen e-posta için AYNI
- * genel başarı iletisi gösterilir (hesap varlığı sızdırılmaz). Bağlantı uygulamayı "Yeni Şifre" ekranında açar (ResetPasswordScreen).
+ * Şifre sıfırlama isteği. Kayıtlı hesaba Supabase sıfırlama bağlantısı gönderilir; bilinen/bilinmeyen e-posta için AYNI başarı iletisi
+ * gösterilir (hesap varlığı yanıttan anlaşılmaz). Bağlantı uygulamayı "Yeni Şifre" ekranında açar (ResetPasswordScreen).
  */
 export function ForgotPasswordScreen() {
   const { auth } = useServices();
-  const { submitting, failure, submit } = useAuthSubmit();
-  const [requestedEmail, setRequestedEmail] = useState<string | null>(null);
-  const { control, handleSubmit, setError } = useForm<ForgotPasswordValues>({
+  const router = useRouter();
+  const { submitting, failure, submit, clearFailure } = useAuthSubmit();
+  const [sentTo, setSentTo] = useState<string | null>(null);
+  const { control, handleSubmit, setError, subscribe } = useForm<ForgotPasswordValues>({
     resolver: zodResolver(forgotPasswordSchema),
     defaultValues: { email: '' },
   });
+  const email = useWatch({ control, name: 'email' });
+  useClearFailureOnEdit(subscribe, clearFailure); // alan düzenlenince eski sunucu hatası kalkar
 
+  // Doğrulama başarısız olsa da yeni deneme eski genel hatayı (ör. "E-posta veya şifre hatalı.") temizler; geçerli gönderimde `submit` temizler.
   const onSubmit = handleSubmit(async ({ email }) => {
     const result = await submit(
       () => auth.requestPasswordReset(email),
-      () => setRequestedEmail(email),
+      () => setSentTo(email.trim()),
     );
     if (result?.fieldErrors.email) setError('email', { message: result.fieldErrors.email });
-  });
+  }, clearFailure);
 
   return (
-    <Screen edges={['top', 'left', 'right', 'bottom']} background={colors.white} testID="forgot-password-screen">
+    <View style={styles.container} testID="forgot-password-screen">
+      <FocusStatusBar style="dark" />
       <PageHeader title="Şifremi Unuttum" testID="forgot-back" />
       <KeyboardAvoidingView style={styles.flex} behavior="padding" enabled={Platform.OS === 'ios'}>
-        <FormScroll contentContainerStyle={styles.form}>
-          {requestedEmail === null ? (
+        <FormScroll contentContainerStyle={styles.content}>
+          {sentTo ? (
             <>
-              <Text style={[textStyles.bodyRelaxed, styles.lead]}>E-posta adresinizi girin; şifre sıfırlama adımını başlatalım.</Text>
-              <TextField control={control} name="email" label="E-posta" type="email" autoComplete="email" returnKeyType="done" onSubmitEditing={onSubmit} testID="forgot-email" />
-              <FormError message={failure?.message ?? null} />
-              <Btn label="Sıfırlama İste" onPress={onSubmit} loading={submitting} testID="forgot-submit" />
+              <View style={styles.sent} accessibilityLiveRegion="polite" testID="forgot-sent">
+                <Icon name="mail" size={24} color="success" />
+                <Text variant="body" style={styles.flex}>
+                  {`${sentTo} adresine şifre sıfırlama bağlantısı gönderdik. Bağlantıya bu telefondan dokunarak yeni şifrenizi belirleyebilirsiniz.`}
+                </Text>
+              </View>
+              <Button title="Tekrar gönder" variant="outline" onPress={() => setSentTo(null)} testID="forgot-again" />
             </>
           ) : (
-            <View style={styles.sent} testID="forgot-sent">
-              <Text style={[textStyles.titleSection, styles.sentTitle]} accessibilityRole="header">
-                İsteğiniz alındı
+            <>
+              <Text variant="body" color="textSecondary" style={styles.lead}>
+                E-posta adresinizi girin; şifre sıfırlama bağlantısını gönderelim.
               </Text>
-              <Text style={[textStyles.bodyRelaxed, styles.lead]}>
-                {`${requestedEmail} adresiyle kayıtlı bir hesap varsa şifre sıfırlama bağlantısı gönderdik. Bağlantıya bu cihazda dokunduğunuzda uygulama yeni şifre ekranını açar.`}
-              </Text>
-              <Btn label="Tekrar gönder" variant="secondary" onPress={() => setRequestedEmail(null)} testID="forgot-again" />
-            </View>
+              <TextField control={control} name="email" label="E-posta" type="email" autoComplete="email" returnKeyType="done" onSubmitEditing={onSubmit} testID="forgot-email" />
+              <FormError message={failure?.message ?? null} />
+              <Button title="Sıfırlama İste" disabled={!email.includes('@')} loading={submitting} onPress={() => void onSubmit()} testID="forgot-submit" />
+            </>
           )}
-          <View style={styles.switchRow}>
-            <Link href="/login" accessibilityRole="link" style={[textStyles.bodySmall, styles.switchLink]} testID="forgot-to-login">
+          <Pressable
+            hitSlop={8}
+            accessibilityRole="link"
+            style={styles.back}
+            onPress={() => (router.canGoBack() ? router.back() : router.replace('/login'))}
+            testID="forgot-to-login">
+            <Text variant="bodySemibold" color="green">
               Girişe dön
-            </Link>
-          </View>
+            </Text>
+          </Pressable>
         </FormScroll>
       </KeyboardAvoidingView>
-    </Screen>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: Colors.surface },
+  content: { padding: Spacing.three, gap: Spacing.three },
   flex: { flex: 1 },
-  form: { paddingVertical: spacing.xl, paddingHorizontal: spacing['2xl'], gap: spacing.lg },
-  lead: { color: colors.inkMuted },
-  sent: { gap: spacing.lg },
-  sentTitle: { color: colors.navy },
-  switchRow: { alignItems: 'center' },
-  switchLink: { color: colors.greenPressed, fontFamily: fontFamily.inter700, paddingVertical: 12, paddingHorizontal: 4 },
+  lead: { fontSize: 18, lineHeight: 27 },
+  sent: {
+    flexDirection: 'row',
+    gap: Spacing.three,
+    padding: Spacing.three,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.successSoft,
+  },
+  back: { alignSelf: 'center', marginTop: Spacing.three },
 });

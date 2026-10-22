@@ -88,7 +88,9 @@ export type Database = {
           last_message_at: string
           last_message_is_staff: boolean | null
           listing_id: string
+          staff_hidden_at: string | null
           user_id: string
+          user_hidden_at: string | null
         }
         Insert: {
           created_at?: string
@@ -97,7 +99,9 @@ export type Database = {
           last_message_at?: string
           last_message_is_staff?: boolean | null
           listing_id: string
+          staff_hidden_at?: string | null
           user_id: string
+          user_hidden_at?: string | null
         }
         Update: {
           created_at?: string
@@ -106,7 +110,9 @@ export type Database = {
           last_message_at?: string
           last_message_is_staff?: boolean | null
           listing_id?: string
+          staff_hidden_at?: string | null
           user_id?: string
+          user_hidden_at?: string | null
         }
         Relationships: [
           {
@@ -548,6 +554,10 @@ export type Database = {
     }
     Functions: {
       delete_my_account: { Args: never; Returns: undefined }
+      hide_conversation: {
+        Args: { p_conversation_id: string }
+        Returns: undefined
+      }
       mark_conversation_read: {
         Args: { p_conversation_id: string }
         Returns: undefined

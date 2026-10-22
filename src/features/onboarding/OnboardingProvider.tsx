@@ -3,12 +3,17 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { BootstrapLoading } from '@/bootstrap';
 import { createDeviceStorage } from '@/services';
 
-import { readOnboardingCompleted, writeOnboardingCompleted, type OnboardingStorage } from './onboardingStorage';
+import { clearOnboardingCompleted, readOnboardingCompleted, writeOnboardingCompleted, type OnboardingStorage } from './onboardingStorage';
 
 type OnboardingContextValue = {
   readonly completed: boolean;
   /** Kalıcı olarak "tamamlandı" yazar (yazma bitince durum değişir) ve yönlendirmeyi tetikler. Tekrar çağrı zararsızdır. */
   readonly complete: () => Promise<void>;
+  /**
+   * Test aracı (profildeki "Tanıtımı yeniden göster"): kalıcı bayrağı siler ve durumu "tamamlanmadı" yapar. Oturum KAPANMAZ; yönlendirme
+   * (`RootNavigator`) tanıtımı açar, tanıtım bitince (`complete`) oturum açık olduğundan doğrudan sekmelere (ana sayfa) döner.
+   */
+  readonly reset: () => Promise<void>;
 };
 
 const OnboardingContext = createContext<OnboardingContextValue | null>(null);
@@ -44,7 +49,16 @@ export function OnboardingProvider({ children, storage }: Props) {
     setCompleted(true);
   }, [store]);
 
-  const value = useMemo(() => ({ completed: completed === true, complete }), [completed, complete]);
+  const reset = useCallback(async () => {
+    try {
+      await clearOnboardingCompleted(store);
+    } catch {
+      // Silinemezse yalnız bu oturumda yeniden gösterilir (sonraki açılışta eski "tamamlandı" değeri okunur); test aracı için yeterli.
+    }
+    setCompleted(false);
+  }, [store]);
+
+  const value = useMemo(() => ({ completed: completed === true, complete, reset }), [completed, complete, reset]);
 
   if (completed === null) return <BootstrapLoading />;
   return <OnboardingContext.Provider value={value}>{children}</OnboardingContext.Provider>;

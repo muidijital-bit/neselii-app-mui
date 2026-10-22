@@ -1,6 +1,7 @@
-import { formatRelativeDate, type AppNotification, type NotificationKind } from '@/domain';
-import type { IconName } from '@/components/icons/Icon';
-import { colors } from '@/theme';
+import type { AppNotification, NotificationKind } from '@/domain';
+import type { IconName } from '@/ui/Icon';
+import { timeAgo } from '@/ui/format';
+import { Colors } from '@/ui/theme';
 
 export type NotificationRowModel = {
   readonly id: string;
@@ -10,32 +11,28 @@ export type NotificationRowModel = {
   readonly icon: IconName;
   readonly iconBackground: string;
   readonly iconColor: string;
+  /** İlanın kapak fotoğrafı; varsa satırda tür simgesi yerine fotoğraf, simge köşesinde küçük rozet olarak durur. */
+  readonly imageUri: string | null;
   readonly target: AppNotification['target'];
 };
 
-/** Tür → simge ve renk çifti (tasarım ekran 11: etiket zemini + simge rengi). */
+/**
+ * Tür → simge ve renk çifti (main tasarımındaki `typeStyles`). Main'de olmayan türler aynı dile oturtuldu: kayıtlı arama eşleşmesi yeni ilanla
+ * aynı; `new-message` (yöneticiye müşteriden yeni mesaj) yeşil zeminli mesaj balonu (mesaj cevabının lacivert balonundan ayrışır).
+ */
 const KIND_STYLE: Record<NotificationKind, { icon: IconName; background: string; color: string }> = {
-  'new-listing': { icon: 'tag', background: colors.greenTint, color: colors.greenPressed },
-  'saved-search-match': { icon: 'tag', background: colors.greenTint, color: colors.greenPressed },
-  'message-reply': { icon: 'message-circle', background: colors.bluePale, color: colors.blue },
-  'new-message': { icon: 'message-circle', background: colors.greenTint, color: colors.greenPressed },
-  'price-change': { icon: 'trending-down', background: colors.warningTint, color: colors.warningText },
-  'status-change': { icon: 'refresh-cw', background: colors.lineSoft, color: colors.inkMuted },
-  announcement: { icon: 'megaphone', background: colors.blueTint, color: colors.blueText },
+  'new-listing': { icon: 'tag', background: '#E2F5E9', color: Colors.green },
+  'saved-search-match': { icon: 'tag', background: '#E2F5E9', color: Colors.green },
+  'message-reply': { icon: 'message-circle', background: '#DCE6F2', color: Colors.heading },
+  'new-message': { icon: 'message-square', background: '#E2F5E9', color: Colors.green },
+  'price-change': { icon: 'trending-down', background: Colors.warningSoft, color: Colors.warning },
+  'status-change': { icon: 'refresh-cw', background: Colors.chip, color: Colors.textSecondary },
+  announcement: { icon: 'mci:bullhorn-outline', background: Colors.surfaceMuted, color: Colors.heading },
 };
 
-const MINUTE_MS = 60_000;
-const HOUR_MS = 3_600_000;
-
-/** `Az önce`, `12 dk önce`, `2 sa önce` (24 saate kadar); sonrası ilan tarihiyle aynı göreli biçim (`Dün`, `4 gün önce`, `12 Eki`). */
+/** Main'deki göreli zaman: `az önce`, `5 dakika önce`, `3 saat önce`, `dün`, `2 gün önce`… Geçersiz tarih boş metin verir. */
 export function notificationTime(iso: string, nowMs: number): string {
-  const thenMs = Date.parse(iso);
-  if (!Number.isFinite(thenMs)) return '';
-  const elapsed = nowMs - thenMs;
-  if (elapsed < MINUTE_MS) return 'Az önce';
-  if (elapsed < HOUR_MS) return `${Math.floor(elapsed / MINUTE_MS)} dk önce`;
-  if (elapsed < 24 * HOUR_MS) return `${Math.floor(elapsed / HOUR_MS)} sa önce`;
-  return formatRelativeDate(iso, nowMs);
+  return Number.isFinite(Date.parse(iso)) ? timeAgo(iso, nowMs) : '';
 }
 
 export function toNotificationRow(notification: AppNotification, nowMs: number): NotificationRowModel {
@@ -44,11 +41,12 @@ export function toNotificationRow(notification: AppNotification, nowMs: number):
   return {
     id: notification.id,
     title: notification.title,
-    subtitle: time === '' ? notification.body : `${notification.body} · ${time}`,
+    subtitle: [notification.body, time].filter(Boolean).join(' · '),
     unread: !notification.read,
     icon: style.icon,
     iconBackground: style.background,
     iconColor: style.color,
+    imageUri: notification.imageUri,
     target: notification.target,
   };
 }

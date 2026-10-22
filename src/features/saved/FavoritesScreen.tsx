@@ -1,17 +1,21 @@
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 
-import { ListingCard } from '@/components/ListingCard';
-import { Screen } from '@/components/Screen';
-import { Icon } from '@/components/icons/Icon';
 import { userMessage, type FavoriteEntry } from '@/domain';
 import { ListingSkeletons, StateMessage } from '@/features/listings/ListStates';
-import { toCardModel } from '@/features/listings/presentation';
+import { toListingView } from '@/features/listings/presentation';
 import { listingHref } from '@/features/listings/routes';
 import { PageHeader } from '@/features/notifications/PageHeader';
-import { colors, fontFamily, radii, spacing, textStyles } from '@/theme';
+import { FocusStatusBar } from '@/ui/FocusStatusBar';
+import { Icon } from '@/ui/Icon';
+import { ListingCard } from '@/ui/ListingCard';
+import { Text } from '@/ui/Text';
+import { Card, IconTile } from '@/ui/Ui';
+import { Colors, Spacing } from '@/ui/theme';
+import { usePullRefresh } from '@/ui/usePullRefresh';
 
+import { FavoriteFailureNotice } from './FavoriteFailureNotice';
 import { useFavoriteToggle, useFavoritesQuery } from './useFavorites';
 
 /**
@@ -24,6 +28,8 @@ export function FavoritesScreen() {
   const query = useFavoritesQuery();
   const favorites = useFavoriteToggle();
   const { refetch } = query;
+  // Gösterge yalnız kullanıcı çektiğinde; aşağıdaki odak eşitlemesi (her girişte yeniden çekme) göstergeyi açmaz.
+  const { pulling, onRefresh } = usePullRefresh(refetch);
 
   // Her odakta (ilk açılış, ilan detayından dönüş) liste servisle eşitlenir; sürmekte olan yükleme iptal edilmeden bekletilir.
   useFocusEffect(
@@ -33,18 +39,16 @@ export function FavoritesScreen() {
   );
 
   const entries = query.data ?? [];
-  const nowMs = Date.now();
 
   let empty = null;
   if (query.isPending) {
     empty = <ListingSkeletons testID="favorites-loading" />;
   } else if (query.isError && query.data === undefined) {
-    empty = (
-      <StateMessage icon="info" title="Favoriler yüklenemedi" message={userMessage(query.error)} actionLabel="Tekrar dene" onAction={() => void refetch()} testID="favorites-error" />
-    );
+    empty = <StateMessage icon="wifi-off" title="Favoriler yüklenemedi" message={userMessage(query.error)} actionLabel="Tekrar dene" onAction={() => void refetch()} testID="favorites-error" />;
   } else {
     empty = (
       <StateMessage
+        top
         icon="heart"
         title="Henüz favori ilanınız yok"
         message="Beğendiğiniz ilanların kalbine dokunarak burada toplayabilirsiniz."
@@ -59,73 +63,59 @@ export function FavoritesScreen() {
   const renderEntry = (entry: FavoriteEntry) => {
     if (entry.listing === null) return <UnavailableFavorite entry={entry} busy={favorites.isPending(entry.listingId)} onRemove={() => favorites.toggle(entry.listingId)} />;
     const listing = entry.listing;
-    const card = toCardModel(listing, nowMs);
     return (
       <ListingCard
-        title={card.title}
-        location={card.location}
-        dateLabel={card.dateLabel}
-        price={card.price}
-        category={card.category}
-        photoCount={card.photoCount}
-        hasVideo={card.hasVideo}
-        status={card.status}
-        imageUri={card.imageUri}
-        favorite={favorites.isFavorite(listing.id)}
-        favoriteBusy={favorites.isPending(listing.id)}
+        listing={toListingView(listing)}
+        isFavorite={favorites.isFavorite(listing.id)}
         onToggleFavorite={() => favorites.toggle(listing.id, listing)}
-        favoriteTestID={`favorite-toggle-${card.id}`}
-        onPress={() => router.push(listingHref(card.id))}
-        testID={`listing-card-${card.id}`}
+        onPress={() => router.push(listingHref(listing.id))}
+        testID={`listing-card-${listing.id}`}
       />
     );
   };
 
   return (
-    <Screen background={colors.white} testID="favorites-screen">
+    <View style={styles.container} testID="favorites-screen">
+      <FocusStatusBar style="dark" />
       <PageHeader title="Favori İlanlarım" testID="favorites-back" />
-      {favorites.failure ? (
-        <View style={styles.notice} accessibilityRole="alert" accessibilityLiveRegion="polite" testID="favorites-failure">
-          <Icon name="info" size={18} color={colors.danger} />
-          <Text style={styles.noticeText}>{favorites.failure}</Text>
-        </View>
-      ) : null}
       <FlatList
-        style={styles.list}
-        contentContainerStyle={styles.listContent}
+        style={styles.flex}
+        contentContainerStyle={styles.list}
         data={entries}
         extraData={favorites}
         keyExtractor={(entry) => entry.listingId}
         ListHeaderComponent={
-          entries.length > 0 ? (
-            <Text style={styles.count} accessibilityLiveRegion="polite" testID="favorites-count">
-              {`${entries.length} favori ilan`}
-            </Text>
+          entries.length > 0 || favorites.failure ? (
+            <View style={styles.header}>
+              <FavoriteFailureNotice message={favorites.failure} testID="favorites-failure" />
+              {entries.length > 0 ? (
+                <Text variant="bodyMedium" color="textSecondary" accessibilityLiveRegion="polite" testID="favorites-count">
+                  {`${entries.length} favori ilan`}
+                </Text>
+              ) : null}
+            </View>
           ) : undefined
         }
         renderItem={({ item }) => renderEntry(item)}
-        ItemSeparatorComponent={Separator}
-        ListEmptyComponent={empty ?? undefined}
-        showsVerticalScrollIndicator={false}
+        ListEmptyComponent={empty}
+        refreshControl={<RefreshControl refreshing={pulling} onRefresh={onRefresh} tintColor={Colors.navy} />}
         testID="favorites-list"
       />
-    </Screen>
+    </View>
   );
 }
 
-/** Yayından kalkmış / bulunamayan ilanın güvenli satırı: ilan verisi yoktur, yalnızca açıklama ve kaldırma eylemi. */
+/** Yayından kalkmış / bulunamayan ilanın güvenli satırı (main'de karşılığı yok; main'in kart diliyle): açıklama ve kaldırma eylemi. */
 function UnavailableFavorite({ entry, busy, onRemove }: { entry: FavoriteEntry; busy: boolean; onRemove: () => void }) {
   return (
-    <View style={styles.unavailable} testID={`favorite-unavailable-${entry.listingId}`}>
-      <View style={styles.unavailableHead}>
-        <View style={styles.unavailableIcon}>
-          <Icon name="eye-off" size={20} color={colors.slate} />
-        </View>
+    <Card>
+      <View style={styles.unavailable} testID={`favorite-unavailable-${entry.listingId}`}>
+        <IconTile icon="eye-off" color="textSecondary" />
         <View style={styles.unavailableText}>
-          <Text style={[textStyles.cardTitle, styles.unavailableTitle]} accessibilityRole="header">
+          <Text variant="subheading" accessibilityRole="header">
             Bu ilan artık yayında değil
           </Text>
-          <Text style={[textStyles.caption, styles.unavailableNote]}>İlan yayından kaldırılmış ya da bulunamıyor. Favorilerinizden kaldırabilirsiniz.</Text>
+          <Text variant="small">İlan yayından kaldırılmış ya da bulunamıyor. Favorilerinizden kaldırabilirsiniz.</Text>
         </View>
       </View>
       <Pressable
@@ -134,32 +124,34 @@ function UnavailableFavorite({ entry, busy, onRemove }: { entry: FavoriteEntry; 
         accessibilityState={{ disabled: busy, busy }}
         disabled={busy}
         onPress={onRemove}
-        style={({ pressed }) => [styles.removeButton, pressed && styles.pressed]}
+        style={({ pressed }) => [styles.removeButton, pressed && styles.pressed, busy && styles.busy]}
         testID={`favorite-unavailable-remove-${entry.listingId}`}>
-        <Icon name="trash-2" size={18} color={colors.danger} />
-        <Text style={styles.removeText}>Favorilerden kaldır</Text>
+        <Icon name="trash-2" size={20} color="danger" />
+        <Text variant="bodySemibold" color="danger">
+          Favorilerden kaldır
+        </Text>
       </Pressable>
-    </View>
+    </Card>
   );
 }
 
-const Separator = () => <View style={styles.separator} />;
-
-// Kart, bildirim ve profil ekranlarının ortak ölçüleri (16 yan boşluk, 10 aralık, r14 kartlar).
 const styles = StyleSheet.create({
-  list: { flex: 1, backgroundColor: colors.surface },
-  listContent: { flexGrow: 1, paddingHorizontal: spacing.xl, paddingTop: 12, paddingBottom: spacing.xl },
-  count: { height: 32, fontFamily: fontFamily.inter600, fontSize: 13, lineHeight: 32, color: colors.inkSoft },
-  separator: { height: 10 },
-  notice: { flexDirection: 'row', gap: 10, alignItems: 'flex-start', marginHorizontal: spacing.xl, marginTop: 12, padding: 12, borderRadius: radii.xl, backgroundColor: colors.blueTint },
-  noticeText: { flex: 1, fontFamily: fontFamily.inter400, fontSize: 13, lineHeight: 19, color: colors.blue },
-  unavailable: { gap: 6, padding: 10, backgroundColor: colors.white, borderRadius: radii.card, borderWidth: 1, borderColor: colors.lineSoft },
-  unavailableHead: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
-  unavailableIcon: { width: 40, height: 40, borderRadius: radii.pill, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' },
-  unavailableText: { flex: 1, minWidth: 0, gap: 4 },
-  unavailableTitle: { color: colors.navy },
-  unavailableNote: { color: colors.slateLight },
-  removeButton: { minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: radii.lg, backgroundColor: colors.white },
-  removeText: { fontFamily: fontFamily.inter600, fontSize: 14, color: colors.danger },
-  pressed: { backgroundColor: colors.surface },
+  container: { flex: 1, backgroundColor: Colors.background },
+  flex: { flex: 1 },
+  // Main'deki `ListingList`: 16 kenar boşluğu, kartlar arası 16.
+  list: { padding: Spacing.three, gap: Spacing.three, flexGrow: 1 },
+  header: { gap: Spacing.three },
+  unavailable: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, padding: Spacing.three },
+  unavailableText: { flex: 1, gap: 2 },
+  removeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.two,
+    minHeight: 48,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: Colors.border,
+  },
+  pressed: { backgroundColor: Colors.background },
+  busy: { opacity: 0.5 },
 });

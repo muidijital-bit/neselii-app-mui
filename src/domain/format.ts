@@ -21,6 +21,22 @@ export function formatInteger(value: number): string {
   return value < 0 ? `-${grouped}` : grouped;
 }
 
+/**
+ * Kısa TL özeti (filtre başlığı gibi dar yerler): `0` → `0 TL`, `850000` → `850 Bin TL`, `3850000` → `3,85 Mn TL`, `1000000` → `1 Mn TL`.
+ * Milyonda en çok iki ondalık (Türkçe virgül, sondaki sıfırlar atılır); 1.000'in altı olduğu gibi yazılır.
+ */
+export function formatCompactTl(value: number): string {
+  const tl = Math.max(0, Math.round(value));
+  // 999.500 ve üstü yuvarlanınca "1.000 Bin" olmasın: milyona geçer.
+  if (tl >= 999_500) {
+    const [whole, fraction] = (Math.round(tl / 10_000) / 100).toFixed(2).split('.');
+    const decimals = fraction.replace(/0+$/, '');
+    return `${formatInteger(Number(whole))}${decimals ? `,${decimals}` : ''} Mn TL`;
+  }
+  if (tl >= 1000) return `${formatInteger(Math.round(tl / 1000))} Bin TL`;
+  return `${formatInteger(tl)} TL`;
+}
+
 /** `Ankara / Yenimahalle`; ilçe boşsa yalnızca şehir. */
 export const formatLocation = ({ city, district }: ListingLocation): string => [city, district].map((part) => part.trim()).filter(Boolean).join(' / ');
 

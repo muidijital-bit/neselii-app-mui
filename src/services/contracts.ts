@@ -153,6 +153,12 @@ export interface MessagingService {
   markConversationRead(conversationId: ConversationId): Promise<Conversation>;
   /** Tüm sohbetlerdeki toplam okunmamış (sekme rozeti). */
   countUnread(): Promise<number>;
+  /**
+   * Sohbeti çağıranın listesinden kaldırır (kayıt ve mesajlar silinmez): müşteride yalnız kendi listesinden, yöneticide firma gelen
+   * kutusundan (tüm yöneticiler için). Bu taraftaki okunmamışlar ve sohbetin mesaj bildirimleri okundu sayılır. Sohbete yeni mesaj gelince
+   * iki tarafta da yeniden listelenir. Gizli sohbet kimlikle açılabilir kalır. Erişilemeyen/olmayan sohbet → `notFound`.
+   */
+  hideConversation(conversationId: ConversationId): Promise<void>;
   subscribe(conversationId: ConversationId, listener: (event: MessagingEvent) => void): Unsubscribe;
 }
 
@@ -165,6 +171,8 @@ export interface NotificationsService {
   /** İdempotent. Bilinmeyen kimlik → `notFound`. */
   markRead(ids: readonly NotificationId[]): Promise<void>;
   countUnread(): Promise<number>;
+  /** Kullanıcının kendi bildirimlerini kalıcı olarak siler. İdempotent: zaten silinmiş/bilinmeyen kimlik hata değildir. */
+  remove(ids: readonly NotificationId[]): Promise<void>;
   getPreferences(): Promise<NotificationPreferences>;
   /** Verilen alanları günceller ve tam tercihleri döner. */
   updatePreferences(patch: Partial<NotificationPreferences>): Promise<NotificationPreferences>;

@@ -1,27 +1,31 @@
 import type { ReactNode } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Screen } from '@/components/Screen';
-import { colors, spacing, textStyles } from '@/theme';
+import { FocusStatusBar } from '@/ui/FocusStatusBar';
+import { Text } from '@/ui/Text';
+import { Colors, Spacing } from '@/ui/theme';
 
-/** Sekmelerin ve geçici giriş hedefinin içeriği ilgili görevlerde gelir; bu ekran yalnızca gezinme iskeletini gösterir. */
+/** Sekmelerin ve geçici giriş hedefinin içeriği ilgili görevlerde gelir; bu ekran yalnızca gezinme iskeletini gösterir (main yazı/renk dili). */
 export function PlaceholderScreen({ title, note, testID, children }: { title: string; note: string; testID: string; children?: ReactNode }) {
+  const insets = useSafeAreaInsets();
   return (
-    <Screen edges={['top', 'left', 'right']} testID={testID}>
+    <View style={[styles.container, { paddingTop: insets.top }]} testID={testID}>
+      <FocusStatusBar style="dark" />
       <View style={styles.center}>
-        <Text style={[textStyles.titlePage, styles.title]} accessibilityRole="header">
+        <Text variant="title" align="center" accessibilityRole="header">
           {title}
         </Text>
-        <Text style={[textStyles.bodySmall, styles.note]}>{note}</Text>
+        <Text variant="body" color="textSecondary" align="center">
+          {note}
+        </Text>
         {children}
       </View>
-    </Screen>
+    </View>
   );
 }
 
-
 const styles = StyleSheet.create({
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing['3xl'], gap: spacing.lg },
-  title: { color: colors.navy },
-  note: { color: colors.slate, textAlign: 'center' },
+  container: { flex: 1, backgroundColor: Colors.background },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: Spacing.five, gap: Spacing.three },
 });

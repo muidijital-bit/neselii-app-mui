@@ -1,25 +1,28 @@
 import * as Linking from 'expo-linking';
 import { useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Btn } from '@/components/Btn';
-import { Screen } from '@/components/Screen';
-import { BrandLogo } from '@/components/brand/BrandLogo';
 import { useSession } from '@/features/session/SessionProvider';
 import { isAuthLink, useServices } from '@/services';
-import { colors, spacing, textStyles } from '@/theme';
+import { Button } from '@/ui/Button';
+import { FocusStatusBar } from '@/ui/FocusStatusBar';
+import { Logo } from '@/ui/Logo';
+import { Text } from '@/ui/Text';
+import { Colors, Fonts, Spacing } from '@/ui/theme';
 
 import { FormError } from './AuthForm';
 import { SignOutButton } from './SignOutButton';
 import { useAuthSubmit } from './useAuthSubmit';
 
 /**
- * E-posta doğrulama (tasarım kaynağında tam ekranı yoktur; aynı başlık/buton bileşenleriyle kurulur). Kayıt sonrası Supabase doğrulama
- * bağlantısı gönderir. Bağlantı uygulamayı açarsa doğrulama kendiliğinden tamamlanır; başka cihazda açıldıysa "Doğruladım" hesabı
- * yeniden denetler. RootNavigator, `emailVerified=false` oturumunu bu ekrana kilitler.
+ * E-posta doğrulama (main'de karşılığı yoktur; tanıtım ekranlarının lacivert diliyle kurulur). Supabase'te e-posta doğrulaması şu an
+ * KAPALI olduğundan normal akışta açılmaz; RootNavigator yalnız `emailVerified=false` oturumunu bu ekrana kilitler. Bağlantı uygulamayı
+ * açarsa doğrulama kendiliğinden tamamlanır; başka cihazda açıldıysa "Doğruladım" hesabı yeniden denetler.
  */
 export function VerifyEmailScreen() {
   const { auth } = useServices();
+  const insets = useSafeAreaInsets();
   const { session, setSession } = useSession();
   const { submitting, failure, submit } = useAuthSubmit();
   const resend = useAuthSubmit();
@@ -42,40 +45,41 @@ export function VerifyEmailScreen() {
     );
 
   return (
-    <Screen background={colors.navy} statusBar="light" testID="verify-email-screen">
-      <View style={styles.page}>
-        <BrandLogo height={40} />
-        <View style={styles.body}>
-          <Text style={[textStyles.eyebrow, styles.eyebrow]}>E-POSTA DOĞRULAMA</Text>
-          <Text style={[textStyles.titleLarge, styles.title]} accessibilityRole="header">
-            E-postanızı doğrulayın
-          </Text>
-          <Text style={[textStyles.bodyRelaxed, styles.text]}>
-            {session?.user.email ? `${session.user.email} adresine bir doğrulama bağlantısı gönderdik.` : 'E-posta adresinize bir doğrulama bağlantısı gönderdik.'} Bağlantıya
-            dokunduktan sonra aşağıdaki düğmeyle devam edin.
-          </Text>
-        </View>
+    <View style={[styles.container, { paddingTop: insets.top + Spacing.two, paddingBottom: insets.bottom + Spacing.three }]} testID="verify-email-screen">
+      <FocusStatusBar style="light" />
+      <Logo height={36} />
+      <View style={styles.body}>
+        <Text style={styles.eyebrow}>E-POSTA DOĞRULAMA</Text>
+        <Text variant="display" style={styles.title} accessibilityRole="header">
+          E-postanızı doğrulayın
+        </Text>
+        <Text variant="body" style={styles.text}>
+          {session?.user.email ? `${session.user.email} adresine bir doğrulama bağlantısı gönderdik.` : 'E-posta adresinize bir doğrulama bağlantısı gönderdik.'} Bağlantıya
+          dokunduktan sonra aşağıdaki düğmeyle devam edin.
+        </Text>
+      </View>
+      <View style={styles.footer}>
         <FormError message={failure?.message ?? null} />
-        <Btn label="Doğruladım, devam et" onPress={complete} loading={submitting} testID="verify-submit" />
-        <Btn label="Bağlantıyı tekrar gönder" variant="onDark" icon="refresh-cw" onPress={sendAgain} loading={resend.submitting} testID="verify-resend" />
+        <Button title="Doğruladım, devam et" onPress={() => void complete()} loading={submitting} testID="verify-submit" />
+        <Button title="Bağlantıyı tekrar gönder" variant="outlineDark" icon="refresh-cw" onPress={() => void sendAgain()} loading={resend.submitting} testID="verify-resend" />
         {resent ? (
-          <Text style={[textStyles.caption, styles.ok]} accessibilityLiveRegion="polite">
+          <Text variant="caption" style={styles.ok} accessibilityLiveRegion="polite">
             Doğrulama bağlantısı tekrar gönderildi. Gelen kutunuzu ve gereksiz klasörünü kontrol edin.
           </Text>
         ) : null}
         <FormError message={resend.failure?.message ?? null} testID="verify-resend-error" />
-        <Text style={[textStyles.caption, styles.text]}>Yanlış e-postayla mı kaydoldunuz? Çıkış yapıp tekrar kayıt olabilirsiniz.</Text>
         <SignOutButton onDark testID="verify-sign-out" />
       </View>
-    </Screen>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  page: { flex: 1, justifyContent: 'center', gap: spacing.xl, paddingHorizontal: spacing['3xl'] },
-  body: { gap: spacing.lg },
-  eyebrow: { color: colors.greenBright },
-  title: { color: colors.white },
-  text: { color: colors.bluePale },
-  ok: { color: colors.greenBright },
+  container: { flex: 1, backgroundColor: Colors.navy, paddingHorizontal: Spacing.four, gap: Spacing.four },
+  body: { flex: 1, justifyContent: 'flex-end', gap: Spacing.three },
+  eyebrow: { fontFamily: Fonts.bold, fontSize: 12, letterSpacing: 1.4, color: Colors.orange },
+  title: { color: Colors.white, fontSize: 32, lineHeight: 39 },
+  text: { color: '#C9D5E5', fontSize: 17, lineHeight: 25 },
+  footer: { gap: Spacing.three },
+  ok: { color: Colors.greenSoft },
 });

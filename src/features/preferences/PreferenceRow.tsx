@@ -1,15 +1,7 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Switch, View } from 'react-native';
 
-import { colors, fontFamily } from '@/theme';
-
-/** Tasarımdaki anahtar (12b): 51×31 iz, 27 yuvarlak, açık = yeşil iz + sağda. Geçiş animasyonu yoktur (kaynaktaki 0,2 sn geçiş uygulanmadı). */
-function SwitchVisual({ on }: { on: boolean }) {
-  return (
-    <View style={[styles.track, { backgroundColor: on ? colors.green : colors.line }]}>
-      <View style={[styles.knob, { left: on ? 22 : 2 }]} />
-    </View>
-  );
-}
+import { Text } from '@/ui/Text';
+import { Colors, Spacing } from '@/ui/theme';
 
 export type PreferenceRowProps = {
   label: string;
@@ -21,55 +13,52 @@ export type PreferenceRowProps = {
   testID: string;
 };
 
-/** Tercih satırı: tek dokunuşluk anahtar. Ekran okuyucuya `switch` rolü, açık/kapalı durumu ve alt metin bildirilir. */
+/**
+ * Tercih satırı: `@/ui/Ui` ToggleRow ile birebir aynı görünüm (main tasarımı: başlık + alt metin + sistem anahtarı). Satıra ya da anahtara dokunmak
+ * aynı eylemi başlatır; anahtar denetimlidir (izin verilmezse eski değerine döner). Ekran okuyucuya `switch` rolü ve açık/kapalı durumu bildirilir.
+ */
 export function PreferenceRow({ label, sub, on, onPress, busy = false, testID }: PreferenceRowProps) {
+  const press = () => {
+    if (!busy) onPress();
+  };
   return (
     <Pressable
       accessibilityRole="switch"
       accessibilityLabel={label}
       accessibilityHint={sub}
       accessibilityState={{ checked: on, busy }}
-      onPress={busy ? undefined : onPress}
+      onPress={press}
       style={styles.row}
       testID={testID}>
-      <View style={styles.text}>
-        <Text style={styles.label}>{label}</Text>
-        <Text style={styles.sub} testID={`${testID}-sub`}>
+      <View style={styles.flex}>
+        <Text variant="bodyMedium" style={styles.title}>
+          {label}
+        </Text>
+        <Text variant="small" testID={`${testID}-sub`}>
           {sub}
         </Text>
       </View>
-      <SwitchVisual on={on} />
+      <Switch
+        value={on}
+        onValueChange={press}
+        trackColor={{ false: Colors.disabled, true: Colors.green }}
+        thumbColor={Colors.white}
+        ios_backgroundColor={Colors.disabled}
+        importantForAccessibility="no-hide-descendants"
+        accessibilityElementsHidden
+      />
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
+  flex: { flex: 1 },
+  title: { fontSize: 17 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    paddingVertical: 12,
-    paddingLeft: 16,
-    paddingRight: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.lineSoft,
-    backgroundColor: colors.white,
-  },
-  text: { flex: 1, minWidth: 0, gap: 3 },
-  label: { fontFamily: fontFamily.inter500, fontSize: 15, lineHeight: 15 * 1.3, color: colors.ink },
-  sub: { fontFamily: fontFamily.inter400, fontSize: 12, lineHeight: 12 * 1.35, color: colors.slateLight },
-  track: { width: 51, height: 31, borderRadius: 16 },
-  knob: {
-    position: 'absolute',
-    top: 2,
-    width: 27,
-    height: 27,
-    borderRadius: 14,
-    backgroundColor: colors.white,
-    shadowColor: '#07182b',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3,
-    elevation: 2,
+    gap: Spacing.three,
+    paddingHorizontal: Spacing.four,
+    paddingVertical: Spacing.three,
   },
 });

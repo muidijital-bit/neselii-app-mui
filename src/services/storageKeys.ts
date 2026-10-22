@@ -7,4 +7,6 @@ export const STORAGE_KEYS = {
   onboarding: 'neseli.device.onboarding',
   /** Cihaz tercihleri (izin istendi bilgisi vb., 005/018). */
   devicePreferences: 'neseli.device.preferences',
+  /** Yönetici Mesajlar tanıtımı görüldü mü; sonuna kullanıcı kimliği eklenir (aynı cihazdaki her yönetici bir kez görür). */
+  adminInboxIntroPrefix: 'neseli.device.admin-inbox-intro.',
 } as const;

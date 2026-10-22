@@ -1,17 +1,19 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as Linking from 'expo-linking';
 import { Redirect, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
-import { ActivityIndicator, KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, StyleSheet, View, type TextInput as TextInputInstance } from 'react-native';
 
-import { Btn } from '@/components/Btn';
-import { Screen } from '@/components/Screen';
-import { passwordStrength, toAppError } from '@/domain';
+import { toAppError } from '@/domain';
 import { isAuthLink, useServices } from '@/services';
-import { colors, spacing, textStyles } from '@/theme';
+import { Button } from '@/ui/Button';
+import { FocusStatusBar } from '@/ui/FocusStatusBar';
+import { Icon } from '@/ui/Icon';
+import { Text } from '@/ui/Text';
+import { Colors, Radius, Spacing } from '@/ui/theme';
 
-import { FormError, StrengthMeter, TextField } from './AuthForm';
+import { FormError, StrengthMeter, TextField, useClearFailureOnEdit } from './AuthForm';
 import { FormScroll } from './FormScroll';
 import { PageHeader } from './PageHeader';
 import { resetPasswordSchema, type ResetPasswordValues } from './authSchemas';
@@ -20,12 +22,14 @@ import { useAuthSubmit } from './useAuthSubmit';
 type LinkState = { status: 'checking' } | { status: 'ready'; email: string } | { status: 'invalid' };
 
 /**
- * Yeni şifre belirleme (tasarım 25). E-postadaki sıfırlama bağlantısı uygulamayı bu ekranda açar; bağlantı doğrulanınca hesabın e-postası
- * gösterilir ve yeni şifre 006 kurallarıyla kaydedilir. Bağlantısız açılış istek ekranına döner; süresi dolmuş bağlantıda yeni bağlantı istenir.
+ * Yeni şifre belirleme. E-postadaki sıfırlama bağlantısı uygulamayı bu ekranda açar; bağlantı doğrulanınca hesabın e-postası gösterilir ve
+ * yeni şifre kayıt kurallarıyla kaydedilir. Bağlantısız açılış istek ekranına döner; süresi dolmuş bağlantıda yeni bağlantı istenir.
  */
 export function ResetPasswordScreen() {
   const { auth } = useServices();
-  const url = Linking.useURL();
+  // `useURL` yalnız açılış URL'sini ve ekran açıkken gelen olayları görür; uygulama arka plandayken bağlantıya dokunulunca bu ekran
+  // olaydan SONRA açıldığı için bağlantıyı kaçırırdı. `useLinkingURL` son gelen URL'yi de döner.
+  const url = Linking.useLinkingURL();
   // Sonuç doğrulanan URL'ye bağlıdır: yeni bir bağlantı gelince durum kendiliğinden "doğrulanıyor"a döner.
   const [result, setResult] = useState<{ url: string; state: LinkState } | null>(null);
   const state: LinkState = result && result.url === url ? result.state : { status: 'checking' };
@@ -48,28 +52,34 @@ export function ResetPasswordScreen() {
   if (!isAuthLink(url)) return <Redirect href="/forgot-password" />;
   if (state.status === 'ready') return <ResetPasswordForm email={state.email} />;
   return (
-    <Screen edges={['top', 'left', 'right', 'bottom']} background={colors.white} testID="reset-password-screen">
-      <PageHeader title="Yeni Şifre" testID="reset-back" />
-      <View style={styles.center}>
-        {state.status === 'checking' ? (
-          <ActivityIndicator color={colors.navy} accessibilityLabel="Bağlantı doğrulanıyor" />
-        ) : (
-          <InvalidLink />
-        )}
-      </View>
-    </Screen>
+    <View style={styles.container} testID="reset-password-screen">
+      <FocusStatusBar style="dark" />
+      <PageHeader title="Yeni Şifre" back={false} />
+      {state.status === 'checking' ? (
+        <View style={styles.center}>
+          <ActivityIndicator color={Colors.navy} accessibilityLabel="Bağlantı doğrulanıyor" />
+        </View>
+      ) : (
+        <InvalidLink />
+      )}
+    </View>
   );
 }
 
 function InvalidLink() {
   const router = useRouter();
   return (
-    <View style={styles.done} testID="reset-invalid">
-      <Text style={[textStyles.titleSection, styles.doneTitle]} accessibilityRole="header">
-        Bağlantı geçersiz
-      </Text>
-      <Text style={[textStyles.bodyRelaxed, styles.text]}>Şifre sıfırlama bağlantısının süresi dolmuş ya da daha önce kullanılmış. Yeni bir bağlantı isteyin.</Text>
-      <Btn label="Yeni bağlantı iste" onPress={() => router.replace('/forgot-password')} testID="reset-request-again" />
+    <View style={styles.content} testID="reset-invalid">
+      <View style={[styles.notice, styles.noticeDanger]} accessibilityLiveRegion="polite">
+        <Icon name="alert-circle" size={24} color="danger" />
+        <View style={styles.noticeText}>
+          <Text variant="bodySemibold" color="heading" accessibilityRole="header">
+            Bağlantı geçersiz
+          </Text>
+          <Text variant="body">Şifre sıfırlama bağlantısının süresi dolmuş ya da daha önce kullanılmış. Yeni bir bağlantı isteyin.</Text>
+        </View>
+      </View>
+      <Button title="Yeni bağlantı iste" onPress={() => router.replace('/forgot-password')} testID="reset-request-again" />
     </View>
   );
 }
@@ -77,17 +87,26 @@ function InvalidLink() {
 function ResetPasswordForm({ email }: { email: string }) {
   const { auth } = useServices();
   const router = useRouter();
-  const { submitting, failure, submit } = useAuthSubmit();
+  const { submitting, failure, submit, clearFailure } = useAuthSubmit();
+  const cancel = useAuthSubmit();
+  const clearCancelFailure = cancel.clearFailure;
   const [done, setDone] = useState(false);
-  const { control, handleSubmit, setError, reset } = useForm<ResetPasswordValues>({
+  const { control, handleSubmit, setError, reset, subscribe } = useForm<ResetPasswordValues>({
     resolver: zodResolver(resetPasswordSchema),
     defaultValues: { password: '', passwordConfirm: '' },
   });
   const [password, passwordConfirm] = useWatch({ control, name: ['password', 'passwordConfirm'] });
-  const strength = passwordStrength(password);
-  const passwordsMatch = passwordConfirm !== '' && passwordConfirm === password;
+  const mismatch = passwordConfirm.length > 0 && password !== passwordConfirm;
 
+  // Her yeni deneme (doğrulama başarısız olsa da) önceki genel hataları temizler; "Vazgeç" hatası da artık geçerli değildir.
+  const clearFailures = useCallback(() => {
+    clearFailure();
+    clearCancelFailure();
+  }, [clearFailure, clearCancelFailure]);
+  useClearFailureOnEdit(subscribe, clearFailures); // alan düzenlenince eski hatalar da hemen kalkar
+  const confirmRef = useRef<TextInputInstance>(null);
   const onSubmit = handleSubmit(async ({ password: newPassword }) => {
+    clearCancelFailure();
     const result = await submit(
       () => auth.completePasswordReset({ email, newPassword }),
       () => {
@@ -96,29 +115,52 @@ function ResetPasswordForm({ email }: { email: string }) {
       },
     );
     if (result?.fieldErrors.newPassword) setError('password', { message: result.fieldErrors.newPassword });
-  });
+  }, clearFailures);
+
+  // "Vazgeç": bağlantının açtığı kurtarma oturumu kapatılır ve girişe dönülür (uygulama oturumu bu ekranda hiç kurulmamıştır).
+  const onCancel = () =>
+    void cancel.submit(
+      () => auth.signOut(),
+      () => router.replace('/login'),
+    );
 
   return (
-    <Screen edges={['top', 'left', 'right', 'bottom']} background={colors.white} testID="reset-password-screen">
-      <PageHeader title="Yeni Şifre" testID="reset-back" />
+    <View style={styles.container} testID="reset-password-screen">
+      <FocusStatusBar style="dark" />
+      <PageHeader title="Yeni Şifre" back={false} />
       <KeyboardAvoidingView style={styles.flex} behavior="padding" enabled={Platform.OS === 'ios'}>
-        <FormScroll contentContainerStyle={styles.form}>
+        <FormScroll contentContainerStyle={styles.content}>
           {done ? (
-            <View style={styles.done} testID="reset-done">
-              <Text style={[textStyles.titleSection, styles.doneTitle]} accessibilityRole="header">
-                Şifreniz güncellendi
-              </Text>
-              <Text style={[textStyles.bodyRelaxed, styles.text]}>Yeni şifrenizle giriş yapabilirsiniz.</Text>
-              <Btn label="Girişe dön" onPress={() => router.replace('/login')} testID="reset-to-login" />
-            </View>
+            <>
+              <View style={styles.notice} accessibilityLiveRegion="polite" testID="reset-done">
+                <Icon name="check-circle" size={24} color="success" />
+                <View style={styles.noticeText}>
+                  <Text variant="bodySemibold" color="heading" accessibilityRole="header">
+                    Şifreniz güncellendi
+                  </Text>
+                  <Text variant="body">Yeni şifrenizle giriş yapabilirsiniz.</Text>
+                </View>
+              </View>
+              <Button title="Girişe dön" onPress={() => router.replace('/login')} testID="reset-to-login" />
+            </>
           ) : (
             <>
-              <Text style={[textStyles.bodyRelaxed, styles.text]}>{`${email} için yeni bir şifre belirleyin.`}</Text>
-              <View style={styles.passwordGroup}>
-                <TextField control={control} name="password" label="Yeni Şifre" type="password" autoComplete="new-password" returnKeyType="next" testID="reset-password" />
-                <StrengthMeter level={strength.level} label={strength.label} />
-              </View>
+              <Text variant="body" color="textSecondary" style={styles.lead}>
+                {`${email} için yeni bir şifre belirleyin.`}
+              </Text>
               <TextField
+                control={control}
+                name="password"
+                label="Yeni Şifre"
+                type="password"
+                autoComplete="new-password"
+                returnKeyType="next"
+                onSubmitEditing={() => confirmRef.current?.focus()}
+                testID="reset-password"
+              />
+              <StrengthMeter password={password} />
+              <TextField
+                ref={confirmRef}
                 control={control}
                 name="passwordConfirm"
                 label="Yeni Şifre (Tekrar)"
@@ -126,25 +168,28 @@ function ResetPasswordForm({ email }: { email: string }) {
                 autoComplete="new-password"
                 returnKeyType="done"
                 onSubmitEditing={onSubmit}
-                okHint={passwordsMatch ? 'Şifreler eşleşiyor' : null}
+                liveError={mismatch ? 'Şifreler eşleşmiyor.' : undefined}
                 testID="reset-password-confirm"
               />
-              <FormError message={failure?.message ?? null} />
-              <Btn label="Şifreyi Güncelle" onPress={onSubmit} loading={submitting} testID="reset-submit" />
+              <FormError message={failure?.message ?? cancel.failure?.message ?? null} />
+              <Button title="Şifreyi Güncelle" disabled={password === '' || passwordConfirm === ''} loading={submitting} onPress={() => void onSubmit()} testID="reset-submit" />
+              <Button title="Vazgeç ve çıkış yap" variant="outline" loading={cancel.submitting} onPress={onCancel} testID="reset-cancel" />
             </>
           )}
         </FormScroll>
       </KeyboardAvoidingView>
-    </Screen>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: Colors.surface },
   flex: { flex: 1 },
-  center: { flex: 1, justifyContent: 'center', paddingHorizontal: spacing['2xl'] },
-  form: { paddingVertical: spacing.xl, paddingHorizontal: spacing['2xl'], gap: spacing.lg },
-  text: { color: colors.inkMuted },
-  passwordGroup: { gap: spacing.md },
-  done: { gap: spacing.lg },
-  doneTitle: { color: colors.navy },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  content: { padding: Spacing.three, gap: Spacing.three },
+  lead: { fontSize: 18, lineHeight: 27 },
+  // Bilgi kutusu: main'deki "bağlantı gönderildi" kutusunun dili (Şifremi Unuttum).
+  notice: { flexDirection: 'row', gap: Spacing.three, padding: Spacing.three, borderRadius: Radius.md, backgroundColor: Colors.successSoft },
+  noticeDanger: { backgroundColor: Colors.dangerSoft },
+  noticeText: { flex: 1, gap: Spacing.one },
 });

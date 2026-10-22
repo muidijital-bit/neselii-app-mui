@@ -1,33 +1,35 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState, type ComponentRef } from 'react';
-import { ActivityIndicator, Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type KeyboardEvent, type NativeScrollEvent, type NativeSyntheticEvent } from 'react-native';
+import { ActivityIndicator, Keyboard, KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, StyleSheet, TextInput, View, type KeyboardEvent, type NativeScrollEvent, type NativeSyntheticEvent } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { BrandLogo } from '@/components/brand/BrandLogo';
-import { Btn } from '@/components/Btn';
-import { Screen } from '@/components/Screen';
-import { Image } from 'expo-image';
-
-import { StripePlaceholder } from '@/components/StripePlaceholder';
-import { Icon } from '@/components/icons/Icon';
-import { formatMoney, formatRelativeDate, initialsOf, toAppError, userMessage, type Conversation, type Message } from '@/domain';
-import { StateMessage } from '@/features/listings/ListStates';
+import { formatMoney, toAppError, userMessage, type Conversation, type Message } from '@/domain';
 import { listingHref } from '@/features/listings/routes';
 import { useSession } from '@/features/session/SessionProvider';
 import { useIsAdmin } from '@/features/session/useIsAdmin';
-import { colors, fontFamily, radii, spacing, textStyles } from '@/theme';
+import { Button } from '@/ui/Button';
+import { FocusStatusBar } from '@/ui/FocusStatusBar';
+import { initials } from '@/ui/format';
+import { Icon, type IconName } from '@/ui/Icon';
+import { ListingImage } from '@/ui/ListingImage';
+import { LogoMark } from '@/ui/Logo';
+import { Text } from '@/ui/Text';
+import { Colors, Fonts, Radius, Spacing } from '@/ui/theme';
 
-import { formatClock } from './presentation';
+import { MessagingState } from './MessagingState';
+import { dayLabel, formatClock } from './presentation';
 import { useConversationChat, type PendingMessage } from './useConversationChat';
-import { useScreenVisible } from './useScreenVisible';
 import { messagingKeys, useMarkConversationRead } from './useMessagingQueries';
+import { useScreenVisible } from './useScreenVisible';
 
 const MAX_LENGTH = 2000;
 /** En alta bu kadar piksel yakınsa kullanıcı "altta" sayılır (yeni mesaj gelince alta kayılır). */
 const BOTTOM_THRESHOLD = 80;
 const TURKEY_OFFSET_MS = 3 * 3_600_000;
 const dayKey = (iso: string) => new Date(Date.parse(iso) + TURKEY_OFFSET_MS).toISOString().slice(0, 10);
+/** Lacivert balondaki saat/tik rengi (main tasarımı). */
+const META_ON_NAVY = '#8FA6C4';
 
 /**
  * Klavye yüksekliği/görünürlüğü. iOS'ta `KeyboardAvoidingView` yerleşimi kaydırır; Android'de pencere kenardan kenara olduğundan
@@ -48,9 +50,9 @@ function useKeyboard() {
 }
 
 /**
- * İlan sohbeti (10): kullanıcı ↔ Neşeli Otomotiv, ilana bağlı. Üstte ilan kartı (ilana gider), mesaj balonları (tik durumları),
- * altta composer. Boş mesaj gönderilmez; gönderim hatasında mesaj "Gönderilemedi · Tekrar dene" kalır ve aynı kimlikle yeniden denenir.
- * Başkasının/olmayan görüşme güvenli "bulunamadı" durumuna düşer.
+ * İlan sohbeti (10): kullanıcı ↔ Neşeli Otomotiv, ilana bağlı. Başlıkta firma (müşteride) ya da müşteri (yöneticide), mesajların üstünde
+ * ilan kartı (ilana gider), mesaj balonları (tik durumları), altta composer. Boş mesaj gönderilmez; gönderim hatasında mesaj
+ * "Gönderilemedi · Tekrar dene" kalır ve aynı kimlikle yeniden denenir. Başkasının/olmayan görüşme güvenli "bulunamadı" durumuna düşer.
  */
 export function ConversationScreen() {
   const router = useRouter();
@@ -138,7 +140,8 @@ export function ConversationScreen() {
   const listing = conversationInfo?.listing ?? null;
   // Yönetici sohbeti müşteri adına açar; müşteri "Neşeli Otomotiv" ile konuşur.
   const isAdmin = useIsAdmin();
-  const customerName = conversationInfo?.customer?.fullName ?? 'Müşteri';
+  const customerName = conversationInfo?.customer?.fullName || 'Müşteri';
+  const customerPhone = conversationInfo?.customer?.phone ?? null;
 
   // Yüklenmiş mesaj varken (eski sayfa/yenileme hatası) sohbet ekranı hata durumuna DÜŞMEZ: TanStack bu durumda da `isError` verir.
   const failed = query.isError && query.data === undefined;
@@ -163,24 +166,19 @@ export function ConversationScreen() {
   const queryError = query.error;
   let body;
   if (missing) {
-    body = <StateMessage icon="info" title="Görüşme bulunamadı" message="Bu görüşme mevcut değil ya da erişiminiz yok." actionLabel="Mesajlara dön" actionIcon="arrow-left" onAction={goBack} testID="conversation-missing" />;
+    body = <MessagingState icon="info" title="Görüşme bulunamadı" message="Bu görüşme mevcut değil ya da erişiminiz yok." actionLabel="Mesajlara dön" actionIcon="arrow-left" onAction={goBack} testID="conversation-missing" />;
   } else if (query.isPending) {
-    body = (
-      <View style={styles.center} accessible accessibilityLabel="Mesajlar yükleniyor" accessibilityState={{ busy: true }} testID="conversation-loading">
-        <ActivityIndicator color={colors.blue} />
-      </View>
-    );
+    body = <MessagingState loading loadingLabel="Mesajlar yükleniyor" testID="conversation-loading" />;
   } else if (failed) {
-    body = <StateMessage icon="info" title="Mesajlar yüklenemedi" message={userMessage(query.error)} actionLabel="Tekrar dene" onAction={() => void query.refetch()} testID="conversation-error" />;
+    body = <MessagingState icon="info" title="Mesajlar yüklenemedi" message={userMessage(query.error)} actionLabel="Tekrar dene" actionIcon="refresh-cw" onAction={() => void query.refetch()} testID="conversation-error" />;
   } else {
-    // Henüz mesaj yoksa (2. aşama tasarımı) ilan kartı yazma alanının hemen üstünde, altında yönlendirme metniyle durur.
     const isEmpty = messages.length === 0 && visiblePending.length === 0 && !query.hasNextPage;
+    // Main tasarımı (ters liste): içerik alta yaslanır; ilan kartı en eski mesajın üstünde akışla kayar, mesaj yoksa altında yönlendirme metni.
     body = (
       <ScrollView
         ref={scrollRef}
         style={styles.flex}
-        contentContainerStyle={[styles.messages, isEmpty && styles.messagesEmpty]}
-        stickyHeaderIndices={listing && !isEmpty ? [0] : undefined}
+        contentContainerStyle={styles.list}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="none"
         showsVerticalScrollIndicator={false}
@@ -193,49 +191,46 @@ export function ConversationScreen() {
         onContentSizeChange={onContentSizeChange}
         onLayout={onViewportChange}
         testID="conversation-messages">
-        {isEmpty ? <View style={styles.flex} /> : null}
+        <View style={styles.spacer} />
         {listing ? (
-          <View style={[styles.listingWrap, isEmpty && styles.listingWrapEmpty]}>
-            <Pressable accessibilityRole="button" accessibilityLabel={`İlan: ${listing.title}, ${formatMoney(listing.price)}`} onPress={() => router.push(listingHref(listing.id))} style={styles.listingCard} testID="conversation-listing">
-              <View style={[styles.listingThumb, isEmpty && styles.listingThumbLarge]}>
-                {listing.coverImageUri ? (
-                  <Image source={{ uri: listing.coverImageUri }} style={StyleSheet.absoluteFill} contentFit="cover" accessibilityIgnoresInvertColors />
-                ) : (
-                  <StripePlaceholder width={isEmpty ? 76 : 56} height={isEmpty ? 64 : 48} />
-                )}
-              </View>
-              <View style={styles.listingText}>
-                <Text numberOfLines={2} style={styles.listingTitle}>
-                  {listing.title}
-                </Text>
-                <Text style={styles.listingPrice}>{formatMoney(listing.price)}</Text>
-              </View>
-              <Icon name="chevron-right" size={18} color={colors.slateFaint} />
-            </Pressable>
-          </View>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`İlan: ${listing.title}, ${formatMoney(listing.price)}`}
+            onPress={() => router.push(listingHref(listing.id))}
+            style={styles.listingCard}
+            testID="conversation-listing">
+            <ListingImage uri={listing.coverImageUri} style={styles.listingThumb} iconSize={20} />
+            <View style={styles.flex}>
+              <Text variant="bodySemibold" color="heading" numberOfLines={2}>
+                {listing.title}
+              </Text>
+              <Text variant="price">{formatMoney(listing.price)}</Text>
+            </View>
+            <Icon name="chevron-right" size={22} color="textTertiary" />
+          </Pressable>
         ) : null}
         {query.hasNextPage ? (
           <View style={styles.older}>
             {query.isFetchingNextPage ? (
-              <ActivityIndicator color={colors.blue} accessibilityLabel="Eski mesajlar yükleniyor" testID="conversation-older-loading" />
+              <ActivityIndicator color={Colors.navy} accessibilityLabel="Eski mesajlar yükleniyor" testID="conversation-older-loading" />
             ) : (
-              <Btn label="Daha eski mesajlar" variant="secondary" onPress={loadOlder} style={styles.olderBtn} testID="conversation-older" />
+              <Button title="Daha eski mesajlar" variant="outline" onPress={loadOlder} style={styles.olderBtn} testID="conversation-older" />
             )}
           </View>
         ) : null}
         {query.isFetchNextPageError ? (
-          <Text style={[textStyles.caption, styles.olderError]} testID="conversation-older-error">
+          <Text variant="caption" color="danger" align="center" testID="conversation-older-error">
             {userMessage(queryError)}
           </Text>
         ) : null}
         {isEmpty ? (
-          <Text style={[textStyles.bodySmall, styles.emptyNote]} testID="conversation-empty">
-            {isAdmin ? `${customerName} henüz mesaj yazmadı.` : 'İlan hakkında sorunuzu yazın; Neşeli Otomotiv size buradan cevap verecek.'}
+          <Text variant="small" align="center" style={styles.empty} testID="conversation-empty">
+            {isAdmin ? 'Henüz mesaj yok.' : 'İlan hakkında sorunuzu yazın; Neşeli Otomotiv size buradan cevap verecek.'}
           </Text>
         ) : null}
         {messages.map((message, index) => (
           <View key={message.id} style={styles.messageGroup}>
-            {index === 0 || dayKey(messages[index - 1].sentAt) !== dayKey(message.sentAt) ? <DayChip label={formatRelativeDate(message.sentAt, nowMs)} /> : null}
+            {index === 0 || dayKey(messages[index - 1].sentAt) !== dayKey(message.sentAt) ? <DayChip label={dayLabel(message.sentAt, nowMs)} /> : null}
             <Bubble message={message} isAdmin={isAdmin} peerName={isAdmin ? customerName : 'Neşeli Otomotiv'} />
           </View>
         ))}
@@ -247,41 +242,48 @@ export function ConversationScreen() {
   }
 
   return (
-    <Screen background={colors.surface} edges={['top', 'left', 'right']} testID="conversation-screen">
+    <View style={styles.container} testID="conversation-screen">
+      <FocusStatusBar style="dark" />
       <KeyboardAvoidingView style={styles.flex} behavior="padding" enabled={Platform.OS === 'ios'}>
-        <View style={styles.header}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Geri" onPress={goBack} hitSlop={4} style={styles.back} testID="conversation-back">
-            <Icon name={Platform.OS === 'ios' ? 'chevron-left' : 'arrow-left'} size={Platform.OS === 'ios' ? 26 : 24} color={colors.navy} />
+        <View style={[styles.header, { paddingTop: insets.top + Spacing.two }]}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Geri" onPress={goBack} hitSlop={12} testID="conversation-back">
+            <Icon name="chevron-left" size={30} />
           </Pressable>
-          <View style={styles.avatar}>
-            {isAdmin ? (
-              <Text style={styles.avatarInitials} maxFontSizeMultiplier={1.2}>
-                {initialsOf(customerName) || 'M'}
+          {isAdmin ? (
+            <View style={styles.avatar}>
+              <Text variant="subheading" style={styles.white} maxFontSizeMultiplier={1.2}>
+                {initials(customerName)}
               </Text>
-            ) : (
-              <BrandLogo variant="emblem" height={19} accessibilityLabel="Neşeli Otomotiv" />
-            )}
-          </View>
-          <View style={styles.headerText}>
-            <Text style={styles.company} accessibilityRole="header" numberOfLines={1} maxFontSizeMultiplier={1.3} testID="conversation-title">
+            </View>
+          ) : (
+            <LogoMark size={52} />
+          )}
+          <View style={styles.flex}>
+            <Text variant="subheading" numberOfLines={1} accessibilityRole="header" maxFontSizeMultiplier={1.3} testID="conversation-title">
               {isAdmin ? customerName : 'Neşeli Otomotiv'}
             </Text>
             {listing ? (
-              <Text numberOfLines={1} maxFontSizeMultiplier={1.3} style={styles.subtitle} testID="conversation-subtitle">
+              <Text variant="small" numberOfLines={1} maxFontSizeMultiplier={1.3} testID="conversation-subtitle">
                 {`İlan: ${listing.title}`}
               </Text>
             ) : null}
           </View>
+          {isAdmin && customerPhone ? (
+            <Pressable hitSlop={12} accessibilityRole="button" accessibilityLabel="Müşteriyi ara" onPress={() => void Linking.openURL(`tel:${customerPhone}`)} testID="conversation-call">
+              <Icon name="phone" size={24} />
+            </Pressable>
+          ) : null}
         </View>
         {body}
         {missing || query.isPending || failed ? null : (
-          <View style={[styles.composer, { paddingBottom: spacing.md + bottomPadding }]} testID="conversation-composer">
+          <View style={[styles.composer, { paddingBottom: Spacing.two + bottomPadding }]} testID="conversation-composer">
             <TextInput
               value={draft}
               onChangeText={setDraft}
               placeholder="Mesaj yazın..."
-              placeholderTextColor={colors.slateFaint}
+              placeholderTextColor={Colors.textTertiary}
               maxLength={MAX_LENGTH}
+              multiline
               returnKeyType="send"
               submitBehavior="submit"
               onSubmitEditing={onSend}
@@ -295,29 +297,32 @@ export function ConversationScreen() {
               accessibilityState={{ disabled: !canSend }}
               disabled={!canSend}
               onPress={onSend}
-              style={[styles.sendButton, !canSend && styles.sendDisabled]}
+              style={[styles.send, { backgroundColor: canSend ? Colors.green : Colors.greenSoft }]}
               testID="conversation-send">
-              <Icon name="send-horizontal" size={20} color={colors.white} />
+              <Icon name="send" size={24} color="white" />
             </Pressable>
           </View>
         )}
       </KeyboardAvoidingView>
-    </Screen>
+    </View>
   );
 }
 
 function DayChip({ label }: { label: string }) {
   return (
-    <View style={styles.dayWrap}>
-      <Text style={styles.dayChip}>{label}</Text>
+    <View style={styles.day}>
+      <Text variant="smallMedium" color="textSecondary">
+        {label}
+      </Text>
     </View>
   );
 }
 
-const TICK: Record<Message['status'], { icon: 'check' | 'check-check'; color: string; label: string }> = {
-  sent: { icon: 'check', color: colors.blueLight, label: 'Gönderildi' },
-  delivered: { icon: 'check-check', color: colors.blueLight, label: 'İletildi' },
-  read: { icon: 'check-check', color: colors.greenTick, label: 'Okundu' },
+/** Tikler (main tasarımı + iletildi): gönderildi tek gri tik, iletildi çift gri tik, okundu çift yeşil tik. */
+const TICK: Record<Message['status'], { icon: IconName; color: string; label: string }> = {
+  sent: { icon: 'check', color: META_ON_NAVY, label: 'Gönderildi' },
+  delivered: { icon: 'mci:check-all', color: META_ON_NAVY, label: 'İletildi' },
+  read: { icon: 'mci:check-all', color: Colors.greenSoft, label: 'Okundu' },
 };
 
 function Bubble({ message, isAdmin, peerName }: { message: Message; isAdmin: boolean; peerName: string }) {
@@ -326,17 +331,19 @@ function Bubble({ message, isAdmin, peerName }: { message: Message; isAdmin: boo
   const tick = TICK[message.status];
   const time = formatClock(message.sentAt);
   return (
-    <View style={[styles.bubbleRow, mine ? styles.rowMine : styles.rowTheirs]}>
-      <View style={[styles.bubble, mine ? styles.bubbleMine : styles.bubbleTheirs]} accessible accessibilityLabel={`${mine ? 'Siz' : peerName}: ${message.text}, ${time}${mine ? `, ${tick.label}` : ''}`} testID={`message-${message.id}`}>
-        <Text style={[styles.bubbleText, mine ? styles.textMine : styles.textTheirs]}>{message.text}</Text>
-        <View style={styles.meta}>
-          <Text style={[styles.time, mine ? styles.timeMine : styles.timeTheirs]}>{time}</Text>
-          {mine ? (
-            <View testID={`message-status-${message.status}`}>
-              <Icon name={tick.icon} size={14} color={tick.color} />
-            </View>
-          ) : null}
-        </View>
+    <View style={[styles.bubble, mine ? styles.mine : styles.theirs]} accessible accessibilityLabel={`${mine ? 'Siz' : peerName}: ${message.text}, ${time}${mine ? `, ${tick.label}` : ''}`} testID={`message-${message.id}`}>
+      <Text variant="body" style={mine ? styles.white : undefined}>
+        {message.text}
+      </Text>
+      <View style={styles.meta}>
+        <Text variant="caption" style={{ color: mine ? META_ON_NAVY : Colors.textSecondary }}>
+          {time}
+        </Text>
+        {mine ? (
+          <View testID={`message-status-${message.status}`}>
+            <Icon name={tick.icon} size={16} color={tick.color} />
+          </View>
+        ) : null}
       </View>
     </View>
   );
@@ -345,78 +352,125 @@ function Bubble({ message, isAdmin, peerName }: { message: Message; isAdmin: boo
 function PendingBubble({ entry, onRetry }: { entry: PendingMessage; onRetry: () => void }) {
   const failed = entry.state === 'failed';
   return (
-    <View style={[styles.bubbleRow, styles.rowMine]}>
-      <View style={styles.pendingColumn}>
-        <View style={[styles.bubble, styles.bubbleMine, failed && styles.bubbleFailed]} testID={`pending-${entry.clientMessageId}`}>
-          <Text style={[styles.bubbleText, styles.textMine]}>{entry.text}</Text>
-          <View style={styles.meta}>
-            <Text style={[styles.time, styles.timeMine]}>{failed ? 'Gönderilemedi' : 'Gönderiliyor…'}</Text>
-          </View>
+    <View style={styles.pendingColumn}>
+      <View style={[styles.bubble, styles.mine, styles.pendingBubble, failed && styles.bubbleFailed]} testID={`pending-${entry.clientMessageId}`}>
+        <Text variant="body" style={styles.white}>
+          {entry.text}
+        </Text>
+        <View style={styles.meta}>
+          <Text variant="caption" style={{ color: META_ON_NAVY }}>
+            {failed ? 'Gönderilemedi' : 'Gönderiliyor…'}
+          </Text>
         </View>
-        {failed ? (
-          <View style={styles.failedRow}>
-            <Text style={styles.failedText} testID="pending-error">
-              {entry.error ? userMessage(entry.error) : 'Mesaj gönderilemedi.'}
-            </Text>
-            <Pressable accessibilityRole="button" accessibilityLabel="Mesajı tekrar gönder" onPress={onRetry} hitSlop={8} style={styles.retry} testID="pending-retry">
-              <Icon name="refresh-cw" size={14} color={colors.blue} />
-              <Text style={styles.retryText}>Tekrar dene</Text>
-            </Pressable>
-          </View>
-        ) : null}
       </View>
+      {failed ? (
+        <View style={styles.failedRow}>
+          <Text variant="caption" color="danger" align="right" testID="pending-error">
+            {entry.error ? userMessage(entry.error) : 'Mesaj gönderilemedi.'}
+          </Text>
+          <Pressable accessibilityRole="button" accessibilityLabel="Mesajı tekrar gönder" onPress={onRetry} hitSlop={8} style={styles.retry} testID="pending-retry">
+            <Icon name="refresh-cw" size={14} />
+            <Text variant="smallSemibold" color="heading">
+              Tekrar dene
+            </Text>
+          </Pressable>
+        </View>
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: Colors.background },
   flex: { flex: 1 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  header: { minHeight: 56, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingLeft: spacing.xs, paddingRight: spacing.lg, backgroundColor: colors.white, borderBottomWidth: 1, borderBottomColor: colors.lineSoft },
-  back: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  avatar: { width: 38, height: 38, borderRadius: 19, backgroundColor: colors.navy, alignItems: 'center', justifyContent: 'center' },
-  headerText: { flex: 1, minWidth: 0, gap: 3, marginLeft: spacing.xs },
-  avatarInitials: { fontFamily: fontFamily.montserrat700, fontSize: 14, color: colors.white },
-  company: { fontFamily: fontFamily.montserrat700, fontSize: 15, lineHeight: 16.5, color: colors.navy },
-  subtitle: { fontFamily: fontFamily.inter400, fontSize: 12, lineHeight: 13.2, color: colors.slateLight },
-  messages: { flexGrow: 1, paddingHorizontal: spacing.xl, paddingBottom: spacing.lg, gap: 10 },
-  listingWrap: { paddingTop: spacing.lg, backgroundColor: colors.surface },
-  listingCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg, padding: 10, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.lineSoft, borderRadius: radii.card },
-  listingThumb: { width: 56, height: 48, borderRadius: radii.md, overflow: 'hidden' },
-  listingText: { flex: 1, minWidth: 0, gap: 5 },
-  listingTitle: { fontFamily: fontFamily.montserrat600, fontSize: 13, lineHeight: 16.25, color: colors.navy },
-  listingPrice: { fontFamily: fontFamily.montserrat700, fontSize: 15, lineHeight: 15, color: colors.navy },
+  white: { color: Colors.white },
+  avatar: {
+    width: 52,
+    height: 52,
+    borderRadius: Radius.pill,
+    backgroundColor: Colors.navy,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.three,
+    paddingHorizontal: Spacing.three,
+    paddingBottom: Spacing.three,
+    backgroundColor: Colors.surface,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: Colors.border,
+  },
+  list: { padding: Spacing.three, gap: Spacing.three, flexGrow: 1 },
+  // Ters listedeki gibi az içerik alta yaslanır.
+  spacer: { flex: 1, marginBottom: -Spacing.three },
+  empty: { marginTop: Spacing.four - Spacing.three, paddingHorizontal: Spacing.four },
+  listingCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.three,
+    padding: Spacing.three,
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  listingThumb: { width: 76, height: 64, borderRadius: Radius.sm },
   older: { alignItems: 'center' },
-  olderBtn: { maxWidth: 220 },
-  olderError: { color: colors.danger, textAlign: 'center' },
-  emptyNote: { color: colors.slate, textAlign: 'center', paddingTop: spacing.xl, paddingBottom: spacing.lg, paddingHorizontal: spacing.xl },
-  messagesEmpty: { flexGrow: 1 },
-  listingWrapEmpty: { backgroundColor: 'transparent' },
-  listingThumbLarge: { width: 76, height: 64 },
-  messageGroup: { gap: 10 },
-  dayWrap: { alignItems: 'center', marginVertical: spacing.xs },
-  dayChip: { fontFamily: fontFamily.inter500, fontSize: 12, lineHeight: 12, color: colors.slate, backgroundColor: colors.stripe, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10, overflow: 'hidden' },
-  bubbleRow: { flexDirection: 'row' },
-  rowMine: { justifyContent: 'flex-end' },
-  rowTheirs: { justifyContent: 'flex-start' },
-  bubble: { maxWidth: '78%', gap: spacing.xs },
-  bubbleMine: { backgroundColor: colors.navy, borderTopLeftRadius: 16, borderTopRightRadius: 16, borderBottomLeftRadius: 16, borderBottomRightRadius: 4, paddingTop: 10, paddingRight: 12, paddingBottom: 6, paddingLeft: 14 },
-  bubbleTheirs: { backgroundColor: colors.white, borderWidth: 1, borderColor: colors.lineSoft, borderTopLeftRadius: 16, borderTopRightRadius: 16, borderBottomLeftRadius: 4, borderBottomRightRadius: 16, paddingTop: 10, paddingRight: 14, paddingBottom: 6, paddingLeft: 12 },
+  olderBtn: { minWidth: 220 },
+  messageGroup: { gap: Spacing.three },
+  day: {
+    alignSelf: 'center',
+    backgroundColor: Colors.chip,
+    borderRadius: Radius.pill,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.one,
+  },
+  bubble: {
+    maxWidth: '80%',
+    borderRadius: Radius.lg,
+    paddingHorizontal: Spacing.three,
+    paddingTop: Spacing.three - 4,
+    paddingBottom: Spacing.two,
+    gap: 2,
+  },
+  mine: { alignSelf: 'flex-end', backgroundColor: Colors.navy, borderBottomRightRadius: 4 },
+  theirs: {
+    alignSelf: 'flex-start',
+    backgroundColor: Colors.surface,
+    borderBottomLeftRadius: 4,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  meta: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-end', gap: 4 },
+  pendingColumn: { alignSelf: 'flex-end', maxWidth: '80%', alignItems: 'flex-end', gap: Spacing.one },
+  pendingBubble: { maxWidth: '100%' },
   bubbleFailed: { opacity: 0.75 },
-  bubbleText: { fontFamily: fontFamily.inter400, fontSize: 14, lineHeight: 20.3 },
-  textMine: { color: colors.white },
-  textTheirs: { color: colors.ink },
-  meta: { alignSelf: 'flex-end', flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  time: { fontFamily: fontFamily.inter400, fontSize: 11, lineHeight: 11 },
-  timeMine: { color: colors.blueLight },
-  timeTheirs: { color: colors.slateLight },
-  pendingColumn: { maxWidth: '78%', alignItems: 'flex-end', gap: spacing.xs },
-  failedRow: { alignItems: 'flex-end', gap: spacing.xxs },
-  failedText: { fontFamily: fontFamily.inter400, fontSize: 12, lineHeight: 15.6, color: colors.danger, textAlign: 'right' },
-  retry: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  retryText: { fontFamily: fontFamily.inter600, fontSize: 13, lineHeight: 16, color: colors.blue },
-  composer: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingTop: spacing.md, paddingLeft: spacing.lg, paddingRight: 10, backgroundColor: colors.white, borderTopWidth: 1, borderTopColor: colors.lineSoft },
-  input: { flex: 1, minWidth: 0, minHeight: 44, borderRadius: 22, backgroundColor: colors.surface, paddingHorizontal: spacing.xl, marginRight: spacing.sm, fontFamily: fontFamily.inter400, fontSize: 15, color: colors.ink },
-  sendButton: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.green, alignItems: 'center', justifyContent: 'center' },
-  sendDisabled: { opacity: 0.5 },
+  failedRow: { alignItems: 'flex-end', gap: Spacing.half },
+  retry: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: Spacing.one },
+  composer: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: Spacing.three,
+    paddingHorizontal: Spacing.three,
+    paddingTop: Spacing.two,
+    backgroundColor: Colors.surface,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: Colors.border,
+  },
+  input: {
+    flex: 1,
+    minHeight: 54,
+    maxHeight: 140,
+    borderRadius: 27,
+    backgroundColor: Colors.background,
+    paddingHorizontal: Spacing.four,
+    paddingTop: 15,
+    paddingBottom: 15,
+    fontFamily: Fonts.regular,
+    fontSize: 17,
+    color: Colors.text,
+  },
+  send: { width: 54, height: 54, borderRadius: 27, alignItems: 'center', justifyContent: 'center' },
 });

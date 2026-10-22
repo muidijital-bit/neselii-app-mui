@@ -55,6 +55,8 @@ export type AppNotification = {
   readonly createdAt: IsoDateTime;
   readonly read: boolean;
   readonly target: NotificationTarget;
+  /** Bildirimin bağlı olduğu ilanın kapak fotoğrafı (ilan, mesaj bildirimleri); yoksa `null` (tür ikonu gösterilir). */
+  readonly imageUri: string | null;
 };
 
 /**

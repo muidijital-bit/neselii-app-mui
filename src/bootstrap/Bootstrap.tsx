@@ -1,12 +1,14 @@
+import { Image } from 'expo-image';
+import { StatusBar } from 'expo-status-bar';
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
-import { BrandLogo } from '@/components/brand/BrandLogo';
-import { Btn } from '@/components/Btn';
-import { Screen } from '@/components/Screen';
 import { toAppError, userMessage, type AppError } from '@/domain';
 import { useServiceContainer } from '@/services';
-import { colors, spacing, textStyles } from '@/theme';
+import { Button } from '@/ui/Button';
+import { Logo } from '@/ui/Logo';
+import { Text } from '@/ui/Text';
+import { Colors, Spacing } from '@/ui/theme';
 
 import { BOOTSTRAP_TIMEOUT_MS, runBootstrap, type BootstrapResult } from './runBootstrap';
 
@@ -59,38 +61,39 @@ export function Bootstrap({ children, timeoutMs = BOOTSTRAP_TIMEOUT_MS }: Props)
   return <BootstrapLoading />;
 }
 
-/** Marka yükleme ekranı (00a splash karşılığı): bootstrap ve onboarding durumu okunurken gösterilir. */
+/** Açılış görseli; native açılış ekranıyla (app.json `expo-splash-screen`, 240 genişlik) aynı yerde durur, geçiş fark edilmez. */
+const splashImage = require('../../assets/images/splash-icon.png');
+
+/** Yükleme ekranı: bootstrap ve onboarding durumu okunurken native açılış ekranının devamı gibi görünür (main'deki gibi). */
 export function BootstrapLoading() {
   return (
-    <Screen background={colors.navy} statusBar="light" testID="bootstrap-loading">
-      <View style={styles.center}>
-        <BrandLogo height={56} />
-        <ActivityIndicator color={colors.greenBright} style={styles.spinner} accessibilityLabel="Yükleniyor" />
-      </View>
-    </Screen>
+    <View style={styles.root} testID="bootstrap-loading">
+      <StatusBar style="light" />
+      <Image source={splashImage} style={styles.splash} contentFit="contain" accessibilityLabel="Yükleniyor" />
+    </View>
   );
 }
 
 function BootstrapError({ error, onRetry }: { error: AppError; onRetry: () => void }) {
   return (
-    <Screen background={colors.navy} statusBar="light" testID="bootstrap-error">
+    <View style={styles.root} testID="bootstrap-error">
+      <StatusBar style="light" />
       <View style={styles.center}>
-        <BrandLogo height={56} />
+        <Logo height={56} />
         {/* Kullanıcıya yalnızca güvenli sabit mesaj gösterilir; ham hata/cause asla. */}
-        <Text style={[textStyles.bodyRelaxed, styles.message]} accessibilityRole="alert">
+        <Text align="center" style={styles.message} accessibilityRole="alert">
           {userMessage(error)}
         </Text>
-        <View style={styles.action}>
-          <Btn label="Tekrar dene" onPress={onRetry} testID="bootstrap-retry" />
-        </View>
+        <Button title="Tekrar dene" onPress={onRetry} style={styles.action} testID="bootstrap-retry" />
       </View>
-    </Screen>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing['3xl'], gap: spacing.xl },
-  spinner: { marginTop: spacing['2xl'] },
-  message: { color: colors.bluePale, textAlign: 'center' },
-  action: { alignSelf: 'stretch', marginTop: spacing.lg },
+  root: { flex: 1, backgroundColor: Colors.navy, alignItems: 'center', justifyContent: 'center' },
+  splash: { width: 240, height: 240 },
+  center: { alignSelf: 'stretch', alignItems: 'center', paddingHorizontal: Spacing.four, gap: Spacing.four },
+  message: { color: '#D6E3F0' },
+  action: { alignSelf: 'stretch' },
 });

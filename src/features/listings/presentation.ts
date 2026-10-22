@@ -1,76 +1,37 @@
-import {
-  CATEGORY_CATALOG,
-  formatInteger,
-  formatLocation,
-  formatMoney,
-  formatRelativeDate,
-  type DamageStatus,
-  type FuelType,
-  type Gearbox,
-  type ListingDetail,
-  type ListingSpecs,
-  type ListingSummary,
-} from '@/domain';
-import type { StatusVariant } from '@/components/Badge';
+import { CATEGORY_CATALOG, formatInteger, type DamageStatus, type FuelType, type Gearbox, type ListingSpecs, type ListingSummary } from '@/domain';
+import type { IconName } from '@/ui/Icon';
+import type { ListingView } from '@/ui/listingView';
 
-export type ListingCardModel = {
-  readonly id: string;
-  readonly title: string;
-  readonly location: string;
-  readonly dateLabel: string;
-  readonly price: string;
-  readonly category: string;
-  readonly photoCount: number;
-  readonly hasVideo: boolean;
-  readonly status?: StatusVariant;
-  readonly imageUri?: string;
-  /** Fiyatın "TL"siz kısmı (`6.450.000`): 2. aşama kartlarında "TL" küçük yazılır. */
-  readonly priceAmount: string;
-  readonly yearLabel?: string;
-  readonly kmLabel?: string;
-  readonly city: string;
-  /** Tam finansman metni (`Kredi kartına 18 ay taksit`) ve kart rozetindeki kısa hali (`18 ay taksit`, `%2,85 kredi`). */
-  readonly financing?: string;
-  readonly financingShort?: string;
-  readonly featured: boolean;
+/** Fotoğrafsız ilanın yer tutucusundaki kategori ikonu (main tasarımındaki eşleme). */
+export const CATEGORY_ICONS: Record<ListingSummary['categoryId'], IconName> = {
+  kamyon: 'mci:truck-outline',
+  cekici: 'mci:truck-trailer',
+  dorse: 'mci:cube-outline',
+  otomobil: 'mci:car-outline',
+  'ticari-arac': 'mci:van-utility',
+  'is-makinesi': 'mci:excavator',
+  gayrimenkul: 'mci:office-building-outline',
+  arsa: 'mci:map-marker-radius-outline',
 };
 
-/** Finansman metninin rozet hali: `%2,85 faizli kredi` → `%2,85 kredi`, `Kredi kartına 18 ay taksit` → `18 ay taksit`. */
-export function financingShortLabel(financing: string): string {
-  const rate = /%\s?[\d.,]+/.exec(financing);
-  if (rate) return `${rate[0].replace(/\s/g, '')} kredi`;
-  const months = /(\d+)\s*ay/i.exec(financing);
-  if (months && /taksit/i.test(financing)) return `${months[1]} ay taksit`;
-  return /taksit/i.test(financing) ? 'Taksit' : 'Kredi';
-}
-
-/** Kartta gösterilecek rozet: satıldı > rezerve > yeni; sıradan yayındaki ilanda rozet yoktur (tasarım). */
-export function cardStatus(listing: Pick<ListingSummary, 'status' | 'isNew'>): StatusVariant | undefined {
-  if (listing.status === 'sold') return 'satildi';
-  if (listing.status === 'reserved') return 'rezerve';
-  if (listing.status === 'published' && listing.isNew) return 'yeni';
-  return undefined;
-}
-
-/** Servis özeti → kart gösterim metinleri (biçimlendirme UI sınırında; servis/domain fiyatı sayısal tutar). */
-export function toCardModel(listing: ListingSummary, nowMs: number): ListingCardModel {
+/** Domain ilanı → main tasarımındaki kart / karo / vitrin bileşenlerinin gösterim alanları. */
+export function toListingView(listing: ListingSummary): ListingView {
   return {
     id: listing.id,
     title: listing.title,
-    location: formatLocation(listing.location),
-    dateLabel: formatRelativeDate(listing.publishedAt, nowMs),
-    price: formatMoney(listing.price),
-    category: CATEGORY_CATALOG[listing.categoryId].name,
+    coverUri: listing.coverImageUri,
+    categoryName: CATEGORY_CATALOG[listing.categoryId].name,
+    categoryIcon: CATEGORY_ICONS[listing.categoryId],
+    subtype: listing.subcategory ?? null,
+    status: listing.status,
+    year: listing.modelYear ?? null,
+    km: listing.odometerKm ?? null,
+    city: listing.location.city,
+    price: Math.floor(listing.price.amountKurus / 100),
+    financing: listing.financing,
+    publishedAt: listing.publishedAt,
     photoCount: listing.photoCount,
     hasVideo: listing.hasVideo,
-    status: cardStatus(listing),
-    imageUri: listing.coverImageUri ?? undefined,
-    priceAmount: formatInteger(Math.floor(listing.price.amountKurus / 100)),
-    ...(listing.modelYear !== undefined ? { yearLabel: String(listing.modelYear) } : {}),
-    ...(listing.odometerKm !== undefined ? { kmLabel: `${formatInteger(listing.odometerKm)} km` } : {}),
-    city: listing.location.city,
-    ...(listing.financing ? { financing: listing.financing, financingShort: financingShortLabel(listing.financing) } : {}),
-    featured: listing.isFeatured,
   };
 }
 
@@ -118,34 +79,4 @@ export function specRows(specs: ListingSpecs): readonly SpecRow[] {
       break;
   }
   return rows;
-}
-
-/** Detaydaki durum rozeti (tasarım 07: fiyatın yanında `Yayında`); "Yeni" yalnızca kart rozetidir. */
-export function detailStatus(status: ListingSummary['status']): StatusVariant | undefined {
-  if (status === 'published') return 'yayinda';
-  if (status === 'reserved') return 'rezerve';
-  if (status === 'sold') return 'satildi';
-  return undefined;
-}
-
-export type ListingDetailModel = ListingCardModel & {
-  readonly listingNumber: string;
-  readonly kicker: string;
-  readonly description: string;
-  readonly specRows: readonly SpecRow[];
-  readonly shareText: string;
-};
-
-/** Detay gösterimi: başlık/fiyat/konum/tarih/kategori kartla AYNI `toCardModel`'den gelir; `listingNumber` yalnızca gösterim alanıdır. */
-export function toDetailModel(detail: ListingDetail, nowMs: number): ListingDetailModel {
-  const card = toCardModel(detail, nowMs);
-  return {
-    ...card,
-    status: detailStatus(detail.status),
-    listingNumber: detail.listingNumber,
-    kicker: detail.subcategory ? `${card.category} · ${detail.subcategory}` : card.category,
-    description: detail.description,
-    specRows: specRows(detail.specs),
-    shareText: `${detail.title} · İlan no: ${detail.listingNumber} · Neşeli Kamyon Tır Pazarı`,
-  };
 }

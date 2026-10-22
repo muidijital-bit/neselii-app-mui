@@ -22,10 +22,14 @@ import { call, offsetOf, pageRange, requireUserId, tlToKurus, toIso, toPage, unw
 type Row = Pick<
   Tables<'notifications'>,
   'id' | 'type' | 'title' | 'body' | 'data' | 'created_at' | 'read_at' | 'listing_id' | 'conversation_id' | 'announcement_id'
->;
+> & {
+  /** Bildirimin ilanı (kapak fotoğrafı için); RLS ilanı göstermiyorsa ya da ilan yoksa `null`. */
+  listing: { cover_url: string | null } | null;
+};
 type AnnouncementRow = Pick<Tables<'announcements'>, 'id' | 'title' | 'body'>;
 
-const COLUMNS = 'id, type, title, body, data, created_at, read_at, listing_id, conversation_id, announcement_id';
+const COLUMNS =
+  'id, type, title, body, data, created_at, read_at, listing_id, conversation_id, announcement_id, listing:listings!notifications_listing_id_fkey(cover_url)';
 
 /** Sunucu türleri (tetikleyiciler `snake_case` yazar) → domain türü. */
 const KIND: Record<string, NotificationKind> = {
@@ -109,7 +113,7 @@ export function createSupabaseNotifications(sb: Supabase): NotificationsService 
         const [from, to] = pageRange(offset);
         const rows = unwrap(
           await sb.from('notifications').select(COLUMNS).eq('user_id', userId).order('created_at', { ascending: false }).order('id').range(from, to),
-        ) as Row[];
+        ) as unknown as Row[];
         const announcementIds = Array.from(new Set(rows.flatMap((row) => (row.announcement_id ? [row.announcement_id] : []))));
         const announcements = new Map<string, AnnouncementRow>();
         if (announcementIds.length > 0) {
@@ -120,7 +124,16 @@ export function createSupabaseNotifications(sb: Supabase): NotificationsService 
           if (!kind) return null;
           const target = targetOf(row, kind, announcements);
           if (!target) return null;
-          return { id: asNotificationId(row.id), kind, title: row.title, body: bodyOf(row, kind), createdAt: toIso(row.created_at), read: row.read_at !== null, target };
+          return {
+            id: asNotificationId(row.id),
+            kind,
+            title: row.title,
+            body: bodyOf(row, kind),
+            createdAt: toIso(row.created_at),
+            read: row.read_at !== null,
+            target,
+            imageUri: row.listing?.cover_url ?? null,
+          };
         });
         // Tanınmayan tür / hedefsiz kayıt listede gösterilmez (çökmez); sayfalama imleci sunucu satırlarına göre kalır.
         return { items: page.items.filter((item): item is AppNotification => item !== null), nextCursor: page.nextCursor };
@@ -139,6 +152,14 @@ export function createSupabaseNotifications(sb: Supabase): NotificationsService 
         const { count, error } = await sb.from('notifications').select('id', { count: 'exact', head: true }).eq('user_id', userId).is('read_at', null);
         if (error) throw error;
         return count ?? 0;
+      }),
+
+    remove: (ids: readonly NotificationId[]) =>
+      call(async () => {
+        if (ids.length === 0) return;
+        const userId = await requireUserId(sb);
+        // RLS yalnız kullanıcının kendi satırlarını sildirir; `user_id` filtresi yine de açıkça verilir.
+        ensure(await sb.from('notifications').delete().eq('user_id', userId).in('id', [...ids]));
       }),
 
     getPreferences: () =>

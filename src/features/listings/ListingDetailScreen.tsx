@@ -1,41 +1,44 @@
-import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
+import { FlatList, Pressable, ScrollView, Share, StyleSheet, useWindowDimensions, View, type StyleProp, type ViewStyle } from 'react-native';
+import Animated, { type AnimatedStyle } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Platform, Pressable, ScrollView, Share, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
-import { Badge } from '@/components/Badge';
-import { Btn } from '@/components/Btn';
-import { Screen } from '@/components/Screen';
-import { BrandLogo } from '@/components/brand/BrandLogo';
-import { StripePlaceholder } from '@/components/StripePlaceholder';
-import { Icon, type IconName } from '@/components/icons/Icon';
 import { AppError, userMessage, type ListingDetail } from '@/domain';
 import { useFavoriteToggle } from '@/features/saved/useFavorites';
-import { colors, fontFamily, radii, shadows, sizes, spacing, textStyles } from '@/theme';
-
-import { StateMessage } from './ListStates';
 import { useIsAdmin } from '@/features/session/useIsAdmin';
+import { Button } from '@/ui/Button';
+import { FocusStatusBar } from '@/ui/FocusStatusBar';
+import { formatPrice, statusLabels, statusTones, timeAgo } from '@/ui/format';
+import { Icon, type IconName } from '@/ui/Icon';
+import { ListingImage } from '@/ui/ListingImage';
+import { usePop } from '@/ui/motion';
+import { Text } from '@/ui/Text';
+import { Badge } from '@/ui/Ui';
+import { Colors, Radius, Spacing } from '@/ui/theme';
 
 import { callCompany } from './companyPhone';
-import { toDetailModel } from './presentation';
+import { DetailStateView } from './DetailStateView';
+import { specRows, toListingView, type SpecRow } from './presentation';
 import { listingContactHref, listingMediaHref } from './routes';
 import { useListingQuery } from './useListingsQueries';
 
-
-const HERO_HEIGHT = 280;
-/** Açıklama bu uzunluğu aşarsa "Devamını oku" çıkar (tasarım 07: dört satırda kesilir). */
-const DESCRIPTION_PREVIEW_CHARS = 140;
-const DESCRIPTION_PREVIEW_LINES = 4;
+const HERO_HEIGHT = 330;
 
 /**
- * İlan detayı (07). Tek kaynak `listingId` rota parametresidir; gövde ID ile anahtarlanır, böylece parametre değişince önceki ilanın
- * açıklama aç/kapat ve bildirim durumu taşınmaz. Boş/dizi ID doğrudan "bulunamadı"dır (servis çağrılmaz).
+ * İlan detayı (main tasarımı). Tek kaynak `listingId` rota parametresidir; gövde ID ile anahtarlanır, böylece parametre değişince önceki
+ * ilanın sayfa/bildirim durumu taşınmaz. Boş/dizi ID doğrudan "bulunamadı"dır (servis çağrılmaz).
  */
 export function ListingDetailScreen() {
   const { listingId } = useLocalSearchParams<{ listingId?: string | string[] }>();
   const id = typeof listingId === 'string' ? listingId.trim() : '';
-  return <ListingDetailBody key={id} listingId={id} />;
+  // Durum çubuğu sarmalayıcıda: yükleniyor/hata durumları da (açık zemin) koyu yazıyla görünür.
+  return (
+    <>
+      <FocusStatusBar style="dark" />
+      <ListingDetailBody key={id} listingId={id} />
+    </>
+  );
 }
 
 function useGoBack() {
@@ -46,369 +49,421 @@ function useGoBack() {
 function ListingDetailBody({ listingId }: { listingId: string }) {
   const query = useListingQuery(listingId);
   const goBack = useGoBack();
+  const back = { title: 'Geri dön', onPress: goBack };
 
-  if (listingId === '') return <DetailMessage kind="notFound" onBack={goBack} />;
-  if (query.isPending) return <DetailLoading onBack={goBack} />;
+  const notFound = (
+    <DetailStateView
+      icon="alert-circle"
+      title="İlan bulunamadı"
+      message="İlan yayından kaldırılmış olabilir."
+      actions={[{ ...back, testID: 'listing-not-found-action' }]}
+      testID="listing-not-found"
+    />
+  );
+
+  if (listingId === '') return notFound;
+  if (query.isPending) return <DetailStateView loading loadingLabel="İlan yükleniyor" testID="listing-loading" />;
   // Önbellek yalnızca GEÇİCİ hatalarda (offline/zaman aşımı/bilinmeyen) korunur: arka plan yenilemesi başarısız olsa da son bilinen detay
   // gösterilir. Varlık/erişim sonuçları (notFound, unauthenticated) eski veri olsa bile ilanı ve eylemlerini kaldırır.
   const error = query.isError ? query.error : null;
   const kind = error instanceof AppError ? error.kind : null;
-  if (kind === 'notFound') return <DetailMessage kind="notFound" onBack={goBack} />;
+  if (kind === 'notFound') return notFound;
   if (kind === 'unauthenticated') {
     return (
-      <DetailFrame onBack={goBack}>
-        <StateMessage
-          icon="info"
-          title="Oturum gerekli"
-          message={userMessage(error)}
-          actionLabel="Geri dön"
-          actionIcon="arrow-left"
-          onAction={goBack}
-          testID="listing-unauthenticated"
-        />
-      </DetailFrame>
+      <DetailStateView
+        icon="alert-circle"
+        title="Oturum gerekli"
+        message={userMessage(error)}
+        actions={[{ ...back, testID: 'listing-unauthenticated-action' }]}
+        testID="listing-unauthenticated"
+      />
     );
   }
   if (error && !query.data) {
-    const offline = kind === 'offline';
     return (
-      <DetailFrame onBack={goBack}>
-        <StateMessage
-          icon="info"
-          title={offline ? 'Bağlantı yok' : 'İlan yüklenemedi'}
-          message={userMessage(error)}
-          actionLabel="Tekrar dene"
-          onAction={() => void query.refetch()}
-          testID="listing-error"
-        />
-      </DetailFrame>
+      <DetailStateView
+        icon="alert-circle"
+        title={kind === 'offline' ? 'Bağlantı yok' : 'İlan yüklenemedi'}
+        message={userMessage(error)}
+        actions={[
+          { title: 'Tekrar dene', onPress: () => void query.refetch(), testID: 'listing-error-action' },
+          { ...back, variant: 'outline' },
+        ]}
+        testID="listing-error"
+      />
     );
   }
-  if (!query.data) return <DetailLoading onBack={goBack} />;
-  if (query.data.status === 'withdrawn') return <DetailMessage kind="withdrawn" onBack={goBack} />;
+  if (!query.data) return <DetailStateView loading loadingLabel="İlan yükleniyor" testID="listing-loading" />;
+  if (query.data.status === 'withdrawn') {
+    return (
+      <DetailStateView
+        icon="alert-circle"
+        title="Bu ilan yayından kaldırıldı"
+        message="İlan yayından kaldırıldığı için fotoğraflar ve iletişim kullanılamıyor."
+        actions={[{ ...back, testID: 'listing-withdrawn-action' }]}
+        testID="listing-withdrawn"
+      />
+    );
+  }
   return <DetailContent detail={query.data} onBack={goBack} />;
 }
 
-/** Yükleme/hata durumlarının ortak çerçevesi: sabit geri düğmesi + içerik. */
-function DetailFrame({ children, onBack }: { children: React.ReactNode; onBack: () => void }) {
-  return (
-    <Screen background={colors.white} testID="listing-screen">
-      <View style={styles.frameBar}>
-        <BackButton onPress={onBack} testID="listing-back" />
-      </View>
-      <ScrollView contentContainerStyle={styles.frameBody}>{children}</ScrollView>
-    </Screen>
-  );
+/** Galeri sırası (main): önce fotoğraflar, en sonda video. Galeri ekranı da aynı sırayı kullanır; `index` bu sıradaki konumdur. */
+function heroPhotos(detail: ListingDetail): { id: string; uri: string | null }[] {
+  const photos = detail.media.filter((m) => m.kind === 'photo').map((m) => ({ id: m.id as string, uri: m.uri }));
+  if (photos.length === 0 && detail.coverImageUri) return [{ id: 'cover', uri: detail.coverImageUri }];
+  return photos;
 }
 
-function DetailLoading({ onBack }: { onBack: () => void }) {
-  return (
-    <DetailFrame onBack={onBack}>
-      <View accessible accessibilityLabel="İlan yükleniyor" accessibilityState={{ busy: true }} style={styles.skeleton} testID="listing-loading">
-        <View style={styles.skeletonHero} />
-        <View style={[styles.bar, { width: '40%', height: 12 }]} />
-        <View style={[styles.bar, { width: '90%', height: 20 }]} />
-        <View style={[styles.bar, { width: '60%', height: 12 }]} />
-        <View style={[styles.bar, { width: '45%', height: 26, marginTop: spacing.md }]} />
-      </View>
-    </DetailFrame>
-  );
-}
+/** Main'deki özellik sırası: Marka, Model, Model Yılı, Kilometre, Tip, ardından kategoriye özel alanlar. */
+const HEAD_SPEC_KEYS = new Set(['brand', 'model', 'modelYear', 'odometer']);
 
-function DetailMessage({ kind, onBack }: { kind: 'notFound' | 'withdrawn'; onBack: () => void }) {
-  const withdrawn = kind === 'withdrawn';
-  return (
-    <DetailFrame onBack={onBack}>
-      <StateMessage
-        icon={withdrawn ? 'eye-off' : 'search-x'}
-        title={withdrawn ? 'Bu ilan yayından kaldırıldı' : 'İlan bulunamadı'}
-        message={
-          withdrawn
-            ? 'İlan sahibi tarafından yayından kaldırıldığı için fotoğraflar ve iletişim kullanılamıyor. Benzer ilanlar için aramaya dönebilirsiniz.'
-            : 'Aradığınız ilan kaldırılmış olabilir ya da bağlantı hatalı. Geri dönüp başka bir ilan seçebilirsiniz.'
-        }
-        actionLabel="Geri dön"
-        actionIcon="arrow-left"
-        onAction={onBack}
-        testID={withdrawn ? 'listing-withdrawn' : 'listing-not-found'}
-      />
-    </DetailFrame>
-  );
-}
-
-function BackButton({ onPress, testID }: { onPress: () => void; testID: string }) {
-  return (
-    <Pressable accessibilityRole="button" accessibilityLabel="Geri" onPress={onPress} style={styles.roundButton} testID={testID}>
-      <Icon name={Platform.OS === 'ios' ? 'chevron-left' : 'arrow-left'} size={Platform.OS === 'ios' ? 24 : 22} color={colors.navy} />
-    </Pressable>
-  );
-}
-
-function RoundAction({
-  icon,
-  label,
-  onPress,
-  active = false,
-  busy = false,
-  testID,
-}: {
-  icon: IconName;
-  label: string;
-  onPress: () => void;
-  /** Seçili durum (ör. favoride): kırmızı dolu simge (tasarım 07: `#d4183d`). */
-  active?: boolean;
-  busy?: boolean;
-  testID: string;
-}) {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      accessibilityState={{ selected: active, busy }}
-      disabled={busy}
-      onPress={onPress}
-      style={styles.roundButton}
-      testID={testID}>
-      <Icon name={icon} size={19} color={active ? colors.danger : colors.navy} filled={active} />
-    </Pressable>
-  );
+function detailSpecRows(detail: ListingDetail): SpecRow[] {
+  const rows = [...specRows(detail.specs)];
+  const subtype = detail.subcategory;
+  if (!subtype || rows.some((row) => row.value === subtype)) return rows;
+  const after = rows.reduce((last, row, i) => (HEAD_SPEC_KEYS.has(row.key) ? i : last), -1);
+  rows.splice(after + 1, 0, { key: 'subtype', label: 'Tip', value: subtype });
+  return rows;
 }
 
 /** Bu yazı ölçeğinden büyükte alt eylem düğmeleri alt alta dizilir. */
 const STACK_ACTIONS_MIN_FONT_SCALE = 1.3;
 
 function DetailContent({ detail, onBack }: { detail: ListingDetail; onBack: () => void }) {
-  const stackActions = useWindowDimensions().fontScale > STACK_ACTIONS_MIN_FONT_SCALE;
+  const { width, fontScale } = useWindowDimensions();
+  const stackActions = fontScale > STACK_ACTIONS_MIN_FONT_SCALE;
   const isAdmin = useIsAdmin();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const [expanded, setExpanded] = useState(false);
+  const [index, setIndex] = useState(0);
   const [notice, setNotice] = useState<string | null>(null);
   const favorites = useFavoriteToggle();
-  const favorite = favorites.isFavorite(detail.id);
+  const isFavorite = favorites.isFavorite(detail.id);
+  const heart = usePop();
   // Favori hatası (geri alma sonrası) eylem uyarısının yerine görünür; yeni eylem ikisini de temizler.
   const shownNotice = favorites.failure ?? notice;
-  const model = toDetailModel(detail, Date.now());
-  const sold = detail.status === 'sold';
-  const longDescription = model.description.length > DESCRIPTION_PREVIEW_CHARS;
-  const hasVideo = detail.media.some((item) => item.kind === 'video');
 
-  // Paylaşım yalnızca RN Share ile başlık/ilan no metni hazırlar; web URL'si uydurulmaz.
+  const view = toListingView(detail);
+  const photos = heroPhotos(detail);
+  const hasVideo = detail.media.some((m) => m.kind === 'video');
+  // Galeride video, gerçek fotoğrafların hemen ardındadır (kapak yedeği galeride sayılmaz).
+  const videoIndex = detail.media.filter((m) => m.kind === 'photo').length;
+  const sold = detail.status === 'sold';
+  const specs = detailSpecRows(detail);
+  const location = [detail.location.city, detail.location.district].filter(Boolean).join(' / ');
+  const price = formatPrice(view.price);
+
+  const openGallery = (start = index) => router.push(listingMediaHref(detail.id, start));
+
+  // Paylaşım yalnızca RN Share ile başlık/fiyat/ilan no metni hazırlar; web URL'si uydurulmaz.
   const share = () => {
-    void Share.share({ message: model.shareText }).catch(() => undefined);
+    void Share.share({ message: `${detail.title} – ${price}\nİlan no: ${detail.listingNumber}\nNeşeli Kamyon Tır Pazarı` }).catch(() => undefined);
   };
 
   return (
-    <Screen background={colors.white} edges={['left', 'right', 'bottom']} testID="listing-screen">
-      <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false} testID="listing-scroll">
-        <View style={[styles.hero, { height: HERO_HEIGHT + insets.top }]}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Fotoğraf ve videoları aç"
-            onPress={() => router.push(listingMediaHref(detail.id))}
-            style={StyleSheet.absoluteFill}
-            testID="listing-hero">
-            {detail.coverImageUri ? (
-              <Image source={{ uri: detail.coverImageUri }} style={StyleSheet.absoluteFill} contentFit="cover" accessibilityIgnoresInvertColors />
-            ) : (
-              <>
-                <StripePlaceholder width={1200} height={HERO_HEIGHT + insets.top} stripe={8} />
-                <View style={styles.heroLabel} pointerEvents="none">
-                  <Text style={[textStyles.mono, styles.heroLabelText, styles.heroMono]}>araç fotoğrafı · kapak</Text>
-                </View>
-              </>
-            )}
-          </Pressable>
-          <View style={[styles.heroTop, { top: insets.top + spacing.lg }]} pointerEvents="box-none">
-            <BackButton onPress={onBack} testID="listing-back" />
-            <View style={styles.heroActions}>
-              <RoundAction icon="share-2" label="Paylaş" onPress={share} testID="listing-share" />
-              <RoundAction
-                icon="heart"
-                label={favorite ? 'Favorilerden çıkar' : 'Favorilere ekle'}
-                active={favorite}
+    <View style={styles.container} testID="listing-screen">
+      <ScrollView contentContainerStyle={styles.scroll} testID="listing-scroll">
+        <View style={{ height: HERO_HEIGHT }} testID="listing-hero">
+          {photos.length ? (
+            <FlatList
+              data={photos}
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              keyExtractor={(m) => m.id}
+              onMomentumScrollEnd={(e) => setIndex(Math.round(e.nativeEvent.contentOffset.x / width))}
+              renderItem={({ item, index: i }) => (
+                <Pressable accessibilityRole="button" accessibilityLabel="Fotoğraf ve videoları aç" onPress={() => openGallery(i)}>
+                  <ListingImage uri={item.uri} style={{ width, height: HERO_HEIGHT }} iconSize={64} icon={view.categoryIcon} showLabel />
+                </Pressable>
+              )}
+            />
+          ) : (
+            <ListingImage uri={null} style={{ width, height: HERO_HEIGHT }} iconSize={64} icon={view.categoryIcon} showLabel />
+          )}
+
+          <View style={[styles.heroActions, { top: insets.top + Spacing.two }]}>
+            <RoundButton icon="chevron-left" label="Geri" onPress={onBack} testID="listing-back" />
+            <View style={styles.heroRight}>
+              <RoundButton icon="share-2" label="Paylaş" onPress={share} testID="listing-share" />
+              <RoundButton
+                icon={isFavorite ? 'mci:heart' : 'heart'}
+                iconColor={isFavorite ? Colors.danger : undefined}
+                label={isFavorite ? 'Favorilerden çıkar' : 'Favorilere ekle'}
+                selected={isFavorite}
                 busy={favorites.isPending(detail.id)}
+                iconStyle={heart.style}
                 onPress={() => {
                   setNotice(null);
+                  heart.pop(!isFavorite);
                   favorites.toggle(detail.id, detail);
                 }}
                 testID="listing-favorite"
               />
             </View>
           </View>
-          <View style={styles.heroBottom} pointerEvents="none">
-            {detail.photoCount > 0 ? (
-              <View style={styles.mediaChip} testID="listing-photo-count">
-                <Icon name="camera" size={14} color={colors.white} />
-                <Text style={styles.mediaChipText}>{`1 / ${detail.photoCount}`}</Text>
-              </View>
-            ) : null}
-            {hasVideo ? (
-              <View style={styles.mediaChip} testID="listing-video-chip">
-                <Icon name="play" size={12} color={colors.white} />
-                <Text style={styles.mediaChipText}>Video</Text>
-              </View>
-            ) : null}
-          </View>
+
+          {photos.length || hasVideo ? (
+            <View style={styles.heroPills}>
+              {photos.length ? (
+                <Pressable style={styles.pill} onPress={() => openGallery()} testID="listing-photo-count">
+                  <Icon name="camera" size={18} color="white" />
+                  <Text variant="smallSemibold" style={styles.white}>
+                    {index + 1} / {photos.length}
+                  </Text>
+                </Pressable>
+              ) : null}
+              {hasVideo ? (
+                <Pressable style={styles.pill} onPress={() => openGallery(videoIndex)} testID="listing-video-chip">
+                  <Icon name="play" size={18} color="white" />
+                  <Text variant="smallSemibold" style={styles.white}>
+                    Video
+                  </Text>
+                </Pressable>
+              ) : null}
+            </View>
+          ) : null}
         </View>
 
-        <View style={styles.head}>
-          <Text style={styles.kicker} testID="listing-kicker">
-            {model.kicker}
+        <View style={styles.summary}>
+          <Text variant="body" color="textSecondary" testID="listing-kicker">
+            {[view.categoryName, view.subtype].filter(Boolean).join(' · ')}
           </Text>
-          <Text style={styles.title} accessibilityRole="header" testID="listing-title">
-            {model.title}
+          <Text variant="title" accessibilityRole="header" testID="listing-title">
+            {detail.title}
           </Text>
           <View style={styles.metaRow}>
-            <Icon name="map-pin" size={14} color={colors.slateLight} />
-            <Text style={styles.meta} testID="listing-meta">
-              {`${model.location} · ${model.dateLabel} · İlan no: ${model.listingNumber}`}
+            <Icon name="map-pin" size={16} color="textSecondary" />
+            <Text variant="small" style={styles.flex} testID="listing-meta">
+              {[location, detail.publishedAt ? timeAgo(detail.publishedAt) : null, `İlan no: ${detail.listingNumber}`].filter(Boolean).join(' · ')}
             </Text>
           </View>
           <View style={styles.priceRow}>
-            <Text style={styles.price} testID="listing-price">
-              {model.price}
+            <Text variant="priceLarge" style={styles.flex} testID="listing-price">
+              {price}
             </Text>
-            {model.status ? <Badge variant={model.status} testID="listing-status" /> : null}
+            <View testID="listing-status">
+              <Badge label={statusLabels[detail.status]} tone={statusTones[detail.status]} />
+            </View>
           </View>
-          {model.financing ? (
+          {detail.financing ? (
             <View style={styles.financing} testID="listing-financing">
-              <Icon name="credit-card" size={20} color={colors.greenText} />
-              <Text style={styles.financingText}>{model.financing}</Text>
+              <Icon name="credit-card" size={18} color="success" />
+              <Text variant="smallSemibold" style={styles.financingText}>
+                {detail.financing}
+              </Text>
+            </View>
+          ) : null}
+          {/* Main'de yok: satılmış ilanda iletişim kapalı olduğu için kısa açıklama (bizim iş kuralı). */}
+          {sold ? (
+            <View style={styles.soldInfo} testID="listing-sold-notice">
+              <Icon name="info" size={18} color={INFO} />
+              <Text variant="small" style={styles.infoText}>
+                Bu ilan satıldı. Fotoğrafları inceleyebilirsiniz; yeni görüşme başlatılamaz.
+              </Text>
             </View>
           ) : null}
         </View>
 
-        {sold ? (
-          <View style={styles.soldBox} testID="listing-sold-notice">
-            <Icon name="info" size={18} color={colors.blue} />
-            <Text style={styles.soldText}>Bu ilan satıldı. Fotoğrafları inceleyebilirsiniz; yeni görüşme başlatılamaz.</Text>
+        {specs.length ? (
+          <View style={styles.section}>
+            <Text variant="heading" accessibilityRole="header">
+              Özellikler
+            </Text>
+            {specs.map((row) => (
+              <View key={row.key} style={styles.specRow} testID={`listing-spec-${row.key}`}>
+                <Text variant="body" color="textSecondary">
+                  {row.label}
+                </Text>
+                <Text variant="bodySemibold" style={styles.specValue}>
+                  {row.value}
+                </Text>
+              </View>
+            ))}
           </View>
         ) : null}
 
-        <View style={styles.divider} />
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle} accessibilityRole="header">
-            Özellikler
-          </Text>
-          {model.specRows.map((row) => (
-            <View key={row.key} style={styles.specRow} testID={`listing-spec-${row.key}`}>
-              <Text style={styles.specKey}>{row.label}</Text>
-              <Text style={styles.specValue}>{row.value}</Text>
-            </View>
-          ))}
-        </View>
-
-        <View style={[styles.section, styles.descriptionSection]}>
-          <Text style={[styles.sectionTitle, styles.descriptionTitle]} accessibilityRole="header">
-            Açıklama
-          </Text>
-          <Text style={styles.description} numberOfLines={expanded || !longDescription ? undefined : DESCRIPTION_PREVIEW_LINES} testID="listing-description">
-            {model.description}
-          </Text>
-          {longDescription ? (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityState={{ expanded }}
-              onPress={() => setExpanded((open) => !open)}
-              style={styles.more}
-              testID="listing-description-toggle">
-              <Text style={styles.moreText}>{expanded ? 'Daha az göster' : 'Devamını oku'}</Text>
-            </Pressable>
-          ) : null}
-        </View>
-
-        <View style={styles.assurance}>
-          <View style={styles.assuranceIcon}>
-            <BrandLogo variant="emblem" height={18} accessibilityLabel="Neşeli Otomotiv" testID="listing-assurance-emblem" />
+        {detail.description ? (
+          <View style={styles.section}>
+            <Text variant="heading" accessibilityRole="header">
+              Açıklama
+            </Text>
+            <Text variant="body" testID="listing-description">
+              {detail.description}
+            </Text>
           </View>
-          <View style={styles.assuranceText}>
-            <Text style={styles.assuranceTitle}>Neşeli Otomotiv güvencesi</Text>
-            <Text style={styles.assuranceBody}>Bu ilan firmamızın kendi filosundandır; ilan doğrudan Neşeli Otomotiv tarafından yayımlanır.</Text>
-          </View>
-        </View>
+        ) : null}
       </ScrollView>
 
       {shownNotice ? (
-        <View style={styles.notice} accessibilityRole="alert" accessibilityLiveRegion="polite" testID="listing-notice">
-          <Icon name="info" size={18} color={colors.blue} />
-          <Text style={styles.noticeText}>{shownNotice}</Text>
+        <View
+          style={[styles.notice, isAdmin && { paddingBottom: insets.bottom + Spacing.two }]}
+          accessibilityRole="alert"
+          accessibilityLiveRegion="polite"
+          testID="listing-notice">
+          <Icon name="info" size={18} color={INFO} />
+          <Text variant="small" style={styles.infoText}>
+            {shownNotice}
+          </Text>
         </View>
       ) : null}
       {/* Yönetici firmanın kendisidir: firmayı arama / firmaya mesaj başlatma eylemleri gösterilmez. */}
       {isAdmin ? null : (
-        <View style={[styles.bottomBar, stackActions && styles.bottomBarStacked]}>
-          <View style={stackActions ? styles.slotStacked : styles.callSlot}>
-            <Btn
-              label="Hemen Ara"
-              variant="secondary"
-              icon="phone"
-              disabled={sold}
-              onPress={() => callCompany(setNotice)}
-              testID="listing-call"
-            />
-          </View>
-          <View style={stackActions ? styles.slotStacked : styles.messageSlot}>
-            <Btn label="Mesaj Gönder" icon="message-circle" disabled={sold} onPress={() => router.push(listingContactHref(detail.id))} testID="listing-contact" />
-          </View>
+        <View style={[styles.actions, stackActions && styles.actionsStacked, { paddingBottom: insets.bottom + Spacing.two }]}>
+          <Button
+            title="Hemen Ara"
+            icon="phone"
+            variant="outline"
+            style={stackActions ? undefined : styles.action}
+            disabled={sold}
+            onPress={() => callCompany(setNotice)}
+            testID="listing-call"
+          />
+          <Button
+            title="Mesaj Gönder"
+            icon="message-circle"
+            style={stackActions ? undefined : styles.actionWide}
+            disabled={sold}
+            onPress={() => router.push(listingContactHref(detail.id))}
+            testID="listing-contact"
+          />
         </View>
       )}
-    </Screen>
+    </View>
   );
 }
 
-const roundShadow = shadows.floating;
+function RoundButton({
+  icon,
+  iconColor,
+  label,
+  onPress,
+  selected,
+  busy = false,
+  iconStyle,
+  testID,
+}: {
+  icon: IconName;
+  iconColor?: string;
+  label: string;
+  onPress: () => void;
+  selected?: boolean;
+  busy?: boolean;
+  /** Simgenin animasyonlu stili (favori kalbinin "pop"u). */
+  iconStyle?: StyleProp<AnimatedStyle<StyleProp<ViewStyle>>>;
+  testID: string;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ selected, busy }}
+      disabled={busy}
+      onPress={onPress}
+      style={styles.round}
+      testID={testID}>
+      <Animated.View style={iconStyle}>
+        <Icon name={icon} size={24} color={iconColor} />
+      </Animated.View>
+    </Pressable>
+  );
+}
+
+/** `@/ui/Ui` Badge "info" tonunun yazı rengi. */
+const INFO = '#1E4A7A';
 
 const styles = StyleSheet.create({
-  scroll: { flex: 1 },
-  frameBar: { height: 56, justifyContent: 'center', paddingHorizontal: spacing.lg },
-  frameBody: { flexGrow: 1 },
-  skeleton: { gap: spacing.lg, paddingHorizontal: spacing.xl },
-  skeletonHero: { height: HERO_HEIGHT - 56, borderRadius: radii.card, backgroundColor: colors.lineSoft },
-  bar: { borderRadius: radii.xs, backgroundColor: colors.lineSoft },
-  hero: { overflow: 'hidden', backgroundColor: colors.line },
-  heroLabel: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center' },
-  heroLabelText: { color: colors.slatePale },
-  heroMono: { fontSize: 11, lineHeight: 13.2 },
-  heroTop: { position: 'absolute', left: spacing.lg, right: spacing.lg, flexDirection: 'row', justifyContent: 'space-between' },
-  heroActions: { flexDirection: 'row', gap: spacing.md },
-  roundButton: { width: 40, height: 40, borderRadius: radii.pill, backgroundColor: colors.white, alignItems: 'center', justifyContent: 'center', ...roundShadow },
-  heroBottom: { position: 'absolute', left: spacing.lg, bottom: spacing.lg, flexDirection: 'row', gap: spacing.sm },
-  mediaChip: { height: 26, flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 9, borderRadius: radii.md, backgroundColor: colors.navyDeep },
-  mediaChipText: { fontFamily: fontFamily.inter600, fontSize: 12, lineHeight: 14.4, color: colors.white },
-  head: { paddingHorizontal: spacing.xl, paddingTop: spacing.xl, gap: spacing.sm },
-  financing: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10, paddingHorizontal: 14, height: 36, borderRadius: 12, backgroundColor: colors.greenTint },
-  financingText: { fontFamily: fontFamily.inter600, fontSize: 14, color: colors.greenText },
-  kicker: { fontFamily: fontFamily.inter500, fontSize: 13, lineHeight: 15.6, color: colors.slate },
-  title: { fontFamily: fontFamily.montserrat700, fontSize: 20, lineHeight: 26, color: colors.navy },
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  meta: { flex: 1, fontFamily: fontFamily.inter400, fontSize: 13, lineHeight: 17, color: colors.slateLight },
-  priceRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.md },
-  price: { fontFamily: fontFamily.montserrat800, fontSize: 26, lineHeight: 31.2, color: colors.navy, flexShrink: 1 },
-  soldBox: { flexDirection: 'row', gap: 10, alignItems: 'flex-start', marginHorizontal: spacing.xl, marginTop: spacing.xl, padding: spacing.lg, borderRadius: radii.xl, backgroundColor: colors.blueTint },
-  soldText: { flex: 1, fontFamily: fontFamily.inter400, fontSize: 13, lineHeight: 19, color: colors.blue },
-  divider: { height: 8, backgroundColor: colors.surface, marginTop: 18 },
-  section: { paddingHorizontal: spacing.xl, paddingTop: 18 },
-  sectionTitle: { fontFamily: fontFamily.montserrat700, fontSize: 16, lineHeight: 19.2, color: colors.navy, marginBottom: spacing.sm },
-  specRow: { minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.lg, borderBottomWidth: 1, borderBottomColor: colors.lineSoft },
-  specKey: { fontFamily: fontFamily.inter400, fontSize: 14, color: colors.slate },
-  specValue: { flexShrink: 1, textAlign: 'right', fontFamily: fontFamily.inter600, fontSize: 14, color: colors.ink },
-  descriptionSection: { paddingTop: spacing['2xl'] },
-  descriptionTitle: { marginBottom: spacing.md },
-  description: { fontFamily: fontFamily.inter400, fontSize: 14, lineHeight: 22.4, color: colors.inkSoft },
-  more: { minHeight: sizes.minTouchTarget, alignSelf: 'flex-start', justifyContent: 'center' },
-  moreText: { fontFamily: fontFamily.inter600, fontSize: 14, color: colors.blue },
-  assurance: { margin: spacing.xl, padding: 14, borderRadius: radii.card, backgroundColor: colors.blueTint, flexDirection: 'row', gap: spacing.lg, alignItems: 'flex-start' },
-  assuranceIcon: { width: 36, height: 36, borderRadius: radii.lg, backgroundColor: colors.navy, alignItems: 'center', justifyContent: 'center' },
-  assuranceText: { flex: 1, gap: 3 },
-  assuranceTitle: { fontFamily: fontFamily.montserrat700, fontSize: 14, lineHeight: 18.2, color: colors.navy },
-  assuranceBody: { fontFamily: fontFamily.inter400, fontSize: 13, lineHeight: 18.85, color: colors.inkMuted },
-  notice: { flexDirection: 'row', gap: 10, alignItems: 'flex-start', marginHorizontal: spacing.xl, marginBottom: spacing.md, padding: spacing.lg, borderRadius: radii.xl, backgroundColor: colors.blueTint },
-  noticeText: { flex: 1, fontFamily: fontFamily.inter400, fontSize: 13, lineHeight: 19, color: colors.blue },
-  bottomBar: { flexDirection: 'row', gap: 10, paddingHorizontal: spacing.xl, paddingVertical: spacing.lg, borderTopWidth: 1, borderTopColor: colors.lineSoft, backgroundColor: colors.white },
-  bottomBarStacked: { flexDirection: 'column' },
-  slotStacked: { width: '100%' },
-  callSlot: { width: 150 },
-  messageSlot: { flex: 1, minWidth: 0 },
+  container: { flex: 1, backgroundColor: Colors.background },
+  scroll: { paddingBottom: Spacing.four },
+  flex: { flex: 1 },
+  white: { color: Colors.white },
+  heroActions: {
+    position: 'absolute',
+    left: Spacing.three,
+    right: Spacing.three,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  heroRight: { flexDirection: 'row', gap: Spacing.three },
+  round: {
+    width: 52,
+    height: 52,
+    borderRadius: Radius.pill,
+    backgroundColor: Colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+    boxShadow: '0 2px 8px rgba(10,33,63,0.15)',
+  },
+  heroPills: { position: 'absolute', left: Spacing.three, bottom: Spacing.three, flexDirection: 'row', gap: Spacing.two },
+  pill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    backgroundColor: 'rgba(10,33,63,0.92)',
+    borderRadius: Radius.md,
+    paddingHorizontal: Spacing.three,
+    height: 40,
+  },
+  summary: {
+    backgroundColor: Colors.surface,
+    padding: Spacing.three,
+    gap: Spacing.two,
+    marginBottom: Spacing.two,
+  },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.one },
+  financing: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    alignSelf: 'flex-start',
+    backgroundColor: Colors.successSoft,
+    borderRadius: Radius.md,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
+  },
+  financingText: { color: Colors.success },
+  soldInfo: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: Spacing.two,
+    backgroundColor: Colors.surfaceHighlight,
+    borderRadius: Radius.md,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
+  },
+  infoText: { flex: 1, color: INFO },
+  priceRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, marginTop: Spacing.two },
+  section: { backgroundColor: Colors.surface, padding: Spacing.three, gap: Spacing.one, marginBottom: Spacing.two },
+  specRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: Spacing.three,
+    paddingVertical: Spacing.three,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: Colors.border,
+  },
+  specValue: { flexShrink: 1, textAlign: 'right' },
+  notice: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: Spacing.two,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
+    backgroundColor: Colors.surfaceHighlight,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: Colors.border,
+  },
+  actions: {
+    flexDirection: 'row',
+    gap: Spacing.three,
+    paddingHorizontal: Spacing.three,
+    paddingTop: Spacing.three,
+    backgroundColor: Colors.surface,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: Colors.border,
+  },
+  actionsStacked: { flexDirection: 'column' },
+  action: { flex: 1 },
+  actionWide: { flex: 1.3 },
 });

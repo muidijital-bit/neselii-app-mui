@@ -13,7 +13,9 @@
       "supportsTablet": false,
       "config": {
         "usesNonExemptEncryption": false
-      }
+      },
+      "appleTeamId": "7DKZH9VMX9",
+      "buildNumber": "1"
     },
     "android": {
       "adaptiveIcon": {
@@ -67,7 +69,10 @@
       "policy": "appVersion"
     },
     "updates": {
-      "url": "https://u.expo.dev/7d9ea35a-17ef-4630-b45f-c105d7caf5ee"
+      "url": "https://u.expo.dev/7d9ea35a-17ef-4630-b45f-c105d7caf5ee",
+      "requestHeaders": {
+        "expo-channel-name": "production"
+      }
     },
     "extra": {
       "router": {},

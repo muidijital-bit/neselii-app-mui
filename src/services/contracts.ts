@@ -31,6 +31,8 @@ import type {
   GuideInput,
   FinancePlan,
   FinanceSettings,
+  FleetVehicle,
+  FleetVehicleInput,
   KurusRange,
   TradeInDetail,
   TradeInUpload,
@@ -386,6 +388,16 @@ export interface GuidesService {
   remove(id: string): Promise<void>;
 }
 
+// --- Fleet (madde 48–50) -------------------------------------------------------------------------------------------
+
+/** Müşterinin filo envanteri (yalnız kendi araçları). Hatırlatmaları sunucu gönderir. Plaka boşsa `validation` (`plate`). */
+export interface FleetService {
+  list(): Promise<readonly FleetVehicle[]>;
+  get(id: string): Promise<FleetVehicle>;
+  save(id: string | null, input: FleetVehicleInput): Promise<FleetVehicle>;
+  remove(id: string): Promise<void>;
+}
+
 // --- Birleşik kap --------------------------------------------------------------------------------------------------
 
 export interface Services {
@@ -404,6 +416,7 @@ export interface Services {
   readonly documents: DocumentsService;
   readonly companies: CompaniesService;
   readonly guides: GuidesService;
+  readonly fleet: FleetService;
 }
 
 export type ServiceName = keyof Services;

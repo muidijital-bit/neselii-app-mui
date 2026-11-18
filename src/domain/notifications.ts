@@ -24,7 +24,9 @@ export type NotificationKind =
   | 'lead-new'
   | 'lead-update'
   /** Madde 6: favorideki araca benzer yeni ilan. */
-  | 'similar-listing';
+  | 'similar-listing'
+  /** Madde 49/50: filo aracı hatırlatması (muayene, sigorta, bakım, yenileme). */
+  | 'fleet-reminder';
 
 /**
  * Dokunulunca nereye gidileceği. Tip güvenli: ilan bildirimi `ListingId`, mesaj bildirimi `ConversationId` taşır;
@@ -34,6 +36,7 @@ export type NotificationTarget =
   | { readonly type: 'listing'; readonly listingId: ListingId }
   | { readonly type: 'conversation'; readonly conversationId: ConversationId }
   | { readonly type: 'lead'; readonly leadId: LeadId }
+  | { readonly type: 'fleet'; readonly vehicleId: string }
   | { readonly type: 'announcement'; readonly announcementId: AnnouncementId; readonly title: string; readonly body: string };
 
 export type NotificationTargetType = NotificationTarget['type'];
@@ -59,6 +62,8 @@ export function parseNotificationTarget(input: unknown): NotificationTarget | nu
       return isSafeEntityId(input.conversationId) ? { type: 'conversation', conversationId: asConversationId(input.conversationId) } : null;
     case 'lead':
       return isSafeEntityId(input.leadId) ? { type: 'lead', leadId: asLeadId(input.leadId) } : null;
+    case 'fleet':
+      return isSafeEntityId(input.vehicleId) ? { type: 'fleet', vehicleId: input.vehicleId } : null;
     case 'announcement': {
       if (!isSafeEntityId(input.announcementId)) return null;
       const title = input.title === undefined ? '' : input.title;

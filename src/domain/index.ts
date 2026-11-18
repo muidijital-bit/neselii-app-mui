@@ -8,6 +8,7 @@ export * from './errors';
 export * from './filterForm';
 export * from './filters';
 export * from './finance';
+export * from './fleet';
 export * from './format';
 export * from './guides';
 export * from './ids';

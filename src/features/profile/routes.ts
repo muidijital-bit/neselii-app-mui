@@ -20,6 +20,7 @@ export const PROFILE_TARGETS = {
   myDocuments: { href: '/my-documents', title: 'Belgelerim' },
   company: { href: '/company', title: 'Kurumsal Hesap' },
   guides: { href: '/guides', title: 'Sektör Rehberi' },
+  fleet: { href: '/fleet', title: 'Filom' },
   tradeLeads: { href: { pathname: '/leads', params: { group: 'trade' } }, title: 'Takas ve Alım Talepleri' },
   notificationPreferences: { href: '/notification-preferences', title: 'Bildirim Tercihleri' },
   privacy: { href: '/privacy', title: 'Gizlilik ve Güvenlik' },

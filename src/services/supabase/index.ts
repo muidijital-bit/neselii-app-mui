@@ -7,6 +7,7 @@ import { getSupabase } from './client';
 import { createSupabaseDocuments } from './documents';
 import { createSupabaseFavorites } from './favorites';
 import { createSupabaseFinance } from './finance';
+import { createSupabaseFleet } from './fleet';
 import { createSupabaseGuides } from './guides';
 import { createSupabaseLeads } from './leads';
 import { createSupabaseListings } from './listings';
@@ -37,6 +38,7 @@ export function createSupabaseServices(): Services {
     documents: createSupabaseDocuments(sb),
     companies: createSupabaseCompanies(sb),
     guides: createSupabaseGuides(sb),
+    fleet: createSupabaseFleet(sb),
   };
 }
 

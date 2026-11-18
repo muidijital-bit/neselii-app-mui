@@ -124,6 +124,9 @@ export function ProfileScreen() {
               {/* Madde 52: müşteri belge arşivi. */}
               <Divider />
               <MenuRow icon="file-text" title={PROFILE_TARGETS.myDocuments.title} onPress={go(PROFILE_TARGETS.myDocuments.href)} testID="profile-menu-my-documents" />
+              {/* Madde 48–50: filo envanteri ve muayene / sigorta / bakım / yenileme hatırlatmaları. */}
+              <Divider />
+              <MenuRow icon="truck" title={PROFILE_TARGETS.fleet.title} onPress={go(PROFILE_TARGETS.fleet.href)} testID="profile-menu-fleet" />
               {/* Madde 47: kurumsal hesap (şirket, üyeler, onay akışı). */}
               <Divider />
               <MenuRow icon="briefcase" title={PROFILE_TARGETS.company.title} onPress={go(PROFILE_TARGETS.company.href)} testID="profile-menu-company" />

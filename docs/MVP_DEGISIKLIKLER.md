@@ -265,7 +265,22 @@ Her maddenin müşteri ve yönetici tarafında nasıl test edileceği: **`docs/M
 - **Müşteri:** İlan detayında **"Video İnceleme"**: bölüm adlı düğmeler → galeri o videoda açılır; galeride başlık **"Video · Motor"**.
 - **Veritabanı:** `listing_media.section`; videolar herkese açık `listing-media` alanında.
 
+## Adım 11 — Filo yönetimi ("Gerekli değil" maddeleri) (2026-11-18)
+
+### Madde 48 — Filo envanteri
+- **Müşteri:** Profil → **Filom**: araç listesi (plaka çerçevesi, marka/model, yıl, km, en yakın tarih rozeti) ve **Araç Ekle**. Araç formu: plaka (zorunlu), kategori, marka, model, model yılı, kilometre, muayene / sigorta-kasko bitişi / bakım tarihleri (GG.AA.YYYY), yenileme eşikleri, not; **Kaydet**, **Aracı Sil**.
+- **Veritabanı:** `fleet_vehicles` (müşteri yalnız kendi araçlarını görür/yönetir; yönetici görüntüleyebilir).
+
+### Madde 50 — Bakım ve muayene bildirimleri
+- Her sabah 09:00'da (İstanbul) sunucu kontrol eder: muayene, sigorta veya bakım tarihine **14 gün kala** "… tarihi yaklaşıyor · plaka · tarih (N gün)", **günü gelince** "… günü bugün", tarih geçmişse "… tarihi geçti" bildirimi (her biri bir kez; tarih değişince yeniden).
+- Listede rozet: 14 gün ve altı turuncu, geçmiş kırmızı. Bildirime dokununca araç açılır.
+
+### Madde 49 — Araç yenileme hatırlatması
+- Araç **yenileme yaşını** (varsayılan 10 yıl) ya da **kilometresini** (varsayılan 1.000.000 km) geçince bir kez **"Aracınızı yenileme zamanı"** bildirimi (eşik değişince yeniden).
+- Araç ekranında **"Yenileme zamanı"** kartı: **Benzer araçlar** (aynı kategorideki ilanlar) ve **Takasa ver** (takas formu) kısayolları; listede "Yenileme zamanı" rozeti.
+- **Veritabanı:** `fleet_reminders` (aynı hatırlatmanın tekrarını önler), `notifications.fleet_vehicle_id`, yeni bildirim türü `fleet_reminder`, `fleet-reminders` zamanlanmış görevi (her gün 06:00 UTC).
+
 ## Sıradaki adımlar
 - iOS push için APNs kurulumu (Apple hesabında anahtar gerekir) ve yeni TestFlight build'i.
 - Formdaki **"İlk aşama" ve "Sonraki"** maddelerinin tamamı uygulandı (kapora/online ödeme ve banka API'si gibi tartışılabilir alt parçalar hariç).
-- **Sonra:** "Gerekli değil" işaretli maddeler (15, 22, 34, 42, 45, 48–50) firma isterse.
+- **Adım 12 önerisi:** Madde 22 (finansman başvuru takibi), 34 (satış süreci takibi), 42 (lojistik maliyet simülatörü), 45 (projeye göre araç paketi), 25 (amortisman / kârlılık hesabı). Madde 15 (ekspertiz randevusu) Adım 5'teki randevu yapısıyla zaten karşılanıyor.

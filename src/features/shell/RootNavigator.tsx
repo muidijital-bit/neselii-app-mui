@@ -89,6 +89,9 @@ export function RootNavigator() {
           <Stack.Screen name="guides/index" />
           <Stack.Screen name="guides/[guideId]/index" />
           <Stack.Screen name="guides/[guideId]/edit" />
+          {/* Madde 48–50: filo envanteri ve hatırlatmalar. */}
+          <Stack.Screen name="fleet/index" />
+          <Stack.Screen name="fleet/[vehicleId]" />
           <Stack.Screen name="leads/[leadId]/quote" />
           <Stack.Screen name="conversations/[conversationId]" />
           <Stack.Screen name="announcements/[announcementId]" />

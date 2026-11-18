@@ -553,6 +553,26 @@ Adımlar:
 
 ---
 
+## Adım 11 — Filo yönetimi
+
+### Madde 48 — Filo envanteri
+**Müşteri**
+- [ ] Profil → **Filom** → boş durum açıklaması → **Araç Ekle**: plakayı boş bırakıp Kaydet → "Plakayı girin". Plaka `06 ABC 123`, kategori Çekici, marka/model, yıl, km (binlik ayraçla biçimlenir) → Kaydet → listede plaka çerçevesiyle görünür.
+- [ ] Araca dokun → düzenle (km değiştir) → Kaydet. **Aracı Sil** → onay → listeden kalkar.
+
+### Madde 50 — Muayene / sigorta / bakım hatırlatmaları
+**Müşteri**
+- [ ] Araçta muayene tarihini **bugünden 10 gün sonrası**, sigortayı **bugün**, bakımı **3 gün önce** girin → Kaydet. Listede rozet: en yakın tarih (ör. "Bakım geçti" kırmızı).
+- [ ] **Ertesi sabah 09:00'dan sonra** Bildirimler'de: "Muayene tarihi yaklaşıyor · plaka · tarih (10 gün)", "Sigorta günü bugün", "Bakım tarihi geçti". Bildirime dokununca araç açılır. Aynı bildirimler ertesi gün tekrar gelmez. (Hemen test için hatırlatma görevi veritabanından elle çalıştırılabilir — geliştiriciye iletin.)
+- [ ] Tarih alanına `32.01.2027` → "Tarihi GG.AA.YYYY biçiminde girin".
+
+### Madde 49 — Yenileme hatırlatması
+**Müşteri**
+- [ ] Model yılı 2012 (veya km 1.200.000) olan bir araç ekleyin → araç ekranında **"Yenileme zamanı"** kartı ve listede "Yenileme zamanı" rozeti. **Benzer araçlar** → aynı kategorideki ilanlar; **Takasa ver** → takas formu.
+- [ ] Ertesi sabah: **"Aracınızı yenileme zamanı · plaka · … · Yeni araç ve takas fırsatlarına göz atın"** bildirimi (bir kez). Yenileme yaşını 15 yapıp kaydedince kart kaybolur.
+
+---
+
 ## Bilinen sınırlar / dikkat edilecekler
 
 - **iOS'ta telefona bildirim:** Apple Developer hesabında APNs anahtarı (.p8) oluşturulup Expo'ya yüklenmeli, uygulama kimliğinde Push Notifications yeteneği açılmalı ve yeni TestFlight build'i alınmalı. O zamana kadar bildirimler yalnızca uygulama içinde (Bildirimler sekmesi) görünür.

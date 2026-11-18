@@ -423,6 +423,63 @@ export type Database = {
         }
         Relationships: []
       }
+      fleet_vehicles: {
+        Row: {
+          brand: string | null
+          category_slug: string | null
+          created_at: string
+          id: string
+          inspection_due: string | null
+          insurance_due: string | null
+          km: number | null
+          model: string | null
+          note: string | null
+          plate: string
+          renewal_age_years: number
+          renewal_km: number
+          service_due: string | null
+          updated_at: string
+          user_id: string
+          year: number | null
+        }
+        Insert: {
+          brand?: string | null
+          category_slug?: string | null
+          created_at?: string
+          id?: string
+          inspection_due?: string | null
+          insurance_due?: string | null
+          km?: number | null
+          model?: string | null
+          note?: string | null
+          plate: string
+          renewal_age_years?: number
+          renewal_km?: number
+          service_due?: string | null
+          updated_at?: string
+          user_id: string
+          year?: number | null
+        }
+        Update: {
+          brand?: string | null
+          category_slug?: string | null
+          created_at?: string
+          id?: string
+          inspection_due?: string | null
+          insurance_due?: string | null
+          km?: number | null
+          model?: string | null
+          note?: string | null
+          plate?: string
+          renewal_age_years?: number
+          renewal_km?: number
+          service_due?: string | null
+          updated_at?: string
+          user_id?: string
+          year?: number | null
+        }
+        Relationships: []
+      }
       guides: {
         Row: {
           body: string
@@ -850,6 +907,7 @@ export type Database = {
       }
       notifications: {
         Row: {
+          fleet_vehicle_id: string | null
           announcement_id: string | null
           body: string | null
           conversation_id: string | null
@@ -864,6 +922,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          fleet_vehicle_id?: string | null
           announcement_id?: string | null
           body?: string | null
           conversation_id?: string | null
@@ -878,6 +937,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          fleet_vehicle_id?: string | null
           announcement_id?: string | null
           body?: string | null
           conversation_id?: string | null

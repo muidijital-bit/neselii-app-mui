@@ -8,7 +8,9 @@ import {
   isLeadTimeSlot,
   isLeadTopic,
   isPlausiblePhone,
+  isRevenueRange,
   parseFinancePlan,
+  type CorporateInfo,
   type Lead,
   type LeadId,
   type LeadListing,
@@ -58,6 +60,23 @@ function fleetOf(data: Json): LeadListing[] {
   });
 }
 
+/** Madde 21: talebin `data.corporate` alanı. */
+function corporateOf(data: Json): CorporateInfo | null {
+  const raw = data && typeof data === 'object' && !Array.isArray(data) ? (data as Record<string, unknown>).corporate : null;
+  if (!raw || typeof raw !== 'object') return null;
+  const c = raw as Record<string, unknown>;
+  if (typeof c.companyName !== 'string' || !c.companyName.trim()) return null;
+  const int = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? Math.round(v) : null);
+  return {
+    companyName: c.companyName,
+    foundedYear: int(c.foundedYear),
+    activity: typeof c.activity === 'string' ? c.activity : null,
+    revenueRange: isRevenueRange(c.revenueRange) ? c.revenueRange : null,
+    vehicleCount: int(c.vehicleCount),
+    plannedDownPaymentKurus: int(c.plannedDownPaymentKurus),
+  };
+}
+
 function toLead(row: Row): Lead {
   return {
     id: asLeadId(row.id),
@@ -69,6 +88,7 @@ function toLead(row: Row): Lead {
     note: row.note,
     plan: planOf(row.data),
     fleetListings: fleetOf(row.data),
+    corporate: corporateOf(row.data),
     reservedUntil: row.listing?.reserved_lead_id === row.id && row.listing.reserved_until ? toIso(row.listing.reserved_until) : null,
     appointmentAt: row.appointment_at ? toIso(row.appointment_at) : null,
     appointmentLocation: row.appointment_location,
@@ -111,6 +131,7 @@ export function createSupabaseLeads(sb: Supabase): LeadsService {
         const data: Record<string, Json> = {};
         if (input.plan) data.plan = { ...input.plan };
         if (fleet) data.fleet = fleet;
+        if (input.corporate?.companyName.trim()) data.corporate = { ...input.corporate, companyName: input.corporate.companyName.trim().slice(0, 120) };
         const row = unwrap(
           await sb
             .from('leads')

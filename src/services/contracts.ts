@@ -8,9 +8,11 @@ import type {
   Advisor,
   AdvisorId,
   AppNotification,
+  BankRate,
   CallLog,
   CallStats,
   CallSummary,
+  CorporateInfo,
   CustomerDocument,
   DocumentKind,
   LocalFile,
@@ -226,6 +228,8 @@ export type CreateLeadInput = {
   readonly plan?: FinancePlan;
   /** Madde 44: toplu teklif istenen ilanlar (en çok 3). */
   readonly fleetListingIds?: readonly ListingId[];
+  /** Madde 21: şirket adına finansman başvurusu. */
+  readonly corporate?: CorporateInfo;
 };
 
 /** `mine`: oturumdaki kullanıcının talepleri. `all`: firma gelen kutusu (yalnız yönetici; müşteride RLS yine kendi taleplerini döner). */
@@ -285,6 +289,11 @@ export interface AdvisorsService {
 export interface FinanceService {
   getSettings(): Promise<FinanceSettings>;
   updateSettings(settings: FinanceSettings): Promise<FinanceSettings>;
+  /** Madde 20: anlaşmalı bankalar (sıraya göre); `includeInactive` yalnız yönetici ekranı içindir. */
+  listBanks(input?: { readonly includeInactive?: boolean }): Promise<readonly BankRate[]>;
+  /** Yönetici: banka ekle (`id` null) / güncelle. Ad boşsa veya oran 0–20 dışında `validation`. */
+  saveBank(id: string | null, input: { readonly name: string; readonly monthlyRatePercent: number; readonly active: boolean }): Promise<BankRate>;
+  removeBank(id: string): Promise<void>;
 }
 
 // --- Call logs (madde 27) -----------------------------------------------------------------------------------------

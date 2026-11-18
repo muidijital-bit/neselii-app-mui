@@ -2,7 +2,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState, type ReactNode } from 'react';
 import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
-import { AppError, LEAD_STATUSES, LEAD_TOPIC_LABELS, asAdvisorId, formatMoney, toLocalDateKey, upcomingDays, userMessage, type Lead } from '@/domain';
+import { AppError, LEAD_STATUSES, LEAD_TOPIC_LABELS, REVENUE_RANGES, asAdvisorId, formatMoney, toLocalDateKey, upcomingDays, userMessage, type Lead } from '@/domain';
 import { useAdvisorsQuery } from '@/features/advisors/useAdvisors';
 import { LeadDocumentsCard } from '@/features/documents';
 import { FinancePlanSummary } from '@/features/finance/FinancePlanSummary';
@@ -145,6 +145,18 @@ function LeadContent({ lead }: { lead: Lead }) {
               <Icon name="chevron-right" size={20} color="textTertiary" />
             </Pressable>
           ))}
+        </Card>
+      ) : null}
+
+      {lead.corporate ? (
+        <Card style={styles.planCard}>
+          <Text variant="subheading">Kurumsal başvuru</Text>
+          <InfoRow icon="briefcase" label="Şirket" value={lead.corporate.companyName} />
+          {lead.corporate.foundedYear ? <InfoRow icon="calendar" label="Kuruluş" value={`${lead.corporate.foundedYear} (${new Date().getFullYear() - lead.corporate.foundedYear} yıl)`} /> : null}
+          {lead.corporate.activity ? <InfoRow icon="tool" label="Faaliyet" value={lead.corporate.activity} /> : null}
+          {lead.corporate.revenueRange ? <InfoRow icon="trending-up" label="Yıllık ciro" value={REVENUE_RANGES.find((r) => r.id === lead.corporate!.revenueRange)?.label ?? ''} /> : null}
+          {lead.corporate.vehicleCount !== null ? <InfoRow icon="truck" label="Araç sayısı" value={String(lead.corporate.vehicleCount)} /> : null}
+          {lead.corporate.plannedDownPaymentKurus !== null ? <InfoRow icon="credit-card" label="Planlanan peşinat" value={formatMoney({ amountKurus: lead.corporate.plannedDownPaymentKurus, currency: 'TRY' })} /> : null}
         </Card>
       ) : null}
 

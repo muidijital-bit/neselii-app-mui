@@ -162,3 +162,18 @@ export function ownershipCost(input: OwnershipInput, settings: FinanceSettings):
   const operating = fuel + maintenance + tire + insurance + tax;
   return { lines, yearlyKurus: yearly, monthlyKurus: Math.round(yearly / 12), perKmKurus: km > 0 ? Math.round(operating / km) : 0, plan };
 }
+
+// --- Anlaşmalı bankalar (madde 20) ----------------------------------------------------------------------------------
+
+export type BankRate = { readonly id: string; readonly name: string; readonly monthlyRatePercent: number; readonly active: boolean };
+
+export type BankOffer = { readonly bank: BankRate; readonly plan: FinancePlan; readonly cheapest: boolean };
+
+/** Aynı peşinat ve vadeyle her aktif bankanın taksiti ve toplam ödemesi; en düşük aylık taksitten yükseğe. */
+export function compareBanks(priceKurus: number, downPaymentKurus: number, termMonths: number, banks: readonly BankRate[]): BankOffer[] {
+  const offers = banks
+    .filter((bank) => bank.active)
+    .map((bank) => ({ bank, plan: computePlan(priceKurus, downPaymentKurus, termMonths, bank.monthlyRatePercent) }))
+    .sort((a, b) => a.plan.monthlyPaymentKurus - b.plan.monthlyPaymentKurus);
+  return offers.map((offer, i) => ({ ...offer, cheapest: i === 0 && offers.length > 1 }));
+}

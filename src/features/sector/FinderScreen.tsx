@@ -6,6 +6,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   LOAD_CLASSES,
   SECTORS,
+  SECTOR_QUESTIONS,
+  asksLoad,
+  effectiveLoad,
+  finderAdvice,
+  isPlausiblePhone,
+  userMessage,
   finderSearch,
   formatInteger,
   formatMoney,
@@ -17,8 +23,10 @@ import {
 } from '@/domain';
 import { useFinanceSettings } from '@/features/finance/useFinance';
 import { resultsHref } from '@/features/listings/routes';
+import { useCreateLead } from '@/features/leads/useLeadsQueries';
 import { useListingCountQuery } from '@/features/listings/useListingsQueries';
 import { PageHeader } from '@/features/notifications/PageHeader';
+import { useSession } from '@/features/session/SessionProvider';
 import { Button } from '@/ui/Button';
 import { FocusStatusBar } from '@/ui/FocusStatusBar';
 import { Icon, type IconName } from '@/ui/Icon';
@@ -53,6 +61,9 @@ export function FinderScreen() {
   const [step, setStep] = useState(0);
   const [sector, setLocalSector] = useState<SectorId | null>(savedSector);
   const [load, setLoad] = useState<LoadClass | null>(null);
+  // Madde 41/43: sektöre özel soruların cevapları.
+  const [extras, setExtras] = useState<Record<string, string>>({});
+  const questions = sector ? (SECTOR_QUESTIONS[sector] ?? []) : [];
   const [mode, setMode] = useState<BudgetMode>('any');
   const [cash, setCash] = useState('');
   const [monthly, setMonthly] = useState('');
@@ -65,12 +76,13 @@ export function FinderScreen() {
       : mode === 'credit' && finance.data
         ? Math.floor(maxPriceForBudget(parseTl(monthly) * 100, parseTl(down) * 100, term, finance.data) / 100) || null
         : null;
-  const answers: FinderAnswers = { sector, load: load ?? 'medium', maxPriceTl };
+  const answers: FinderAnswers = { sector, load: load ?? 'medium', maxPriceTl, extras };
+  const advice = finderAdvice(answers);
   const search = finderSearch(answers);
   const withoutBudget = finderSearch({ ...answers, maxPriceTl: null });
   const count = useListingCountQuery(step === STEPS - 1 ? search : null);
 
-  const canNext = step === 1 ? load !== null : step === 2 ? mode === 'any' || maxPriceTl !== null : true;
+  const canNext = step === 1 ? (asksLoad(sector) ? load !== null : extras.capacity !== undefined) : step === 2 ? mode === 'any' || maxPriceTl !== null : true;
   const next = () => {
     if (step === 0 && sector) setSector(sector);
     setStep((current) => Math.min(STEPS - 1, current + 1));
@@ -104,17 +116,34 @@ export function FinderScreen() {
           </>
         ) : step === 1 ? (
           <>
-            <Text variant="title">Ne kadar yük taşıyacaksınız?</Text>
-            {LOAD_CLASSES.map((option) => (
-              <OptionRow
-                key={option.id}
-                icon={option.icon as IconName}
-                title={option.label}
-                subtitle={option.description}
-                selected={load === option.id}
-                onPress={() => setLoad(option.id)}
-                testID={`finder-load-${option.id}`}
-              />
+            <Text variant="title">{asksLoad(sector) ? 'Ne kadar yük taşıyacaksınız?' : 'Dağıtım ihtiyacınız'}</Text>
+            {asksLoad(sector)
+              ? LOAD_CLASSES.map((option) => (
+                  <OptionRow
+                    key={option.id}
+                    icon={option.icon as IconName}
+                    title={option.label}
+                    subtitle={option.description}
+                    selected={load === option.id}
+                    onPress={() => setLoad(option.id)}
+                    testID={`finder-load-${option.id}`}
+                  />
+                ))
+              : null}
+            {questions.map((question) => (
+              <View key={question.id} style={styles.question} testID={`finder-question-${question.id}`}>
+                <Text variant="subheading">{question.label}</Text>
+                <View style={styles.wrap}>
+                  {question.options.map((option) => (
+                    <Chip
+                      key={option.id}
+                      label={option.label}
+                      selected={extras[question.id] === option.id}
+                      onPress={() => setExtras((current) => ({ ...current, [question.id]: option.id }))}
+                    />
+                  ))}
+                </View>
+              </View>
             ))}
           </>
         ) : step === 2 ? (
@@ -156,10 +185,24 @@ export function FinderScreen() {
             <Text variant="title">Size uygun araçlar</Text>
             <View style={styles.summary}>
               <SummaryRow label="Kullanım" value={sector ? sectorById(sector).label : 'Belirtilmedi'} />
-              <SummaryRow label="Yük" value={LOAD_CLASSES.find((l) => l.id === load)?.label ?? '—'} />
+              <SummaryRow label="Yük" value={LOAD_CLASSES.find((l) => l.id === effectiveLoad(answers))?.label ?? '—'} />
               <SummaryRow label="Bütçe" value={maxPriceTl ? `En fazla ${formatMoney({ amountKurus: maxPriceTl * 100, currency: 'TRY' })}` : 'Sınır yok'} />
             </View>
+            {advice.length ? (
+              <View style={styles.advice} testID="finder-advice">
+                <Text variant="subheading">Önerimiz</Text>
+                {advice.map((line) => (
+                  <View key={line} style={styles.adviceRow}>
+                    <Icon name="check" size={16} color="success" />
+                    <Text variant="body" style={styles.flex}>
+                      {line}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            ) : null}
             <Text variant="small">Sonuç ekranında filtreleri değiştirebilir, aramayı kaydedebilirsiniz.</Text>
+            <AdvisorRequest summary={summaryText(answers, advice)} />
             {count.data === 0 && maxPriceTl ? (
               <View style={styles.empty} testID="finder-no-results">
                 <Icon name="info" size={18} color="warning" />
@@ -189,6 +232,66 @@ export function FinderScreen() {
         )}
       </View>
     </KeyboardAvoidingView>
+  );
+}
+
+/** Bulucu cevaplarının danışmana giden notu. */
+function summaryText(answers: FinderAnswers, advice: readonly string[]): string {
+  const lines = [
+    `Araç bulucu: ${answers.sector ? sectorById(answers.sector).label : 'Sektör belirtilmedi'}`,
+    `Yük: ${LOAD_CLASSES.find((l) => l.id === effectiveLoad(answers))?.label ?? '-'}`,
+    `Bütçe: ${answers.maxPriceTl ? `en fazla ${formatInteger(answers.maxPriceTl)} TL` : 'sınır yok'}`,
+    ...(answers.sector ? (SECTOR_QUESTIONS[answers.sector] ?? []) : []).flatMap((q) => {
+      const option = q.options.find((o) => o.id === answers.extras?.[q.id]);
+      return option ? [`${q.label}: ${option.label}`] : [];
+    }),
+    ...advice.map((a) => `Öneri: ${a}`),
+  ];
+  return lines.join('\n').slice(0, 1000);
+}
+
+/** "Danışman önerisi iste": cevaplar not olarak genel bir talebe eklenir (ilansız); danışman atanır. */
+function AdvisorRequest({ summary }: { summary: string }) {
+  const { session } = useSession();
+  const create = useCreateLead();
+  const [phone, setPhone] = useState(session?.user.phone ?? '');
+  const [error, setError] = useState<string | undefined>();
+  if (create.data) {
+    return (
+      <View style={styles.sent} testID="finder-advisor-sent">
+        <Icon name="check-circle" size={20} color="success" />
+        <Text variant="small" color="success" style={styles.flex}>
+          {create.data.advisor ? `Danışmanınız ${create.data.advisor.fullName} sizi arayacaktır.` : 'Danışmanınız sizi arayacaktır.'}
+        </Text>
+      </View>
+    );
+  }
+  return (
+    <View style={styles.advisorBox}>
+      <Text variant="bodySemibold">Emin değil misiniz?</Text>
+      <Text variant="small">Cevaplarınızı danışmanımıza iletelim; size uygun aracı birlikte seçelim.</Text>
+      <TextField label="Telefon" value={phone} onChangeText={setPhone} keyboardType="phone-pad" error={error} testID="finder-advisor-phone" />
+      <Button
+        title="Danışman önerisi iste"
+        icon="phone-incoming"
+        variant="outline"
+        loading={create.isPending}
+        onPress={() => {
+          if (!isPlausiblePhone(phone)) {
+            setError('Geçerli bir telefon numarası girin.');
+            return;
+          }
+          setError(undefined);
+          create.mutate({ listingId: null, topic: 'info', preferredDate: null, preferredSlot: 'any', contactPhone: phone, note: summary });
+        }}
+        testID="finder-advisor-request"
+      />
+      {create.isError ? (
+        <Text variant="small" color="danger">
+          {userMessage(create.error)}
+        </Text>
+      ) : null}
+    </View>
   );
 }
 
@@ -260,4 +363,9 @@ const styles = StyleSheet.create({
   },
   footerButton: { flex: 1 },
   footerWide: { flex: 2 },
+  question: { gap: Spacing.two, marginTop: Spacing.two },
+  advice: { backgroundColor: Colors.surface, borderRadius: Radius.lg, borderWidth: 1, borderColor: Colors.border, padding: Spacing.three, gap: Spacing.two },
+  adviceRow: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.two },
+  advisorBox: { backgroundColor: Colors.surfaceHighlight, borderRadius: Radius.lg, padding: Spacing.three, gap: Spacing.two },
+  sent: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two, padding: Spacing.three, borderRadius: Radius.md, backgroundColor: Colors.successSoft },
 });

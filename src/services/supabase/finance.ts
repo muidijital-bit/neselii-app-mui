@@ -1,11 +1,13 @@
-import { AVAILABLE_TERMS, DEFAULT_COST_SETTINGS, DEFAULT_FINANCE_SETTINGS, appError, type CostSettings, type FinanceSettings } from '@/domain';
+import { AVAILABLE_TERMS, DEFAULT_COST_SETTINGS, DEFAULT_FINANCE_SETTINGS, appError, type BankRate, type CostSettings, type FinanceSettings } from '@/domain';
 
 import type { FinanceService } from '../contracts';
 import type { Supabase } from './client';
 import type { Json, Tables } from './database.types';
-import { call, unwrapMaybe } from './shared';
+import { call, ensure, unwrap, unwrapMaybe } from './shared';
 
 type Row = Omit<Tables<'finance_settings'>, 'id' | 'updated_at'>;
+type BankRow = Pick<Tables<'bank_rates'>, 'id' | 'name' | 'monthly_rate_percent' | 'active'>;
+const toBank = (row: BankRow): BankRate => ({ id: row.id, name: row.name, monthlyRatePercent: Number(row.monthly_rate_percent), active: row.active });
 const COLUMNS =
   'monthly_rate_percent, min_down_payment_percent, terms, fuel_price_tl, fuel_consumption, maintenance_tl_per_km, tire_tl_per_km, insurance_tl_per_year, tax_tl_per_year';
 
@@ -84,6 +86,34 @@ export function createSupabaseFinance(sb: Supabase): FinanceService {
         const row = unwrapMaybe(await sb.from('finance_settings').update(validate(settings)).eq('id', true).select(COLUMNS).maybeSingle());
         if (!row) throw appError.notFound('finance_settings');
         return toSettings(row);
+      }),
+
+    listBanks: (input) =>
+      call(async () => {
+        let query = sb.from('bank_rates').select('id, name, monthly_rate_percent, active');
+        if (!input?.includeInactive) query = query.eq('active', true);
+        return unwrap(await query.order('sort_order').order('name')).map(toBank);
+      }),
+
+    saveBank: (id, input) =>
+      call(async () => {
+        const name = input.name.trim().slice(0, 60);
+        const rate = Math.round(input.monthlyRatePercent * 100) / 100;
+        const errors: Record<string, string> = {};
+        if (!name) errors.name = 'Banka adını girin.';
+        if (!Number.isFinite(rate) || rate < 0 || rate > 20) errors.rate = 'Oran %0 ile %20 arasında olmalı.';
+        if (Object.keys(errors).length) throw appError.validation(errors);
+        const values = { name, monthly_rate_percent: rate, active: input.active };
+        const row = id
+          ? unwrapMaybe(await sb.from('bank_rates').update(values).eq('id', id).select('id, name, monthly_rate_percent, active').maybeSingle())
+          : unwrap(await sb.from('bank_rates').insert(values).select('id, name, monthly_rate_percent, active').single());
+        if (!row) throw appError.notFound(`bank ${id}`);
+        return toBank(row);
+      }),
+
+    removeBank: (id) =>
+      call(async () => {
+        ensure(await sb.from('bank_rates').delete().eq('id', id));
       }),
   };
 }

@@ -216,7 +216,30 @@ Her maddenin müşteri ve yönetici tarafında nasıl test edileceği: **`docs/M
 
 **Not:** `expo-document-picker` ve `expo-print` yerel modülleri eklendi → TestFlight'ta yeni build (5) ile çalışır; Expo Go'da hemen çalışır.
 
+## Adım 9 — Finansman ve sektöre özel bulucu (2026-11-18)
+
+### Madde 20 — Çoklu banka teklif karşılaştırma
+- **Yönetici:** Profil → Finansman Ayarları → **"Anlaşmalı bankalar"**: **Banka Ekle**, her banka için ad, aylık faiz (%), Aktif/Pasif, **Kaydet / Sil** (onaylı).
+- **Müşteri:** İlan detayındaki "Aylık ödeme hesapla" bölümünde, aktif banka varsa **"Anlaşmalı bankalar · N ay, %X peşinat"** listesi: her banka için aylık oran, aylık taksit ve toplam ödeme; **en düşük taksitli banka yeşil "En uygun"**. Peşinat/vade değişince liste güncellenir.
+- **Veritabanı:** `bank_rates` tablosu (herkes okur, yönetici yönetir). Başlangıçta banka yoktur; yönetici ekleyince görünür.
+
+### Madde 21 — Kurumsal finansman başvurusu
+- **Müşteri:** "Beni Arayın" formunda konu **Finansman** seçilince **Başvuru türü: Bireysel / Şirket adına (kurumsal)**. Kurumsalda: şirket adı (zorunlu), kuruluş yılı, filodaki araç sayısı, faaliyet alanı, yıllık ciro aralığı, planlanan peşinat.
+- **Yönetici:** Talep detayında **"Kurumsal başvuru"** kartı: şirket, kuruluş (ve şirket yaşı), faaliyet, ciro, araç sayısı, planlanan peşinat.
+- **Veritabanı:** Bilgiler talebin `data.corporate` alanında (şema değişikliği yok).
+
+### Madde 41 — İnşaat ve şantiye araç seçimi
+- **Müşteri:** Araç Bulucu'da sektör **İnşaat / şantiye** seçilince 2. adımda yükün yanında: **çalışma zemini** (asfalt / karışık / arazi), **eğim** (düz / orta / dik), **malzeme / damper tipi** (standart / Hardox / kaya tipi).
+- Özet ekranında **"Önerimiz"**: ör. "Arazi ve dik rampada 6x4 çekişli, yüksek torklu bir araç önerilir", "Hafriyat için Hardox damper kasa önerilir".
+
+### Madde 43 — Şehir içi dağıtım seçimi
+- **Müşteri:** Sektör **Şehir içi dağıtım** seçilince yük sorusu yerine **taşıma kapasitesi** (≤1,5 t / 1,5–3,5 t / 3,5 t+), **kasa hacmi**, **günlük kullanım** soruları. 3,5 tona kadar kapasite **kamyonet** aramasına, üzeri kasalı kamyona çevrilir; özette kapasite/hacim/kullanıma göre öneriler.
+
+### Madde 41/43 — Danışmana gönderme
+- **Müşteri:** Araç Bulucu özetinde **"Danışman önerisi iste"** (telefon): cevaplar ve öneriler not olarak genel bir talebe eklenir, danışman atanır → "Danışmanınız … sizi arayacaktır".
+- **Yönetici:** Talep (konu "Bilgi", ilansız) notunda bulucu cevapları ve öneriler.
+
 ## Sıradaki adımlar
 - iOS push için APNs kurulumu (Apple hesabında anahtar gerekir) ve yeni TestFlight build'i.
-- **Adım 9 önerisi — Finansman ve sektör:** Madde 20 (çoklu banka teklif karşılaştırma), 21 (kurumsal finansman başvurusu), 41 (inşaat soruları), 43 (şehir içi dağıtım soruları).
-- **Sonra:** 46 (içerik merkezi), 47/51 (kurumsal hesap ve onay akışı), 7 (video bölümleri).
+- **Adım 10 önerisi — Kurumsal hesap ve içerik:** Madde 47 (kurumsal müşteri hesabı), 51 (satın alma onay akışı), 46 (sektörel içerik merkezi), 7 (video bölüm etiketleri).
+- **Sonra:** "Gerekli değil" işaretli maddeler (15, 22, 34, 42, 45, 48–50) firma isterse.

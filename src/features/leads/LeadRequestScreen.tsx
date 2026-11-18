@@ -11,6 +11,9 @@ import {
   LEAD_TOPICS,
   asListingId,
   formatMoney,
+  REVENUE_RANGES,
+  SECTORS,
+  formatInteger,
   isLeadTopic,
   isPlausiblePhone,
   isSafeEntityId,
@@ -19,6 +22,7 @@ import {
   userMessage,
   type FinancePlan,
   type Lead,
+  type RevenueRange,
   type LeadTimeSlot,
   type LeadTopic,
 } from '@/domain';
@@ -101,6 +105,16 @@ function LeadForm({
   const days = useMemo(() => upcomingDays(DAY_COUNT), []);
   const [topic, setTopic] = useState<LeadTopic>(initialTopic);
   const attachedPlan = topic === 'financing' ? plan : null;
+  // Madde 21: finansman talebinde şirket adına başvuru.
+  const [corporate, setCorporate] = useState(false);
+  const [companyName, setCompanyName] = useState('');
+  const [foundedYear, setFoundedYear] = useState('');
+  const [activity, setActivity] = useState<string | null>(null);
+  const [revenue, setRevenue] = useState<RevenueRange | null>(null);
+  const [vehicleCount, setVehicleCount] = useState('');
+  const [plannedDown, setPlannedDown] = useState('');
+  const [companyError, setCompanyError] = useState<string | undefined>();
+  const isCorporate = topic === 'financing' && corporate;
   const fleet = fleetIds.length > 1;
   const { listings: listingsService } = useServices();
   const userId = session?.user.id ?? null;
@@ -119,6 +133,15 @@ function LeadForm({
       return;
     }
     setPhoneError(undefined);
+    if (isCorporate && !companyName.trim()) {
+      setCompanyError('Şirket adını girin.');
+      return;
+    }
+    setCompanyError(undefined);
+    const toInt = (text: string) => {
+      const d = text.replace(/\D/g, '');
+      return d ? Number(d) : null;
+    };
     create.mutate(
       {
         listingId: listingId ? asListingId(listingId) : null,
@@ -129,6 +152,16 @@ function LeadForm({
         note,
         plan: attachedPlan ?? undefined,
         fleetListingIds: fleet ? fleetIds.map(asListingId) : undefined,
+        corporate: isCorporate
+          ? {
+              companyName,
+              foundedYear: toInt(foundedYear),
+              activity,
+              revenueRange: revenue,
+              vehicleCount: toInt(vehicleCount),
+              plannedDownPaymentKurus: toInt(plannedDown) === null ? null : toInt(plannedDown)! * 100,
+            }
+          : undefined,
       },
       {
         onSuccess: onCreated,
@@ -198,6 +231,63 @@ function LeadForm({
         </View>
       </View>
       )}
+
+      {topic === 'financing' ? (
+        <View style={styles.group} testID="lead-request-corporate">
+          <Text variant="subheading">Başvuru türü</Text>
+          <View style={styles.wrap}>
+            <Chip label="Bireysel" selected={!corporate} onPress={() => setCorporate(false)} />
+            <Chip label="Şirket adına (kurumsal)" selected={corporate} onPress={() => setCorporate(true)} />
+          </View>
+          {corporate ? (
+            <>
+              <TextField
+                label="Şirket adı"
+                value={companyName}
+                onChangeText={(t) => {
+                  setCompanyName(t);
+                  if (companyError) setCompanyError(undefined);
+                }}
+                maxLength={120}
+                error={companyError}
+                testID="lead-company-name"
+              />
+              <View style={styles.pair}>
+                <View style={styles.flex}>
+                  <TextField label="Kuruluş yılı" value={foundedYear} onChangeText={setFoundedYear} keyboardType="number-pad" placeholder="Ör. 2012" testID="lead-company-founded" />
+                </View>
+                <View style={styles.flex}>
+                  <TextField label="Filodaki araç sayısı" value={vehicleCount} onChangeText={setVehicleCount} keyboardType="number-pad" placeholder="Ör. 8" testID="lead-company-vehicles" />
+                </View>
+              </View>
+              <Text variant="smallMedium" color="textSecondary">
+                Faaliyet alanı
+              </Text>
+              <View style={styles.wrap}>
+                {[...SECTORS.map((s) => s.label), 'Diğer'].map((label) => (
+                  <Chip key={label} label={label} selected={activity === label} onPress={() => setActivity(activity === label ? null : label)} />
+                ))}
+              </View>
+              <Text variant="smallMedium" color="textSecondary">
+                Yıllık ciro
+              </Text>
+              <View style={styles.wrap}>
+                {REVENUE_RANGES.map((r) => (
+                  <Chip key={r.id} label={r.label} selected={revenue === r.id} onPress={() => setRevenue(revenue === r.id ? null : r.id)} />
+                ))}
+              </View>
+              <TextField
+                label="Planlanan peşinat (TL)"
+                value={plannedDown}
+                onChangeText={(t) => setPlannedDown(t.replace(/\D/g, '') ? formatInteger(Number(t.replace(/\D/g, ''))) : '')}
+                keyboardType="number-pad"
+                testID="lead-company-down"
+              />
+              <Text variant="caption">Kurumsal başvuruda danışmanınız bilanço, vergi levhası ve faaliyet belgesi isteyebilir.</Text>
+            </>
+          ) : null}
+        </View>
+      ) : null}
 
       {attachedPlan ? (
         <View style={styles.group}>
@@ -304,6 +394,7 @@ const styles = StyleSheet.create({
   listing: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, padding: Spacing.two },
   thumb: { width: 72, height: 54, borderRadius: Radius.sm },
   group: { gap: Spacing.two },
+  pair: { flexDirection: 'row', gap: Spacing.three },
   topics: { gap: Spacing.two },
   chips: { gap: Spacing.two, paddingRight: Spacing.three },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },

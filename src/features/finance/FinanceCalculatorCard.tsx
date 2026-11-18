@@ -2,16 +2,16 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
-import { computePlan, downPaymentOptions, formatRatePercent, type Money } from '@/domain';
+import { compareBanks, computePlan, downPaymentOptions, formatMoney, formatRatePercent, type Money } from '@/domain';
 import { Button } from '@/ui/Button';
 import { Icon } from '@/ui/Icon';
 import { Text } from '@/ui/Text';
 import { Chip } from '@/ui/Ui';
-import { Colors, Spacing } from '@/ui/theme';
+import { Colors, Radius, Spacing } from '@/ui/theme';
 
 import { FinancePlanSummary } from './FinancePlanSummary';
 import { financeLeadHref, ownershipCostHref } from './routes';
-import { useFinanceSettings } from './useFinance';
+import { useBanks, useFinanceSettings } from './useFinance';
 
 /**
  * İlan detayındaki "Aylık ödeme hesapla" bölümü: peşinat oranı ve vade seçilir, firmanın faiz oranıyla aylık taksit ve toplam ödeme hesaplanır.
@@ -20,6 +20,7 @@ import { useFinanceSettings } from './useFinance';
 export function FinanceCalculatorCard({ listingId, price, showLeadAction }: { listingId: string; price: Money; showLeadAction: boolean }) {
   const router = useRouter();
   const settings = useFinanceSettings();
+  const banks = useBanks();
   const [downPercent, setDownPercent] = useState<number | null>(null);
   const [term, setTerm] = useState<number | null>(null);
 
@@ -58,6 +59,32 @@ export function FinanceCalculatorCard({ listingId, price, showLeadAction }: { li
       <View style={styles.result}>
         <FinancePlanSummary plan={plan} testID="listing-finance-plan" />
       </View>
+      {/* Madde 20: aynı peşinat ve vadeyle anlaşmalı bankaların karşılaştırması. */}
+      {banks.data && banks.data.length > 0 ? (
+        <View style={styles.banks} testID="listing-bank-comparison">
+          <Text variant="smallSemibold">Anlaşmalı bankalar · {selectedTerm} ay, %{selectedDown} peşinat</Text>
+          {compareBanks(price.amountKurus, plan.downPaymentKurus, selectedTerm, banks.data).map(({ bank, plan: bankPlan, cheapest }) => (
+            <View key={bank.id} style={[styles.bankRow, cheapest && styles.bankCheapest]}>
+              <View style={styles.flex}>
+                <Text variant="bodySemibold">{bank.name}</Text>
+                <Text variant="caption">
+                  Aylık {formatRatePercent(bank.monthlyRatePercent)} · toplam {formatMoney({ amountKurus: bankPlan.totalPaymentKurus, currency: 'TRY' })}
+                </Text>
+              </View>
+              <View style={styles.bankRight}>
+                <Text variant="bodySemibold" color={cheapest ? 'success' : 'text'}>
+                  {formatMoney({ amountKurus: bankPlan.monthlyPaymentKurus, currency: 'TRY' })}
+                </Text>
+                {cheapest ? (
+                  <Text variant="caption" color="success">
+                    En uygun
+                  </Text>
+                ) : null}
+              </View>
+            </View>
+          ))}
+        </View>
+      ) : null}
       <Text variant="caption">Hesaplama bilgi amaçlıdır; kesin oran ve koşulları danışmanımız iletir.</Text>
       {/* Madde 24: yakıt, bakım, lastik, sigorta, vergi ve taksitle toplam maliyet. */}
       <Pressable
@@ -100,4 +127,8 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
   },
   pressed: { opacity: 0.7 },
+  banks: { gap: Spacing.two, marginTop: Spacing.two },
+  bankRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two, padding: Spacing.three, borderRadius: Radius.md, borderWidth: 1, borderColor: Colors.border },
+  bankCheapest: { borderColor: Colors.green, backgroundColor: Colors.successSoft },
+  bankRight: { alignItems: 'flex-end' },
 });

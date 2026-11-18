@@ -123,13 +123,17 @@ export type FinderAnswers = {
   readonly load: LoadClass;
   /** En yüksek fiyat (TL); bütçe girilmediyse `null`. */
   readonly maxPriceTl: number | null;
+  /** Madde 41/43: sektöre özel soruların cevapları (soru kimliği → seçenek kimliği). */
+  readonly extras?: Readonly<Record<string, string>>;
 };
 
 /**
  * Bulucu cevaplarını aramaya çevirir: yük sınıfı kategoriyi, sektör kamyon alt türünü belirler, bütçe en yüksek fiyattır.
  * Ağır yükte uzun yol / soğuk zincir / sektörsüz → çekici; inşaat, tanker, tarım, dağıtım → ağır kamyon (sektörün alt türüyle).
  */
-export function finderDraft({ sector, load, maxPriceTl }: FinderAnswers): FilterDraft {
+export function finderDraft(answers: FinderAnswers): FilterDraft {
+  const { sector, maxPriceTl } = answers;
+  const load = effectiveLoad(answers);
   const info = sector ? sectorById(sector) : null;
   let categories: CategoryId[];
   let subtypes: string[] = [];
@@ -156,4 +160,105 @@ export function finderDraft({ sector, load, maxPriceTl }: FinderAnswers): Filter
 export function finderSearch(answers: FinderAnswers): ListingSearch {
   const built = buildSearch(finderDraft(answers));
   return built.ok ? built.search : EMPTY_SEARCH;
+}
+
+// --- Sektöre özel sorular (madde 41: inşaat, madde 43: şehir içi dağıtım) -----------------------------------------------
+
+export type FinderQuestion = { readonly id: string; readonly label: string; readonly options: readonly { readonly id: string; readonly label: string }[] };
+
+export const SECTOR_QUESTIONS: Partial<Record<SectorId, readonly FinderQuestion[]>> = {
+  construction: [
+    {
+      id: 'terrain',
+      label: 'Çalışma zemini',
+      options: [
+        { id: 'asphalt', label: 'Asfalt / düz yol' },
+        { id: 'mixed', label: 'Karışık' },
+        { id: 'offroad', label: 'Arazi / şantiye içi' },
+      ],
+    },
+    {
+      id: 'slope',
+      label: 'Eğim',
+      options: [
+        { id: 'flat', label: 'Düz' },
+        { id: 'moderate', label: 'Orta eğimli' },
+        { id: 'steep', label: 'Dik rampa' },
+      ],
+    },
+    {
+      id: 'body',
+      label: 'Taşınacak malzeme / damper tipi',
+      options: [
+        { id: 'standard', label: 'Kum, mıcır (standart damper)' },
+        { id: 'hardox', label: 'Hafriyat (Hardox damper)' },
+        { id: 'rock', label: 'Kaya, ağır taş (kaya tipi)' },
+      ],
+    },
+  ],
+  city_delivery: [
+    {
+      id: 'capacity',
+      label: 'Taşıma kapasitesi',
+      options: [
+        { id: 'c1', label: '1,5 tona kadar' },
+        { id: 'c2', label: '1,5 – 3,5 ton' },
+        { id: 'c3', label: '3,5 ton üzeri' },
+      ],
+    },
+    {
+      id: 'volume',
+      label: 'Kasa hacmi',
+      options: [
+        { id: 'small', label: '10 m³ altı' },
+        { id: 'medium', label: '10 – 20 m³' },
+        { id: 'large', label: '20 m³ üzeri' },
+      ],
+    },
+    {
+      id: 'usage',
+      label: 'Günlük kullanım',
+      options: [
+        { id: 'low', label: '100 km altı' },
+        { id: 'mid', label: '100 – 250 km' },
+        { id: 'high', label: '250 km üzeri' },
+      ],
+    },
+  ],
+};
+
+/** Şehir içi dağıtımda yük, kapasite cevabından türer (madde 43: kamyonet önerisi); diğer sektörlerde seçilen yük sınıfı. */
+export function effectiveLoad(answers: FinderAnswers): LoadClass {
+  if (answers.sector === 'city_delivery') {
+    const capacity = answers.extras?.capacity;
+    if (capacity === 'c1' || capacity === 'c2') return 'light';
+    if (capacity === 'c3') return 'medium';
+  }
+  return answers.load;
+}
+
+/** Şehir içi dağıtımda yük sorusu yerine kapasite sorusu sorulur. */
+export const asksLoad = (sector: SectorId | null) => sector !== 'city_delivery';
+
+/** Cevaplardan danışman dilinde kısa öneriler (özet ekranı ve danışmana giden not). */
+export function finderAdvice(answers: FinderAnswers): string[] {
+  const x = answers.extras ?? {};
+  const advice: string[] = [];
+  if (answers.sector === 'construction') {
+    if (x.terrain === 'offroad' || x.slope === 'steep') advice.push('Arazi ve dik rampada 6x4 çekişli, yüksek torklu bir araç önerilir.');
+    else if (x.terrain === 'mixed' || x.slope === 'moderate') advice.push('Karışık zeminde 6x4 ya da diferansiyel kilitli 6x2 uygun olur.');
+    else if (x.terrain === 'asphalt') advice.push('Asfaltta 4x2 / 6x2 yeterlidir; yakıt tüketimi daha düşüktür.');
+    if (x.body === 'hardox') advice.push('Hafriyat için aşınmaya dayanıklı Hardox damper kasa önerilir.');
+    if (x.body === 'rock') advice.push('Kaya ve ağır taş için kaya tipi (güçlendirilmiş) damper önerilir.');
+    if (x.body === 'standard') advice.push('Kum ve mıcır için standart damper kasa yeterlidir.');
+  }
+  if (answers.sector === 'city_delivery') {
+    if (x.capacity === 'c1') advice.push('1,5 tona kadar yük için kamyonet en ekonomik seçenektir.');
+    if (x.capacity === 'c2') advice.push('1,5 – 3,5 ton için kasalı kamyonet / hafif ticari araç önerilir.');
+    if (x.capacity === 'c3') advice.push('3,5 ton üzeri için kasalı kamyon önerilir.');
+    if (x.volume === 'large') advice.push('20 m³ üzeri hacim için uzun şasili, yüksek kasalı araç gerekir.');
+    if (x.usage === 'high') advice.push('Günde 250 km üzeri kullanımda yakıt tüketimi düşük, otomatik vitesli model rahat eder.');
+    if (x.usage === 'low') advice.push('Kısa mesafeli dağıtımda küçük ve çevik bir araç trafikte avantaj sağlar.');
+  }
+  return advice;
 }

@@ -81,6 +81,28 @@ export const isLeadTimeSlot = (value: unknown): value is LeadTimeSlot =>
   typeof value === 'string' && (LEAD_TIME_SLOTS as readonly string[]).includes(value);
 
 /** Talebe atanan danışman (müşteriye adı gösterilir). Yönetici Profil → Danışmanlar'dan ekler, düzenler, pasife alır veya siler. */
+/** Madde 21: kurumsal finansman başvurusu (şirket adına). */
+export type CorporateInfo = {
+  readonly companyName: string;
+  /** Şirketin kuruluş yılı. */
+  readonly foundedYear: number | null;
+  readonly activity: string | null;
+  readonly revenueRange: RevenueRange | null;
+  readonly vehicleCount: number | null;
+  readonly plannedDownPaymentKurus: number | null;
+};
+
+export type RevenueRange = 'lt5m' | '5to20m' | '20to100m' | 'gt100m';
+
+export const REVENUE_RANGES: readonly { readonly id: RevenueRange; readonly label: string }[] = [
+  { id: 'lt5m', label: '5 milyon TL altı' },
+  { id: '5to20m', label: '5 – 20 milyon TL' },
+  { id: '20to100m', label: '20 – 100 milyon TL' },
+  { id: 'gt100m', label: '100 milyon TL üzeri' },
+];
+
+export const isRevenueRange = (value: unknown): value is RevenueRange => REVENUE_RANGES.some((r) => r.id === value);
+
 export type Advisor = { readonly id: AdvisorId; readonly fullName: string; readonly phone: string | null; readonly active: boolean };
 
 /** Talebin bağlı olduğu ilanın kısa özeti; ilan silinmişse talepte `null`. */
@@ -103,6 +125,8 @@ export type Lead = {
   readonly note: string | null;
   /** Hesaplayıcıdan gelen ödeme planı; yoksa `null`. */
   readonly plan: FinancePlan | null;
+  /** Madde 21: kurumsal finansman başvurusu bilgileri; bireyselse `null`. */
+  readonly corporate: CorporateInfo | null;
   /** Madde 44: toplu teklifteki ilanlar (karşılaştırma listesinden). */
   readonly fleetListings: readonly LeadListing[];
   /** Madde 33: onaylanmış rezervasyonun bitişi (ilan şu an bu talep için rezerve ise); yoksa `null`. */

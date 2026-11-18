@@ -467,10 +467,48 @@ Adımlar:
 
 ---
 
+## Adım 9 — Finansman ve sektöre özel bulucu
+
+### Madde 20 — Çoklu banka karşılaştırma
+**Yönetici**
+- [ ] Profil → Finansman Ayarları → **Anlaşmalı bankalar** → **Banka Ekle**: "A Bankası" %2,79 → Kaydet; "B Bankası" %3,05 → Kaydet. Oranı `25` girmeyi deneyin → "Oran %0 ile %20 arasında olmalı".
+- [ ] B Bankası'nı **Pasif** yapıp kaydedin.
+
+**Müşteri**
+- [ ] İlan → "Aylık ödeme hesapla" → altında **"Anlaşmalı bankalar · N ay, %X peşinat"**: yalnız aktif bankalar; en düşük taksitli yeşil **"En uygun"**. Peşinat/vadeyi değiştirince tutarlar değişir.
+- [ ] Yönetici tüm bankaları silince/pasif yapınca liste görünmez.
+
+### Madde 21 — Kurumsal finansman
+**Müşteri**
+- [ ] İlan → Beni Arayın → konu **Finansman / kredi** → **Şirket adına (kurumsal)** → şirket adını boş bırakıp gönderin → "Şirket adını girin". Şirket adı, kuruluş yılı, araç sayısı, faaliyet, ciro, planlanan peşinat → gönderin.
+- [ ] Konuyu "Bilgi"ye çevirince kurumsal alanlar kaybolur.
+
+**Yönetici**
+- [ ] Talep detayında **"Kurumsal başvuru"** kartı: şirket, "Kuruluş: 2012 (14 yıl)", faaliyet, ciro, araç sayısı, planlanan peşinat.
+
+### Madde 41 — İnşaat soruları
+**Müşteri**
+- [ ] Araç Bulucu → **İnşaat / şantiye** → 2. adımda yük + **Çalışma zemini / Eğim / Malzeme-damper tipi**. "Arazi", "Dik rampa", "Hafriyat" seçin → bütçe → özet: **"Önerimiz"** altında 6x4 ve Hardox önerileri.
+
+### Madde 43 — Şehir içi dağıtım soruları
+**Müşteri**
+- [ ] Araç Bulucu → **Şehir içi dağıtım** → 2. adımda yük sorusu yok; **Taşıma kapasitesi** seçmeden Devam pasif. "1,5 – 3,5 ton", "20 m³ üzeri", "250 km üzeri" → özet: Yük "Hafif yük", öneriler; **İlanları göster** → Ticari araç (kamyonet) sonuçları.
+- [ ] Kapasite "3,5 ton üzeri" seçince özet yük "Orta yük" ve sonuç Kasalı kamyon.
+
+### Madde 41/43 — Danışman önerisi
+**Müşteri**
+- [ ] Bulucu özetinde **"Danışman önerisi iste"** → telefonu silip deneyin → uyarı; geçerli telefonla → yeşil "Danışmanınız … sizi arayacaktır".
+
+**Yönetici**
+- [ ] Yeni "Bilgi" talebi (ilansız); notunda "Araç bulucu: …", yük, bütçe, soru cevapları ve "Öneri: …" satırları.
+
+---
+
 ## Bilinen sınırlar / dikkat edilecekler
 
 - **iOS'ta telefona bildirim:** Apple Developer hesabında APNs anahtarı (.p8) oluşturulup Expo'ya yüklenmeli, uygulama kimliğinde Push Notifications yeteneği açılmalı ve yeni TestFlight build'i alınmalı. O zamana kadar bildirimler yalnızca uygulama içinde (Bildirimler sekmesi) görünür.
 - **Teknik bilgiler (Madde 3):** sahibinden'den aktarılan 94 ilanda tonaj, motor gücü ve kabin bilgisi yok. Yönetici girdikçe filtreler çalışır.
+- **Anlaşmalı banka** başlangıçta yoktur; yönetici ekleyene kadar banka karşılaştırması görünmez.
 - **Varsayılan değerler tahminidir:**
   - Faiz %2,99, en düşük peşinat %30.
   - Motorin 55 TL; tüketim kamyon 28, çekici 32, ticari 11 L/100 km.

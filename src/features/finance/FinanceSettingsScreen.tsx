@@ -13,6 +13,7 @@ import { TextField } from '@/ui/TextField';
 import { Chip } from '@/ui/Ui';
 import { Colors, Radius, Spacing } from '@/ui/theme';
 
+import { BankRatesEditor } from './BankRatesEditor';
 import { FinancePlanSummary } from './FinancePlanSummary';
 import { useFinanceSettings, useUpdateFinanceSettings } from './useFinance';
 
@@ -168,6 +169,9 @@ function SettingsForm({ initial }: { initial: FinanceSettings }) {
           </View>
         </View>
       </View>
+
+      {/* Madde 20: anlaşmalı bankalar (ayrı kaydedilir). */}
+      <BankRatesEditor />
 
       {preview ? (
         <View style={styles.group}>

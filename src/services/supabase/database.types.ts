@@ -77,6 +77,33 @@ export type Database = {
           },
         ]
       }
+      bank_rates: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          monthly_rate_percent: number
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          monthly_rate_percent: number
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          monthly_rate_percent?: number
+          name?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
       call_logs: {
         Row: {
           created_at: string

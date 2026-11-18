@@ -3,6 +3,7 @@ import { createSupabaseAdvisors } from './advisors';
 import { createSupabaseAuth } from './auth';
 import { createSupabaseCallLogs } from './callLogs';
 import { getSupabase } from './client';
+import { createSupabaseDocuments } from './documents';
 import { createSupabaseFavorites } from './favorites';
 import { createSupabaseFinance } from './finance';
 import { createSupabaseLeads } from './leads';
@@ -31,6 +32,7 @@ export function createSupabaseServices(): Services {
     finance: createSupabaseFinance(sb),
     callLogs: createSupabaseCallLogs(sb),
     tradeIns: createSupabaseTradeIns(sb),
+    documents: createSupabaseDocuments(sb),
   };
 }
 

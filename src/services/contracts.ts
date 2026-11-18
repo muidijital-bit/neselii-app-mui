@@ -11,6 +11,9 @@ import type {
   CallLog,
   CallStats,
   CallSummary,
+  CustomerDocument,
+  DocumentKind,
+  LocalFile,
   Category,
   CommercialSpecs,
   CategoryId,
@@ -45,6 +48,7 @@ import type {
   SavedSearchId,
   Session,
   Unsubscribe,
+  UserId,
   UserProfile,
 } from '@/domain';
 
@@ -125,6 +129,8 @@ export interface ListingsService {
   saveInsights(id: ListingId, input: ListingInsightsInput): Promise<ListingInsights>;
   /** Yalnız yönetici: ticari araç teknik bilgileri (madde 3: tonaj, motor gücü, kabin, şasi, üstyapı). Boş alan kaldırılır. */
   saveSpecs(id: ListingId, specs: CommercialSpecs): Promise<void>;
+  /** Madde 10 (yönetici): ekspertiz raporu PDF'ini yükler; depolama yolunu döner (`saveInsights` ile ilana bağlanır). */
+  uploadListingDocument(id: ListingId, file: LocalFile): Promise<string>;
 }
 
 // --- Favorites & saved searches ------------------------------------------------------------------------------------
@@ -311,6 +317,19 @@ export interface TradeInsService {
   setValuation(leadId: LeadId, valuation: KurusRange | null): Promise<void>;
 }
 
+// --- Customer documents (madde 52, 32) -----------------------------------------------------------------------------
+
+/** Müşteri belge arşivi. Müşteri kendi belgelerini okur; yönetici yükler ve siler. Okuma süreli imzalı adresle yapılır. */
+export interface DocumentsService {
+  /** Oturumdaki müşterinin belgeleri, en yeni önce. */
+  listMine(): Promise<readonly CustomerDocument[]>;
+  /** Talebe bağlı belgeler (müşteri kendi talebinde, yönetici tümünde). */
+  listForLead(leadId: LeadId): Promise<readonly CustomerDocument[]>;
+  /** Yönetici: müşteriye belge yükler (müşteriye bildirim gider). */
+  upload(input: { readonly customerId: UserId; readonly leadId: LeadId | null; readonly kind: DocumentKind; readonly title: string; readonly file: LocalFile }): Promise<CustomerDocument>;
+  remove(id: string): Promise<void>;
+}
+
 // --- Birleşik kap --------------------------------------------------------------------------------------------------
 
 export interface Services {
@@ -326,6 +345,7 @@ export interface Services {
   readonly finance: FinanceService;
   readonly callLogs: CallLogsService;
   readonly tradeIns: TradeInsService;
+  readonly documents: DocumentsService;
 }
 
 export type ServiceName = keyof Services;

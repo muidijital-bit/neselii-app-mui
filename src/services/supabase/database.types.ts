@@ -191,6 +191,47 @@ export type Database = {
           },
         ]
       }
+      customer_documents: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          kind: string
+          lead_id: string | null
+          storage_path: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kind: string
+          lead_id?: string | null
+          storage_path: string
+          title: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kind?: string
+          lead_id?: string | null
+          storage_path?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_documents_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       favorites: {
         Row: {
           created_at: string
@@ -347,6 +388,12 @@ export type Database = {
       }
       listing_insights: {
         Row: {
+          expertise_report_path: string | null
+          expertise_summary: string | null
+          inspection_valid_until: string | null
+          known_defects: string[]
+          mechanical_condition: string | null
+          tire_percent: number | null
           cautions: string[]
           check_documents: boolean
           check_expertise: boolean
@@ -365,6 +412,12 @@ export type Database = {
           usage_type: string | null
         }
         Insert: {
+          expertise_report_path?: string | null
+          expertise_summary?: string | null
+          inspection_valid_until?: string | null
+          known_defects?: string[]
+          mechanical_condition?: string | null
+          tire_percent?: number | null
           cautions?: string[]
           check_documents?: boolean
           check_expertise?: boolean
@@ -383,6 +436,12 @@ export type Database = {
           usage_type?: string | null
         }
         Update: {
+          expertise_report_path?: string | null
+          expertise_summary?: string | null
+          inspection_valid_until?: string | null
+          known_defects?: string[]
+          mechanical_condition?: string | null
+          tire_percent?: number | null
           cautions?: string[]
           check_documents?: boolean
           check_expertise?: boolean

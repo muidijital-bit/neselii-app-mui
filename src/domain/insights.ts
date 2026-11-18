@@ -44,11 +44,33 @@ export type ListingInsights = {
   readonly expert: { readonly id: AdvisorId; readonly fullName: string } | null;
   readonly strengths: readonly string[];
   readonly cautions: readonly string[];
+  /** Madde 9: araç sağlık kartı. */
+  readonly health: VehicleHealth;
+  /** Madde 10: ekspertiz raporu PDF'inin herkese açık adresi; yüklenmediyse `null`. */
+  readonly expertiseReportUrl: string | null;
+  /** Depolamadaki yol (yönetici düzenlemesi için). */
+  readonly expertiseReportPath: string | null;
   readonly updatedAt: IsoDateTime;
 };
 
+/** Madde 9: araç sağlık kartı (ekspertiz özeti, mekanik durum, lastik, muayene, bilinen kusurlar). */
+export type VehicleHealth = {
+  readonly expertiseSummary: string | null;
+  readonly mechanicalCondition: string | null;
+  /** Lastik diş durumu (%). */
+  readonly tirePercent: number | null;
+  /** `YYYY-MM-DD`. */
+  readonly inspectionValidUntil: string | null;
+  readonly knownDefects: readonly string[];
+};
+
+export const EMPTY_HEALTH: VehicleHealth = { expertiseSummary: null, mechanicalCondition: null, tirePercent: null, inspectionValidUntil: null, knownDefects: [] };
+
+export const hasHealthCard = (i: ListingInsights) =>
+  Boolean(i.health.expertiseSummary || i.health.mechanicalCondition || i.health.tirePercent !== null || i.health.inspectionValidUntil || i.health.knownDefects.length || i.expertiseReportUrl);
+
 /** Yöneticinin kaydettiği alanlar (uzman yalnız kimlikle). */
-export type ListingInsightsInput = Omit<ListingInsights, 'expert' | 'updatedAt'> & { readonly expertId: AdvisorId | null };
+export type ListingInsightsInput = Omit<ListingInsights, 'expert' | 'updatedAt' | 'expertiseReportUrl'> & { readonly expertId: AdvisorId | null };
 
 /** Güven puanı 0–100 (karşılanan kontrol maddesi oranı, tam sayıya yuvarlanır). */
 export function trustScore(checks: TrustChecks): number {

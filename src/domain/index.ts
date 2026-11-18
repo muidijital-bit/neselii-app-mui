@@ -2,6 +2,7 @@ export * from './authRules';
 export * from './calls';
 export * from './categories';
 export * from './common';
+export * from './documents';
 export * from './errors';
 export * from './filterForm';
 export * from './filters';

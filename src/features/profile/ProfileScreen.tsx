@@ -116,7 +116,12 @@ export function ProfileScreen() {
           {isAdmin ? (
             <MenuRow icon="repeat" title={PROFILE_TARGETS.tradeLeads.title} onPress={go(PROFILE_TARGETS.tradeLeads.href)} testID="profile-menu-trade-leads" />
           ) : (
-            <MenuRow icon="repeat" title={PROFILE_TARGETS.tradeIn.title} onPress={go(PROFILE_TARGETS.tradeIn.href)} testID="profile-menu-trade-in" />
+            <>
+              <MenuRow icon="repeat" title={PROFILE_TARGETS.tradeIn.title} onPress={go(PROFILE_TARGETS.tradeIn.href)} testID="profile-menu-trade-in" />
+              {/* Madde 52: müşteri belge arşivi. */}
+              <Divider />
+              <MenuRow icon="file-text" title={PROFILE_TARGETS.myDocuments.title} onPress={go(PROFILE_TARGETS.myDocuments.href)} testID="profile-menu-my-documents" />
+            </>
           )}
           {isAdmin ? (
             <>

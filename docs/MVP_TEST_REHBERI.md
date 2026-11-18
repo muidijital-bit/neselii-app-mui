@@ -20,7 +20,7 @@ Her test adımı bir kutucuktur (`- [ ]`); test ederken işaretleyebilirsiniz. *
 
 ### Hangi uygulama sürümü?
 
-- **TestFlight 1.0.0 (3)** Adım 1–5'i içerir (Adım 6 sonraki build'de). Build 2 yalnızca Adım 1'i içerir. Adım 6 için yeni bir sürüm gerekir:
+- **TestFlight 1.0.0 (4)** Adım 1–7'yi içerir; Adım 8 (belgeler) build 5 ile gelir. Eski build'ler: (3) Adım 1–5, (2) yalnız Adım 1. Adım 8 için yeni bir sürüm gerekir:
   - **Expo Go önizlemesi** (en hızlısı): geliştirici yeni önizlemeyi yayımlar (`npm run preview:expo-go`). Test eden kişi Expo Go'da, `neseli-otomotiv` organizasyonuna davet edilmiş Expo hesabıyla giriş yapar.
   - **Yeni TestFlight build'i** (build 3 ve sonrası).
 - Veritabanı tarafındaki tüm değişiklikler zaten canlıdadır. Yeni sürümü açan herkes aynı verileri görür.
@@ -428,6 +428,42 @@ Adımlar:
 
 **Yönetici**
 - [ ] Profil → **Takas ve Alım Talepleri**: talep "Araç satış" konusuyla görünür; ön değerlendirme girilebilir (takas farkı bölümü gösterilmez).
+
+---
+
+## Adım 8 — Belgeler
+
+> PDF seçme ve PDF üretme yeni yerel modüller kullanır: **Expo Go önizlemesinde** hemen, **TestFlight'ta build 5 ve sonrasında** çalışır.
+
+### Madde 9, 10 — Araç sağlık kartı ve ekspertiz raporu
+**Yönetici**
+- [ ] Bir ilan → **Bilgileri Düzenle** → **Araç sağlık kartı**: ekspertiz özeti, mekanik durum, lastik `70`, muayene geçerlilik (önce `31.13.2026` deneyin → "GG.AA.YYYY biçiminde girin"), bilinen kusurlar (2 satır).
+- [ ] **Ekspertiz raporu → PDF Seç**: telefondan bir PDF seçin → dosya adı görünür → **Kaydet**.
+
+**Müşteri**
+- [ ] İlanda **"Araç Sağlık Kartı"**: ekspertiz, mekanik durum, "Lastikler · %70" ve çubuk, "Muayene geçerli: GG.AA.YYYY", turuncu "Bilinen kusurlar".
+- [ ] **Ekspertiz Raporunu Aç** → PDF uygulama içi tarayıcıda açılır.
+- [ ] Yönetici muayene tarihini geçmiş bir tarih yapınca: kırmızı **"Muayene süresi doldu"**. Lastik `20` yapınca çubuk turuncu.
+
+### Madde 52 — Belge arşivi
+**Yönetici**
+- [ ] Bir müşteri talebinin detayında **Belgeler** kartı → **Dosya Seç (PDF / görsel)** → tür **Ekspertiz**, belge adı → **Müşteriye Gönder**. Belge karta eklenir.
+- [ ] Belgedeki çöp kutusu → onay → belge kalkar.
+
+**Müşteri**
+- [ ] Bildirim: **"Yeni belge eklendi · *ad* · Profil → Belgelerim"**.
+- [ ] Profil → **Belgelerim**: belge türü etiketi ve tarihiyle listelenir; dokununca açılır. Belge yokken "Henüz belgeniz yok".
+- [ ] Talep detayında "Belgeler" kartında da görünür (müşteride yükleme düğmeleri yok).
+
+### Madde 32 — PDF teklif
+**Yönetici**
+- [ ] Talep detayı → Belgeler → **Teklif Oluştur (PDF)** → araç ve liste fiyatı görünür.
+- [ ] Teklif tutarını ilan fiyatından 150.000 TL düşük girin → "İndirim: 150.000 TL".
+- [ ] **Kredili** → peşinat ve vade seçin → aylık taksit kutusu güncellenir. Geçerlilik **7 gün**, not yazın → **PDF Oluştur ve Gönder** → talep detayına dönülür, Belgeler'de "Teklif · …".
+- [ ] Toplu teklif talebinde (Madde 44) teklif ekranında tüm araçlar listelenir ve toplam alınır.
+
+**Müşteri**
+- [ ] Bildirim: **"Teklifiniz hazır"**. Belgelerim'de "Teklif" etiketli belge → açınca PDF: firma başlığı, teklif no, tarih/geçerlilik, müşteri adı ve telefon, danışman, araç ve fiyat, indirim, **teklif tutarı**, ödeme planı tablosu, not. Türkçe karakterler doğru görünmeli.
 
 ---
 

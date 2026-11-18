@@ -10,13 +10,14 @@ import {
   type ListingId,
   type CommercialSpecs,
   type ListingInsightsInput,
+  type LocalFile,
   type ListingSearch,
   type Range,
 } from '@/domain';
 
 import type { ListingsService, SearchListingsInput } from '../contracts';
 import type { Supabase } from './client';
-import { INSIGHTS_COLUMNS, toInsights, toInsightsRow, type InsightsRow } from './insights';
+import { INSIGHTS_COLUMNS, LISTING_DOCUMENTS_BUCKET, toInsights, toInsightsRow, type InsightsRow } from './insights';
 import { SUMMARY_COLUMNS, subtypeVariants, toListingDetail, toListingSummary, type ListingRow, type MediaRow } from './mappers';
 import { call, ensure, kurusToTl, offsetOf, pageRange, toPage, unwrap , unwrapMaybe } from './shared';
 
@@ -188,6 +189,17 @@ export function createSupabaseListings(sb: Supabase): ListingsService {
           await sb.from('listing_insights').upsert(toInsightsRow(id, input), { onConflict: 'listing_id' }).select(INSIGHTS_COLUMNS).single(),
         ) as unknown as InsightsRow;
         return toInsights(row);
+      }),
+
+    uploadListingDocument: (id: ListingId, file: LocalFile) =>
+      call(async () => {
+        const contentType = file.mimeType ?? 'application/pdf';
+        const ext = contentType === 'application/pdf' ? 'pdf' : contentType === 'image/png' ? 'png' : 'jpg';
+        const path = `${id}/ekspertiz-${Date.now()}.${ext}`;
+        const body = await (await fetch(file.uri)).arrayBuffer();
+        const { error } = await sb.storage.from(LISTING_DOCUMENTS_BUCKET).upload(path, body, { contentType, upsert: false });
+        if (error) throw error;
+        return path;
       }),
 
     saveSpecs: (id: ListingId, specs: CommercialSpecs) =>

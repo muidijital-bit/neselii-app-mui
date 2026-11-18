@@ -81,6 +81,9 @@ export function RootNavigator() {
           <Stack.Screen name="documents" />
           {/* Adım 7: takas / araç satış başvurusu. */}
           <Stack.Screen name="trade-in" />
+          {/* Adım 8: müşteri belge arşivi ve yönetici PDF teklif. */}
+          <Stack.Screen name="my-documents" />
+          <Stack.Screen name="leads/[leadId]/quote" />
           <Stack.Screen name="conversations/[conversationId]" />
           <Stack.Screen name="announcements/[announcementId]" />
           <Stack.Screen name="notification-unavailable" />

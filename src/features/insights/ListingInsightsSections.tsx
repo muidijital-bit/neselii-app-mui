@@ -1,4 +1,5 @@
 import { useRouter } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
 import { StyleSheet, View } from 'react-native';
 
 import {
@@ -7,6 +8,7 @@ import {
   formatTrDate,
   hasAnyCheck,
   hasExpertOpinion,
+  hasHealthCard,
   hasHistory,
   trustScore,
   trustScoreLabel,
@@ -30,6 +32,7 @@ export function ListingInsightsSections({ listingId, insights, isAdmin }: { list
   return (
     <>
       {insights && hasAnyCheck(insights) ? <TrustSection insights={insights} /> : null}
+      {insights && hasHealthCard(insights) ? <HealthSection insights={insights} /> : null}
       {insights && hasHistory(insights) ? <HistorySection insights={insights} /> : null}
       {insights && hasExpertOpinion(insights) ? <ExpertSection insights={insights} /> : null}
       {isAdmin ? <AdminEditSection listingId={listingId} hasData={insights !== null} /> : null}
@@ -72,6 +75,67 @@ function TrustSection({ insights }: { insights: ListingInsights }) {
           </View>
         );
       })}
+    </View>
+  );
+}
+
+/** Madde 9: araç sağlık kartı; madde 10: ekspertiz raporu (PDF) bağlantısı. */
+function HealthSection({ insights }: { insights: ListingInsights }) {
+  const h = insights.health;
+  const today = new Date().toISOString().slice(0, 10);
+  const inspectionExpired = h.inspectionValidUntil !== null && h.inspectionValidUntil < today;
+  return (
+    <View style={styles.section} testID="listing-health">
+      <Text variant="heading" accessibilityRole="header">
+        Araç Sağlık Kartı
+      </Text>
+      {h.expertiseSummary ? (
+        <View style={styles.healthRow}>
+          <Icon name="clipboard" size={18} color="heading" />
+          <View style={styles.flex}>
+            <Text variant="smallSemibold">Ekspertiz</Text>
+            <Text variant="body">{h.expertiseSummary}</Text>
+          </View>
+        </View>
+      ) : null}
+      {h.mechanicalCondition ? (
+        <View style={styles.healthRow}>
+          <Icon name="settings" size={18} color="heading" />
+          <View style={styles.flex}>
+            <Text variant="smallSemibold">Mekanik durum</Text>
+            <Text variant="body">{h.mechanicalCondition}</Text>
+          </View>
+        </View>
+      ) : null}
+      {h.tirePercent !== null ? (
+        <View style={styles.healthRow}>
+          <Icon name="disc" size={18} color="heading" />
+          <View style={styles.flex}>
+            <Text variant="smallSemibold">Lastikler · %{h.tirePercent}</Text>
+            <View style={styles.bar}>
+              <View style={[styles.barFill, { width: `${h.tirePercent}%` }, h.tirePercent < 30 && styles.barWarn]} />
+            </View>
+          </View>
+        </View>
+      ) : null}
+      {h.inspectionValidUntil ? (
+        <View style={styles.healthRow}>
+          <Icon name="calendar" size={18} color={inspectionExpired ? 'danger' : 'heading'} />
+          <Text variant="body" color={inspectionExpired ? 'danger' : 'text'} style={styles.flex}>
+            Muayene {inspectionExpired ? 'süresi doldu' : 'geçerli'}: {formatTrDate(h.inspectionValidUntil)}
+          </Text>
+        </View>
+      ) : null}
+      {h.knownDefects.length ? <ItemList title="Bilinen kusurlar" items={h.knownDefects} tone="warn" /> : null}
+      {insights.expertiseReportUrl ? (
+        <Button
+          title="Ekspertiz Raporunu Aç"
+          icon="file-text"
+          variant="outline"
+          onPress={() => void WebBrowser.openBrowserAsync(insights.expertiseReportUrl!).catch(() => undefined)}
+          testID="listing-expertise-report"
+        />
+      ) : null}
     </View>
   );
 }
@@ -197,6 +261,8 @@ const styles = StyleSheet.create({
   scoreMax: { marginTop: -2 },
   bar: { height: 6, borderRadius: Radius.pill, backgroundColor: Colors.chip, marginTop: Spacing.two, overflow: 'hidden' },
   barFill: { height: 6, backgroundColor: Colors.green },
+  barWarn: { backgroundColor: Colors.warning },
+  healthRow: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.two, paddingVertical: Spacing.one },
   checkRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two, paddingVertical: Spacing.one },
   specRow: {
     flexDirection: 'row',

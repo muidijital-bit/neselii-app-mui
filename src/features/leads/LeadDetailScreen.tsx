@@ -4,6 +4,7 @@ import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, View } f
 
 import { AppError, LEAD_STATUSES, LEAD_TOPIC_LABELS, asAdvisorId, formatMoney, toLocalDateKey, upcomingDays, userMessage, type Lead } from '@/domain';
 import { useAdvisorsQuery } from '@/features/advisors/useAdvisors';
+import { LeadDocumentsCard } from '@/features/documents';
 import { FinancePlanSummary } from '@/features/finance/FinancePlanSummary';
 import { listingHref } from '@/features/listings/routes';
 import { TradeInLeadSection } from '@/features/trade';
@@ -121,6 +122,9 @@ function LeadContent({ lead }: { lead: Lead }) {
 
       {/* Adım 7: takas / satış aracı, medya, ön değerlendirme ve takas farkı. */}
       {lead.topic === 'trade_in' || lead.topic === 'sell_vehicle' ? <TradeInLeadSection lead={lead} isAdmin={isAdmin} /> : null}
+
+      {/* Madde 52, 32: talebe gönderilen belgeler; yönetici belge yükler ve PDF teklif oluşturur. */}
+      <LeadDocumentsCard lead={lead} isAdmin={isAdmin} />
 
       {lead.fleetListings.length ? (
         <Card style={styles.planCard}>

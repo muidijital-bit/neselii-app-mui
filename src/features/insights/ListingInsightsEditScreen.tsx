@@ -17,6 +17,7 @@ import {
   trustScore,
   userMessage,
   type CabType,
+  type LocalFile,
   type ListingDetail,
   type ListingInsightsInput,
   type TrustChecks,
@@ -35,6 +36,9 @@ import { Text } from '@/ui/Text';
 import { TextField } from '@/ui/TextField';
 import { Card, Chip, Divider, ToggleRow } from '@/ui/Ui';
 import { Colors, Spacing } from '@/ui/theme';
+
+// eslint-disable-next-line @typescript-eslint/no-require-imports -- yerel modül yalnız PDF seçilirken yüklenir
+const documentPicker = () => require('expo-document-picker') as typeof import('expo-document-picker');
 
 /**
  * Yönetici: ilanın teknik bilgileri (madde 3, yalnız araçlarda), güven kontrolleri (madde 12), araç geçmişi (madde 11) ve uzman görüşü (madde 13). Kaydedince ilan detayı yenilenir ve
@@ -87,6 +91,26 @@ function InsightsForm({ listing }: { listing: ListingDetail }) {
   const [expertId, setExpertId] = useState<string | null>(initial?.expert?.id ?? null);
   const [strengths, setStrengths] = useState((initial?.strengths ?? []).join('\n'));
   const [cautions, setCautions] = useState((initial?.cautions ?? []).join('\n'));
+  // Madde 9: sağlık kartı; madde 10: ekspertiz raporu PDF'i.
+  const [expertiseSummary, setExpertiseSummary] = useState(initial?.health.expertiseSummary ?? '');
+  const [mechanical, setMechanical] = useState(initial?.health.mechanicalCondition ?? '');
+  const [tire, setTire] = useState(initial?.health.tirePercent != null ? String(initial.health.tirePercent) : '');
+  const [inspection, setInspection] = useState(formatTrDate(initial?.health.inspectionValidUntil ?? null));
+  const [defects, setDefects] = useState((initial?.health.knownDefects ?? []).join('\n'));
+  const [reportPath, setReportPath] = useState<string | null>(initial?.expertiseReportPath ?? null);
+  const [reportFile, setReportFile] = useState<LocalFile | null>(null);
+  const [inspectionError, setInspectionError] = useState<string | undefined>();
+
+  const pickReport = async () => {
+    const result = await documentPicker().getDocumentAsync({ type: 'application/pdf', copyToCacheDirectory: true });
+    if (result.canceled || !result.assets[0]) return;
+    const asset = result.assets[0];
+    if ((asset.size ?? 0) > 20 * 1024 * 1024) {
+      setFailure('PDF en fazla 20 MB olabilir.');
+      return;
+    }
+    setReportFile({ uri: asset.uri, name: asset.name, mimeType: asset.mimeType ?? 'application/pdf' });
+  };
   const [pickExpert, setPickExpert] = useState(false);
   const [dateError, setDateError] = useState<string | undefined>();
   const [saving, setSaving] = useState(false);
@@ -101,6 +125,12 @@ function InsightsForm({ listing }: { listing: ListingDetail }) {
       setDateError('Tarihi GG.AA.YYYY biçiminde girin.');
       return;
     }
+    const inspectionDate = inspection.trim() ? parseTrDate(inspection) : null;
+    if (inspection.trim() && !inspectionDate) {
+      setInspectionError('Tarihi GG.AA.YYYY biçiminde girin.');
+      return;
+    }
+    setInspectionError(undefined);
     setDateError(undefined);
     setFailure(null);
     setSaving(true);
@@ -114,6 +144,14 @@ function InsightsForm({ listing }: { listing: ListingDetail }) {
       expertId: expertId ? asAdvisorId(expertId) : null,
       strengths: linesToItems(strengths),
       cautions: linesToItems(cautions),
+      health: {
+        expertiseSummary: expertiseSummary.trim() || null,
+        mechanicalCondition: mechanical.trim() || null,
+        tirePercent: toNumber(tire),
+        inspectionValidUntil: inspectionDate,
+        knownDefects: linesToItems(defects),
+      },
+      expertiseReportPath: reportPath,
     };
     try {
       if (vehicle) {
@@ -125,7 +163,8 @@ function InsightsForm({ listing }: { listing: ListingDetail }) {
           bodyBuilder,
         });
       }
-      await listings.saveInsights(asListingId(listing.id), input);
+      const uploadedPath = reportFile ? await listings.uploadListingDocument(asListingId(listing.id), reportFile) : null;
+      await listings.saveInsights(asListingId(listing.id), uploadedPath ? { ...input, expertiseReportPath: uploadedPath } : input);
       // Yalnız bu ilanın detay önbelleği yenilenir (anahtar: ['listings', userId, 'detail', listingId]).
       await queryClient.invalidateQueries({ queryKey: ['listings'], predicate: (q) => q.queryKey[2] === 'detail' && q.queryKey[3] === listing.id });
       router.back();
@@ -223,6 +262,79 @@ function InsightsForm({ listing }: { listing: ListingDetail }) {
           style={styles.multiline}
           testID="insights-history-note"
         />
+      </View>
+
+      <View style={styles.group}>
+        <Text variant="subheading">Araç sağlık kartı</Text>
+        <TextField
+          label="Ekspertiz özeti"
+          value={expertiseSummary}
+          onChangeText={setExpertiseSummary}
+          placeholder="Ör. Şasi ve motor temiz, sol kapı boyalı."
+          multiline
+          maxLength={500}
+          style={styles.multiline}
+          testID="insights-expertise-summary"
+        />
+        <TextField label="Mekanik durum" value={mechanical} onChangeText={setMechanical} placeholder="Ör. Motor, şanzıman ve diferansiyel sorunsuz" maxLength={300} testID="insights-mechanical" />
+        <View style={styles.pair}>
+          <View style={styles.flex}>
+            <TextField label="Lastik durumu (%)" value={tire} onChangeText={setTire} keyboardType="number-pad" placeholder="Ör. 70" testID="insights-tire" />
+          </View>
+          <View style={styles.flex}>
+            <TextField
+              label="Muayene geçerlilik"
+              value={inspection}
+              onChangeText={(t) => {
+                setInspection(t);
+                if (inspectionError) setInspectionError(undefined);
+              }}
+              keyboardType="numbers-and-punctuation"
+              placeholder="GG.AA.YYYY"
+              error={inspectionError}
+              testID="insights-inspection"
+            />
+          </View>
+        </View>
+        <TextField
+          label="Bilinen kusurlar (her satıra bir madde)"
+          value={defects}
+          onChangeText={setDefects}
+          placeholder={'Ör.\nKlima gazı azalmış'}
+          multiline
+          style={styles.multiline}
+          testID="insights-defects"
+        />
+        <Text variant="smallMedium" color="textSecondary">
+          Ekspertiz raporu (PDF)
+        </Text>
+        <Card>
+          <View style={styles.pickRow}>
+            <Icon name="file-text" size={20} color="textSecondary" />
+            <Text variant="body" numberOfLines={1} style={styles.flex}>
+              {reportFile ? reportFile.name : reportPath ? 'Rapor yüklü' : 'Rapor yüklenmedi'}
+            </Text>
+            {reportFile || reportPath ? (
+              <Pressable
+                hitSlop={8}
+                accessibilityRole="button"
+                onPress={() => {
+                  setReportFile(null);
+                  setReportPath(null);
+                }}
+                testID="insights-report-remove">
+                <Text variant="smallSemibold" color="danger">
+                  Kaldır
+                </Text>
+              </Pressable>
+            ) : null}
+            <Pressable hitSlop={8} accessibilityRole="button" onPress={() => void pickReport()} testID="insights-report-pick">
+              <Text variant="smallSemibold" color="green">
+                {reportFile || reportPath ? 'Değiştir' : 'PDF Seç'}
+              </Text>
+            </Pressable>
+          </View>
+        </Card>
       </View>
 
       <View style={styles.group}>

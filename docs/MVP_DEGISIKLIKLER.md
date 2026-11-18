@@ -194,7 +194,29 @@ Her maddenin müşteri ve yönetici tarafında nasıl test edileceği: **`docs/M
 
 **Not:** `expo-image-picker` yerel modül eklendi → bu özellik TestFlight'ta **yeni build (4)** ile çalışır; Expo Go'da hemen çalışır.
 
+## Adım 8 — Belgeler (2026-11-18) · TestFlight 1.0.0 (4) Adım 7'ye kadar olanları içerir
+
+### Madde 9 — Araç sağlık kartı
+- **Müşteri:** İlan detayında güven puanının altında **"Araç Sağlık Kartı"**: ekspertiz özeti, mekanik durum, lastik durumu (% ve çubuk; %30 altı turuncu), muayene geçerlilik tarihi (süresi geçtiyse kırmızı "Muayene süresi doldu"), bilinen kusurlar.
+- **Yönetici:** İlan detayı → "Yönetici: araç bilgileri" → **Araç sağlık kartı** bölümü: ekspertiz özeti, mekanik durum, lastik %, muayene geçerlilik (GG.AA.YYYY), bilinen kusurlar (her satıra bir madde).
+
+### Madde 10 — Ekspertiz raporu (PDF)
+- **Yönetici:** Aynı bölümde **"PDF Seç"** ile ekspertiz raporu yüklenir (en fazla 20 MB), **Değiştir / Kaldır**.
+- **Müşteri:** Sağlık kartında **"Ekspertiz Raporunu Aç"** → rapor uygulama içi tarayıcıda açılır.
+- **Depolama:** Herkese açık `listing-documents` alanı (yalnız yönetici yükler/siler).
+
+### Madde 52 — Belge arşivi
+- **Yönetici:** Talep detayında **Belgeler** kartı: **Dosya Seç (PDF / görsel)** → tür (Teklif, Ekspertiz, Teslimat, Sözleşme, Diğer) ve belge adı → **Müşteriye Gönder**; belgeyi silme (onaylı).
+- **Müşteri:** **"Yeni belge eklendi · *Belge adı* · Profil → Belgelerim"** bildirimi; Profil → **Belgelerim**: tüm belgeler (tür etiketi, tarih), dokununca açılır; talep detayında da o talebin belgeleri.
+- **Veritabanı / depolama:** `customer_documents` tablosu ve özel `customer-documents` alanı (yalnız belge sahibi müşteri ve yönetici erişir, süreli imzalı adres).
+
+### Madde 32 — Teklif oluşturma (PDF)
+- **Yönetici:** Talep detayı → Belgeler → **"Teklif Oluştur (PDF)"**: araç(lar) (toplu teklifte tümü) ve liste fiyatı, **teklif tutarı** (düşük girilirse indirim olarak gösterilir), **ödeme şekli** Peşin / Kredili (peşinat oranı ve vade; müşterinin hesaplayıcı planı varsa ön seçili), **geçerlilik** 3/7/15 gün, not → **"PDF Oluştur ve Gönder"**.
+- PDF cihazda üretilir (firma başlığı, teklif no, müşteri, danışman, araçlar, indirim, teklif tutarı, ödeme planı, not, geçerlilik), müşterinin Belgelerim'ine yüklenir; müşteriye **"Teklifiniz hazır"** bildirimi gider.
+
+**Not:** `expo-document-picker` ve `expo-print` yerel modülleri eklendi → TestFlight'ta yeni build (5) ile çalışır; Expo Go'da hemen çalışır.
+
 ## Sıradaki adımlar
 - iOS push için APNs kurulumu (Apple hesabında anahtar gerekir) ve yeni TestFlight build'i.
-- **Adım 8 önerisi — Belgeler:** Madde 9 (araç sağlık kartı), 10 (ekspertiz raporu PDF), 52 (belge arşivi), 32 (PDF teklif).
-- **Sonra:** 20/21 (çoklu banka, kurumsal finansman), 41/43 (bulucuya sektör soruları), 46 (içerik merkezi), 47/51 (kurumsal hesap ve onay akışı), 7 (video bölümleri).
+- **Adım 9 önerisi — Finansman ve sektör:** Madde 20 (çoklu banka teklif karşılaştırma), 21 (kurumsal finansman başvurusu), 41 (inşaat soruları), 43 (şehir içi dağıtım soruları).
+- **Sonra:** 46 (içerik merkezi), 47/51 (kurumsal hesap ve onay akışı), 7 (video bölümleri).

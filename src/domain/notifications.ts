@@ -22,7 +22,9 @@ export type NotificationKind =
   | 'new-message'
   | 'announcement'
   | 'lead-new'
-  | 'lead-update';
+  | 'lead-update'
+  /** Madde 6: favorideki araca benzer yeni ilan. */
+  | 'similar-listing';
 
 /**
  * Dokunulunca nereye gidileceği. Tip güvenli: ilan bildirimi `ListingId`, mesaj bildirimi `ConversationId` taşır;

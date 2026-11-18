@@ -114,6 +114,8 @@ export function ProfileScreen() {
           {isAdmin ? (
             <>
               <Divider />
+              <MenuRow icon="calendar" title={PROFILE_TARGETS.appointments.title} onPress={go(PROFILE_TARGETS.appointments.href)} testID="profile-menu-appointments" />
+              <Divider />
               <MenuRow icon="users" title={PROFILE_TARGETS.advisors.title} onPress={go(PROFILE_TARGETS.advisors.href)} testID="profile-menu-advisors" />
               <Divider />
               <MenuRow
@@ -122,6 +124,8 @@ export function ProfileScreen() {
                 onPress={go(PROFILE_TARGETS.financeSettings.href)}
                 testID="profile-menu-finance-settings"
               />
+              <Divider />
+              <MenuRow icon="phone-outgoing" title={PROFILE_TARGETS.callLogs.title} onPress={go(PROFILE_TARGETS.callLogs.href)} testID="profile-menu-call-logs" />
             </>
           ) : null}
           <Divider />

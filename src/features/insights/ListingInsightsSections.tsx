@@ -18,6 +18,8 @@ import { Text } from '@/ui/Text';
 import { initials } from '@/ui/format';
 import { Colors, Radius, Spacing } from '@/ui/theme';
 
+import { useListingCallStats } from '@/features/calls/useCallLogs';
+
 import { listingInsightsHref } from './routes';
 
 /**
@@ -152,6 +154,7 @@ function ItemList({ title, items, tone }: { title: string; items: readonly strin
 
 function AdminEditSection({ listingId, hasData }: { listingId: string; hasData: boolean }) {
   const router = useRouter();
+  const calls = useListingCallStats(listingId);
   return (
     <View style={styles.section} testID="listing-insights-admin">
       <View style={styles.adminHead}>
@@ -165,6 +168,13 @@ function AdminEditSection({ listingId, hasData }: { listingId: string; hasData: 
           ? 'Teknik bilgiler, güven kontrolleri, araç geçmişi ve uzman görüşü müşteriye bu ilanda gösteriliyor.'
           : 'Teknik bilgiler (tonaj, motor gücü, kabin), güven kontrolleri, araç geçmişi ve uzman görüşünü buradan girin.'}
       </Text>
+      {/* Madde 27: ilanın telefonla aranma sayısı. */}
+      <View style={styles.callStats} testID="listing-call-stats">
+        <Icon name="phone-outgoing" size={16} color="textSecondary" />
+        <Text variant="smallMedium" color="textSecondary">
+          {calls.data ? `Hemen Ara: toplam ${calls.data.total} · son 30 gün ${calls.data.last30Days}` : 'Arama sayısı yükleniyor…'}
+        </Text>
+      </View>
       <Button title={hasData ? 'Bilgileri Düzenle' : 'Bilgileri Gir'} icon="edit-2" variant="outline" onPress={() => router.push(listingInsightsHref(listingId))} testID="listing-insights-edit" />
     </View>
   );
@@ -204,4 +214,5 @@ const styles = StyleSheet.create({
   list: { gap: Spacing.one, marginTop: Spacing.two },
   item: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.two },
   adminHead: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
+  callStats: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
 });

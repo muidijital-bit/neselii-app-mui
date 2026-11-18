@@ -8,6 +8,9 @@ import type {
   Advisor,
   AdvisorId,
   AppNotification,
+  CallLog,
+  CallStats,
+  CallSummary,
   Category,
   CommercialSpecs,
   CategoryId,
@@ -192,6 +195,10 @@ export interface NotificationsService {
   getPreferences(): Promise<NotificationPreferences>;
   /** Verilen alanları günceller ve tam tercihleri döner. */
   updatePreferences(patch: Partial<NotificationPreferences>): Promise<NotificationPreferences>;
+  /** Madde 6: bu cihazın Expo push belirtecini oturumdaki hesaba bağlar (başka hesaptan kaldırılır). */
+  registerPushToken(token: string): Promise<void>;
+  /** Çıkışta: hesabın push belirtecini kaldırır (cihaz artık bu hesabın bildirimini almaz). */
+  unregisterPushToken(): Promise<void>;
 }
 
 // --- Leads (talepler) ---------------------------------------------------------------------------------------------
@@ -212,7 +219,8 @@ export type CreateLeadInput = {
 /** `mine`: oturumdaki kullanıcının talepleri. `all`: firma gelen kutusu (yalnız yönetici; müşteride RLS yine kendi taleplerini döner). */
 export type ListLeadsInput = PageInput & { readonly scope: 'mine' | 'all'; readonly status?: LeadStatus };
 
-export type UpdateLeadInput = { readonly status?: LeadStatus; readonly advisorId?: AdvisorId | null };
+/** `appointmentAt`: ISO zaman; `null` randevuyu kaldırır (madde 31). */
+export type UpdateLeadInput = { readonly status?: LeadStatus; readonly advisorId?: AdvisorId | null; readonly appointmentAt?: string | null };
 
 /**
  * Talepler: müşteri bırakır, sunucu durumu "Yeni" yapar ve rastgele aktif danışman atar; yöneticilere bildirim gider. Yönetici durum ve danışmanı
@@ -228,6 +236,8 @@ export interface LeadsService {
   update(id: LeadId, patch: UpdateLeadInput): Promise<Lead>;
   /** "Yeni" durumundaki talep sayısı (yönetici menü sayacı). */
   countNew(): Promise<number>;
+  /** Yönetici: `from` zamanından sonraki randevulu talepler, yakından uzağa (en çok 200). */
+  listAppointments(from: string): Promise<readonly Lead[]>;
 }
 
 // --- Advisors (danışmanlar) ---------------------------------------------------------------------------------------
@@ -255,6 +265,20 @@ export interface FinanceService {
   updateSettings(settings: FinanceSettings): Promise<FinanceSettings>;
 }
 
+// --- Call logs (madde 27) -----------------------------------------------------------------------------------------
+
+/** "Hemen Ara" kayıtları. Kayıt oturumlu kullanıcı adına yazılır (oturum yoksa sessizce atlanır); okuma yalnız yöneticidedir. */
+export interface CallLogsService {
+  /** Arama dokunuşunu kaydeder. Hata yutulmaz ama çağıran aramayı engellememelidir. */
+  log(listingId: ListingId | null): Promise<void>;
+  /** En yeni önce. */
+  list(input?: PageInput): Promise<Page<CallLog>>;
+  /** İlanın toplam ve son 30 gündeki arama sayısı. */
+  statsForListing(listingId: ListingId): Promise<CallStats>;
+  /** Bugün / son 7 gün / toplam. */
+  summary(): Promise<CallSummary>;
+}
+
 // --- Birleşik kap --------------------------------------------------------------------------------------------------
 
 export interface Services {
@@ -268,6 +292,7 @@ export interface Services {
   readonly leads: LeadsService;
   readonly advisors: AdvisorsService;
   readonly finance: FinanceService;
+  readonly callLogs: CallLogsService;
 }
 
 export type ServiceName = keyof Services;

@@ -14,6 +14,8 @@ export const LEAD_TOPIC_ICONS: Record<LeadTopic, IconName> = {
   info: 'info',
   financing: 'credit-card',
   video_call: 'video',
+  inspection: 'map-pin',
+  expertise: 'clipboard',
 };
 
 export const leadStatusLabel = (status: LeadStatus) => LEAD_STATUS_LABELS[status];
@@ -57,3 +59,25 @@ export function formatLeadDate(iso: string): string {
 
 /** Telefon bağlantısı için yalnızca rakam ve baştaki `+`. */
 export const telUrl = (phone: string) => `tel:${phone.replace(/[^\d+]/g, '')}`;
+
+/** Randevu gösterimi: "Yarın, 14:00" / "Cum 21 Kas, 09:30" (cihazın yerel saatiyle). */
+export function formatAppointment(iso: string, now: Date = new Date()): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${dayLabel(toLocalDateKey(date), now)}, ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+/** Randevu saatleri (yönetici seçimi): 09:00 – 18:00 arası yarım saatte bir. */
+export const APPOINTMENT_TIMES: readonly string[] = Array.from({ length: 19 }, (_, i) => {
+  const minutes = 9 * 60 + i * 30;
+  return `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
+});
+
+/** Yerel gün (`YYYY-MM-DD`) + saat (`HH:MM`) → ISO zaman. */
+export function appointmentIso(dayKey: string, time: string): string | null {
+  const day = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dayKey);
+  const clock = /^(\d{2}):(\d{2})$/.exec(time);
+  if (!day || !clock) return null;
+  return new Date(Number(day[1]), Number(day[2]) - 1, Number(day[3]), Number(clock[1]), Number(clock[2])).toISOString();
+}

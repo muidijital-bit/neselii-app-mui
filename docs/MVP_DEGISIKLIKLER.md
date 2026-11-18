@@ -5,6 +5,8 @@ Her değişiklik hem müşteri hem yönetici tarafında Supabase ile çalışır
 
 Supabase migration dosyaları: `supabase/migrations/` (canlı projeye uygulanmıştır).
 
+Her maddenin müşteri ve yönetici tarafında nasıl test edileceği: **`docs/MVP_TEST_REHBERI.md`**.
+
 ---
 
 ## Adım 1 — Talepler (2026-11-18) · TestFlight 1.0.0 (2)
@@ -118,5 +120,28 @@ Supabase migration dosyaları: `supabase/migrations/` (canlı projeye uygulanmı
 - **Yönetici:** Profil → Finansman Ayarları'na **"Maliyet varsayılanları"** bölümü: motorin fiyatı (TL/L), kategoriye göre tüketim (Kamyon, Çekici, Ticari araç; L/100 km), bakım ve lastik (TL/km), sigorta ve vergi (TL/yıl).
 - **Veritabanı:** `finance_settings` tablosuna maliyet sütunları eklendi (varsayılan: motorin 55 TL, tüketim kamyon 28 / çekici 32 / ticari 11, bakım 2,5 TL/km, lastik 1,2 TL/km, sigorta 75.000 TL, vergi 25.000 TL — firma kendi değerleriyle günceller).
 
+## Adım 5 — İletişim, randevu ve bildirimler (2026-11-18)
+
+### Madde 27 — Sabit telefon araması (kayıt ve sayılar)
+- **Müşteri:** Değişiklik yok; "Hemen Ara" eskisi gibi telefonu açar. Her dokunuş arka planda kaydedilir (ilan detayında ilan bazında, ana sayfadaki "Hemen Ara" genel arama olarak). Kayıt başarısız olsa da arama engellenmez.
+- **Yönetici:** İlan detayındaki "Yönetici: araç bilgileri" bölümünde **"Hemen Ara: toplam N · son 30 gün M"**.
+- **Yönetici:** Profil → **Arama Kayıtları**: üstte Bugün / Son 7 gün / Toplam; altta en yeni önce müşteri adı, aranan ilan (dokununca açılır), tarih-saat ve profilinde telefon varsa **geri arama** düğmesi.
+- **Veritabanı:** `call_logs` tablosu (müşteri yalnız kendi adına yazar, yalnız yönetici okur; güncelleme/silme kapalı).
+
+### Madde 31 — Randevu yönetimi (+ madde 14, 15: inceleme ve ekspertiz randevusu)
+- **Müşteri:** "Beni Arayın" formuna iki yeni konu: **Yerinde inceleme randevusu** ve **Ekspertiz randevusu** (görüntülü inceleme zaten vardı).
+- **Yönetici:** Talep detayında **Randevu** kartı: önümüzdeki 14 gün ve 09:00–18:00 arası yarım saatlik saat seçimi (müşterinin tercih ettiği gün/saat ön seçili), **Randevu Oluştur / Güncelle / Kaldır**. Randevu atanınca "Yeni" talep otomatik "Görüşülüyor" olur.
+- **Müşteri:** Randevu atanınca **"Randevunuz oluşturuldu · Yerinde inceleme · 21.11.2026 14:00"** bildirimi; talep detayında ve Taleplerim listesinde **"Randevu: Yarın, 14:00"**.
+- **Hatırlatma:** Randevudan **24 saat önce** müşteriye "Randevu hatırlatması", yöneticilere "Yaklaşan randevu: *Müşteri*" bildirimi (sunucuda her 15 dakikada bir çalışan zamanlanmış görev; randevu değişirse yeniden hatırlatır).
+- **Yönetici:** Profil → **Randevular**: bugünden itibaren tüm randevular güne göre gruplu (Bugün, Yarın, Cum 21 Kas…): saat, müşteri, konu, ilan, danışman, durum; dokununca talep detayı.
+- **Veritabanı:** `leads` tablosuna `appointment_at`, `reminder_sent_at`; konu kısıtına `inspection`, `expertise`; `pg_cron` ile `appointment-reminders` görevi.
+
+### Madde 6 — Fiyat ve stok bildirimleri (telefona bildirim + benzer araç)
+- **Müşteri ve yönetici:** Uygulama içindeki **her bildirim artık telefona da gönderilir** (push): fiyat değişikliği, durum değişikliği (rezerve/satıldı), yeni ilan, mesaj, duyuru, talep ve randevu bildirimleri. Bildirime dokununca ilgili ekran açılır (ilan, sohbet, talep, duyuru). Uygulama açıkken gelen bildirim üstte banner olarak görünür ve bildirim listesi/sayacı yenilenir.
+- **Müşteri:** Yeni **"Beğendiğiniz araca benzer yeni ilan"** bildirimi: yayına giren ilan, kullanıcının favorisindeki bir ilanla **aynı kategori ve alt türde, fiyatı ±%15 içinde** ise. Kullanıcı başına **günde en fazla bir** benzer araç bildirimi; aynı ilan için zaten "yeni ilan" bildirimi aldıysa tekrar gönderilmez. Bildirim Tercihleri'ndeki **"Yeni ilanlar"** anahtarıyla açılıp kapanır.
+- Bildirim izni yalnızca tanıtımda / tercihlerde istenir; izin verilmişse cihaz otomatik kaydolur. **Çıkış yapınca** cihaz o hesabın bildirimlerini almayı bırakır; aynı telefonda başka hesap açılırsa bildirimler yeni hesaba gider.
+- **Veritabanı:** Bildirim yazıldığında sunucu Expo Push servisine gönderir (`pg_net`, `notifications_send_push` tetikleyicisi); `register_push_token` / `unregister_push_token` fonksiyonları; yeni bildirim türü `similar_listing` ve `listings_notify_similar` tetikleyicisi.
+- **Dış kurulum gerekli (iOS TestFlight / App Store):** Telefona bildirimin iOS sürümünde çalışması için Apple Developer hesabında bir **APNs anahtarı (.p8)** oluşturulup Expo'ya (EAS credentials) yüklenmeli, uygulama kimliğinde **Push Notifications** yeteneği açılıp imza profili yenilenmeli ve yeni build alınmalı (şu an iOS build'den push yetkisini kaldıran `withoutPushEntitlement` eklentisi bu kurulumla birlikte kaldırılacak). Android'de Expo Go push'u desteklemez; Android için de FCM anahtarı gerekir.
+
 ## Sıradaki adımlar
-- **Adım 5:** Madde 6 (push + benzer araç bildirimi), 27 (arama kaydı), 31 (randevu yönetimi).
+- "İlk aşama" maddelerinin tamamı uygulandı. Sonraki: iOS push için APNs kurulumu ve yeni TestFlight build'i; ardından "Sonraki" işaretli maddeler.

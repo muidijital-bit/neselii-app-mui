@@ -1,6 +1,7 @@
 import type { Services } from '../contracts';
 import { createSupabaseAdvisors } from './advisors';
 import { createSupabaseAuth } from './auth';
+import { createSupabaseCallLogs } from './callLogs';
 import { getSupabase } from './client';
 import { createSupabaseFavorites } from './favorites';
 import { createSupabaseFinance } from './finance';
@@ -27,6 +28,7 @@ export function createSupabaseServices(): Services {
     leads: createSupabaseLeads(sb),
     advisors: createSupabaseAdvisors(sb),
     finance: createSupabaseFinance(sb),
+    callLogs: createSupabaseCallLogs(sb),
   };
 }
 

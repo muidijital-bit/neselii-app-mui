@@ -43,6 +43,7 @@ const KIND: Record<string, NotificationKind> = {
   announcement: 'announcement',
   lead_new: 'lead-new',
   lead_update: 'lead-update',
+  similar_listing: 'similar-listing',
 };
 
 const STATUS_LABEL: Record<string, string> = {
@@ -171,6 +172,16 @@ export function createSupabaseNotifications(sb: Supabase): NotificationsService 
         const userId = await requireUserId(sb);
         const row = unwrapMaybe(await sb.from('profiles').select(PREFERENCE_COLUMNS).eq('id', userId).maybeSingle());
         return row ? toPreferences(row) : DEFAULT_NOTIFICATION_PREFERENCES;
+      }),
+
+    registerPushToken: (token: string) =>
+      call(async () => {
+        ensure(await sb.rpc('register_push_token', { p_token: token }));
+      }),
+
+    unregisterPushToken: () =>
+      call(async () => {
+        ensure(await sb.rpc('unregister_push_token'));
       }),
 
     updatePreferences: (patch: Partial<NotificationPreferences>) =>

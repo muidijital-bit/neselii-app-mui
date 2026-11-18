@@ -14,7 +14,7 @@ import { Badge, Card, Chip, IconTile } from '@/ui/Ui';
 import { Colors, Spacing } from '@/ui/theme';
 import { usePullRefresh } from '@/ui/usePullRefresh';
 
-import { LEAD_STATUS_TONES, LEAD_TOPIC_ICONS, formatLeadDate, leadStatusLabel, leadWhen } from './presentation';
+import { LEAD_STATUS_TONES, LEAD_TOPIC_ICONS, formatAppointment, formatLeadDate, leadStatusLabel, leadWhen } from './presentation';
 import { leadHref } from './routes';
 import { useLeadsQuery } from './useLeadsQueries';
 
@@ -119,9 +119,9 @@ function LeadRow({ lead, isAdmin, onPress }: { lead: Lead; isAdmin: boolean; onP
             {subtitle}
           </Text>
           <View style={styles.meta}>
-            <Icon name="clock" size={14} color="textTertiary" />
+            <Icon name={lead.appointmentAt ? 'calendar' : 'clock'} size={14} color={lead.appointmentAt ? 'success' : 'textTertiary'} />
             <Text variant="caption" numberOfLines={1} style={styles.flex}>
-              {leadWhen(lead)}
+              {lead.appointmentAt ? `Randevu: ${formatAppointment(lead.appointmentAt)}` : leadWhen(lead)}
               {lead.advisor ? ` · ${lead.advisor.fullName}` : ''}
             </Text>
           </View>

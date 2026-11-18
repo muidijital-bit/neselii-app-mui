@@ -77,6 +77,42 @@ export type Database = {
           },
         ]
       }
+      call_logs: {
+        Row: {
+          created_at: string
+          id: string
+          listing_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          listing_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          listing_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "call_logs_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "call_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       categories: {
         Row: {
           filter_fields: Json
@@ -233,6 +269,7 @@ export type Database = {
       leads: {
         Row: {
           advisor_id: string | null
+          appointment_at: string | null
           contact_phone: string
           created_at: string
           data: Json
@@ -241,6 +278,7 @@ export type Database = {
           note: string | null
           preferred_date: string | null
           preferred_slot: string
+          reminder_sent_at: string | null
           status: string
           topic: string
           updated_at: string
@@ -248,6 +286,7 @@ export type Database = {
         }
         Insert: {
           advisor_id?: string | null
+          appointment_at?: string | null
           contact_phone: string
           created_at?: string
           data?: Json
@@ -256,6 +295,7 @@ export type Database = {
           note?: string | null
           preferred_date?: string | null
           preferred_slot?: string
+          reminder_sent_at?: string | null
           status?: string
           topic: string
           updated_at?: string
@@ -263,6 +303,7 @@ export type Database = {
         }
         Update: {
           advisor_id?: string | null
+          appointment_at?: string | null
           contact_phone?: string
           created_at?: string
           data?: Json
@@ -271,6 +312,7 @@ export type Database = {
           note?: string | null
           preferred_date?: string | null
           preferred_slot?: string
+          reminder_sent_at?: string | null
           status?: string
           topic?: string
           updated_at?: string
@@ -776,6 +818,11 @@ export type Database = {
         Args: { p_conversation_id: string }
         Returns: undefined
       }
+      register_push_token: {
+        Args: { p_token: string }
+        Returns: undefined
+      }
+      unregister_push_token: { Args: never; Returns: undefined }
       set_listing_specs: {
         Args: { p_listing_id: string; p_specs: Json }
         Returns: undefined

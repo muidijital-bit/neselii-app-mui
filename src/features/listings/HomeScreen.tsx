@@ -23,7 +23,7 @@ import { Text } from '@/ui/Text';
 import { Colors, Radius, Spacing } from '@/ui/theme';
 import { usePullRefresh } from '@/ui/usePullRefresh';
 
-import { callCompany } from './companyPhone';
+import { useCompanyCall } from '@/features/calls/useCompanyCall';
 import { BUDGET_HREF } from '@/features/finance/routes';
 import { SectorHomeCard } from '@/features/sector';
 import { FINDER_HREF } from '@/features/sector/routes';
@@ -54,6 +54,7 @@ const FEATURED_FALLBACK = 8;
  */
 export function HomeScreen() {
   const router = useRouter();
+  const companyCall = useCompanyCall();
   const tabBarSpace = useTabBarSpace();
   const { session } = useSession();
   const [heroHeight, setHeroHeight] = useState(0);
@@ -202,7 +203,7 @@ export function HomeScreen() {
           )}
         </Animated.View>
 
-        <HelpCard onCall={() => callCompany((message) => Alert.alert('Hemen Ara', message))} />
+        <HelpCard onCall={() => companyCall(null, (message) => Alert.alert('Hemen Ara', message))} />
       </ScrollView>
     </View>
   );

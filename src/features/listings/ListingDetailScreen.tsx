@@ -5,6 +5,7 @@ import Animated, { type AnimatedStyle } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppError, userMessage, type ListingDetail } from '@/domain';
+import { useCompanyCall } from '@/features/calls/useCompanyCall';
 import { CompareBar, MAX_COMPARE, useCompare } from '@/features/compare';
 import { FinanceCalculatorCard } from '@/features/finance';
 import { ListingInsightsSections } from '@/features/insights';
@@ -21,7 +22,6 @@ import { Text } from '@/ui/Text';
 import { Badge } from '@/ui/Ui';
 import { Colors, Radius, Spacing } from '@/ui/theme';
 
-import { callCompany } from './companyPhone';
 import { DetailStateView } from './DetailStateView';
 import { specRows, toListingView, type SpecRow } from './presentation';
 import { listingContactHref, listingMediaHref } from './routes';
@@ -146,6 +146,7 @@ function DetailContent({ detail, onBack }: { detail: ListingDetail; onBack: () =
   const isFavorite = favorites.isFavorite(detail.id);
   const heart = usePop();
   const compare = useCompare();
+  const companyCall = useCompanyCall();
   const inCompare = compare.has(detail.id);
   // Favori hatası (geri alma sonrası) eylem uyarısının yerine görünür; yeni eylem ikisini de temizler.
   const shownNotice = favorites.failure ?? notice;
@@ -354,7 +355,7 @@ function DetailContent({ detail, onBack }: { detail: ListingDetail; onBack: () =
             variant="outline"
             style={stackActions ? undefined : styles.action}
             disabled={sold}
-            onPress={() => callCompany(setNotice)}
+            onPress={() => companyCall(detail.id, setNotice)}
             testID="listing-call"
           />
           <Button

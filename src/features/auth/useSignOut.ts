@@ -15,7 +15,7 @@ import { useAuthSubmit } from './useAuthSubmit';
  * dokunulmaz.
  */
 export function useSignOut() {
-  const { auth } = useServices();
+  const { auth, notifications } = useServices();
   const { setSession } = useSession();
   const queryClient = useQueryClient();
   const { submitting, failure, submit } = useAuthSubmit();
@@ -23,14 +23,18 @@ export function useSignOut() {
   const signOut = useCallback(
     () =>
       submit(
-        () => auth.signOut(),
+        async () => {
+          // Madde 6: bu cihaz çıkıştan sonra hesabın push bildirimlerini almasın (hata çıkışı engellemez).
+          await notifications.unregisterPushToken().catch(() => undefined);
+          await auth.signOut();
+        },
         () => {
           void queryClient.cancelQueries(); // iptal eşzamanlı başlar; geç gelen yanıt önbelleğe yazılmaz
           setSession(null);
           queryClient.clear();
         },
       ),
-    [auth, queryClient, setSession, submit],
+    [auth, notifications, queryClient, setSession, submit],
   );
 
   return { signOut, signingOut: submitting, failure };

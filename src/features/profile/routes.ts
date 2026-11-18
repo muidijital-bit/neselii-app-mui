@@ -14,6 +14,8 @@ export const PROFILE_TARGETS = {
   leads: { href: '/leads', title: 'Taleplerim' },
   advisors: { href: '/advisors', title: 'Danışmanlar' },
   financeSettings: { href: '/finance-settings', title: 'Finansman Ayarları' },
+  callLogs: { href: '/call-logs', title: 'Arama Kayıtları' },
+  appointments: { href: '/appointments', title: 'Randevular' },
   notificationPreferences: { href: '/notification-preferences', title: 'Bildirim Tercihleri' },
   privacy: { href: '/privacy', title: 'Gizlilik ve Güvenlik' },
   deleteAccount: { href: '/delete-account', title: 'Hesabımı Sil' },

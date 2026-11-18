@@ -22,7 +22,7 @@ export function LeadCallbackCard({ listingId }: { listingId: string }) {
           <Text variant="subheading" accessibilityRole="header">
             Sizi arayalım
           </Text>
-          <Text variant="small">Bilgi, finansman veya görüntülü inceleme için danışmanımız size uygun saatte dönsün.</Text>
+          <Text variant="small">Bilgi, finansman, görüntülü veya yerinde inceleme ve ekspertiz randevusu için danışmanımız size uygun saatte dönsün.</Text>
         </View>
       </View>
       <Button title="Beni Arayın" icon="phone-incoming" variant="outline" onPress={() => router.push(leadRequestHref(listingId))} testID="listing-callback" />

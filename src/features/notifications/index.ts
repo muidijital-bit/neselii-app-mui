@@ -7,3 +7,4 @@ export { announcementHref, NOTIFICATION_LINK_PATH, NOTIFICATION_UNAVAILABLE_HREF
 export { resolveNotificationTarget, targetFromLinkParams, type TargetResolution } from './targets';
 export { notificationKeys, useMarkNotificationsRead, useNotificationUnreadCountQuery, useNotificationsQuery, useRemoveNotifications } from './useNotificationsQueries';
 export { PendingTargetConsumer, useOpenNotificationTarget } from './useOpenNotificationTarget';
+export { PushRegistration } from './PushRegistration';

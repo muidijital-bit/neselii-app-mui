@@ -7,14 +7,15 @@ import type { AdvisorId, LeadId, ListingId, UserId } from './ids';
  * danışman atar ("Danışmanınız sizi arayacaktır"); yönetici durumu ve danışmanı değiştirir. Finansman ve görüntülü inceleme ayrı modül
  * değil, aynı formun konu seçenekleridir.
  */
-export type LeadTopic = 'info' | 'financing' | 'video_call';
+/** `inspection` / `expertise`: yerinde inceleme ve ekspertiz randevusu (madde 31, 15). */
+export type LeadTopic = 'info' | 'financing' | 'video_call' | 'inspection' | 'expertise';
 
 export type LeadStatus = 'new' | 'in_progress' | 'completed' | 'cancelled';
 
 /** Aranmak için uygun saat aralığı. */
 export type LeadTimeSlot = 'morning' | 'noon' | 'afternoon' | 'any';
 
-export const LEAD_TOPICS: readonly LeadTopic[] = ['info', 'financing', 'video_call'];
+export const LEAD_TOPICS: readonly LeadTopic[] = ['info', 'financing', 'video_call', 'inspection', 'expertise'];
 export const LEAD_STATUSES: readonly LeadStatus[] = ['new', 'in_progress', 'completed', 'cancelled'];
 export const LEAD_TIME_SLOTS: readonly LeadTimeSlot[] = ['any', 'morning', 'noon', 'afternoon'];
 
@@ -22,6 +23,8 @@ export const LEAD_TOPIC_LABELS: Record<LeadTopic, string> = {
   info: 'Bilgi almak istiyorum',
   financing: 'Finansman / kredi',
   video_call: 'Görüntülü inceleme',
+  inspection: 'Yerinde inceleme randevusu',
+  expertise: 'Ekspertiz randevusu',
 };
 
 /** Liste ve bildirimlerde kısa konu adı. */
@@ -29,6 +32,8 @@ export const LEAD_TOPIC_SHORT: Record<LeadTopic, string> = {
   info: 'Bilgi',
   financing: 'Finansman',
   video_call: 'Görüntülü inceleme',
+  inspection: 'Yerinde inceleme',
+  expertise: 'Ekspertiz',
 };
 
 export const LEAD_STATUS_LABELS: Record<LeadStatus, string> = {
@@ -74,6 +79,8 @@ export type Lead = {
   /** Hesaplayıcıdan gelen ödeme planı; yoksa `null`. */
   readonly plan: FinancePlan | null;
   readonly advisor: Advisor | null;
+  /** Yöneticinin atadığı randevu (madde 31); yoksa `null`. */
+  readonly appointmentAt: IsoDateTime | null;
   readonly listing: LeadListing | null;
   /** Talebi bırakan müşteri (yönetici görünümü için; müşteri kendi talebinde de kendini görür). */
   readonly customer: { readonly id: UserId; readonly fullName: string };

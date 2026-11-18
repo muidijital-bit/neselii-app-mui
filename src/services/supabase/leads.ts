@@ -20,7 +20,7 @@ import { call, offsetOf, pageRange, requireUserId, tlToKurus, toIso, toPage, unw
 
 type Row = Pick<
   Tables<'leads'>,
-  'id' | 'user_id' | 'topic' | 'status' | 'preferred_date' | 'preferred_slot' | 'contact_phone' | 'note' | 'data' | 'created_at' | 'updated_at'
+  'id' | 'user_id' | 'topic' | 'status' | 'preferred_date' | 'preferred_slot' | 'contact_phone' | 'note' | 'data' | 'appointment_at' | 'created_at' | 'updated_at'
 > & {
   advisor: { id: string; full_name: string; phone: string | null; active: boolean } | null;
   listing: { id: string; title: string; listing_no: number; price: number; cover_url: string | null } | null;
@@ -28,7 +28,7 @@ type Row = Pick<
 };
 
 const COLUMNS =
-  'id, user_id, topic, status, preferred_date, preferred_slot, contact_phone, note, data, created_at, updated_at, ' +
+  'id, user_id, topic, status, preferred_date, preferred_slot, contact_phone, note, data, appointment_at, created_at, updated_at, ' +
   'advisor:advisors!leads_advisor_id_fkey(id, full_name, phone, active), ' +
   'listing:listings!leads_listing_id_fkey(id, title, listing_no, price, cover_url), ' +
   'customer:profiles!leads_user_id_fkey(full_name)';
@@ -46,6 +46,7 @@ function toLead(row: Row): Lead {
     contactPhone: row.contact_phone,
     note: row.note,
     plan: planOf(row.data),
+    appointmentAt: row.appointment_at ? toIso(row.appointment_at) : null,
     advisor: row.advisor ? { id: asAdvisorId(row.advisor.id), fullName: row.advisor.full_name, phone: row.advisor.phone, active: row.advisor.active } : null,
     listing: row.listing
       ? {
@@ -112,13 +113,22 @@ export function createSupabaseLeads(sb: Supabase): LeadsService {
 
     update: (id: LeadId, patch: UpdateLeadInput) =>
       call(async () => {
-        const update: { status?: string; advisor_id?: string | null } = {};
+        const update: { status?: string; advisor_id?: string | null; appointment_at?: string | null } = {};
         if (patch.status !== undefined) update.status = patch.status;
         if (patch.advisorId !== undefined) update.advisor_id = patch.advisorId;
+        if (patch.appointmentAt !== undefined) update.appointment_at = patch.appointmentAt;
         if (Object.keys(update).length === 0) return fetchOne(id);
         const row = unwrapMaybe(await sb.from('leads').update(update).eq('id', id).select(COLUMNS).maybeSingle()) as unknown as Row | null;
         if (!row) throw appError.notFound(`lead ${id}`);
         return toLead(row);
+      }),
+
+    listAppointments: (from: string) =>
+      call(async () => {
+        const rows = unwrap(
+          await sb.from('leads').select(COLUMNS).not('appointment_at', 'is', null).gte('appointment_at', from).order('appointment_at').limit(200),
+        ) as unknown as Row[];
+        return rows.map(toLead);
       }),
 
     countNew: () =>

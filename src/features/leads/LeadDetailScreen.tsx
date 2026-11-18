@@ -2,7 +2,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState, type ReactNode } from 'react';
 import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
-import { AppError, LEAD_STATUSES, LEAD_TOPIC_LABELS, asAdvisorId, formatMoney, userMessage, type Lead } from '@/domain';
+import { AppError, LEAD_STATUSES, LEAD_TOPIC_LABELS, asAdvisorId, formatMoney, toLocalDateKey, upcomingDays, userMessage, type Lead } from '@/domain';
 import { useAdvisorsQuery } from '@/features/advisors/useAdvisors';
 import { FinancePlanSummary } from '@/features/finance/FinancePlanSummary';
 import { listingHref } from '@/features/listings/routes';
@@ -19,7 +19,7 @@ import { Text } from '@/ui/Text';
 import { Badge, Card, Chip, Divider } from '@/ui/Ui';
 import { Colors, Radius, Spacing } from '@/ui/theme';
 
-import { LEAD_STATUS_TONES, formatLeadDate, leadStatusLabel, leadWhen, telUrl } from './presentation';
+import { APPOINTMENT_TIMES, LEAD_STATUS_TONES, appointmentIso, dayLabel, formatAppointment, formatLeadDate, leadStatusLabel, leadWhen, telUrl } from './presentation';
 import { useLeadQuery, useUpdateLead } from './useLeadsQueries';
 
 /**
@@ -69,6 +69,14 @@ function LeadContent({ lead }: { lead: Lead }) {
           <Badge label={leadStatusLabel(lead.status)} tone={LEAD_STATUS_TONES[lead.status]} />
         </View>
         <Text variant="small">{formatLeadDate(lead.createdAt)}</Text>
+        {lead.appointmentAt && open ? (
+          <View style={styles.appointment} testID="lead-appointment">
+            <Icon name="calendar" size={18} color="success" />
+            <Text variant="smallSemibold" color="success" style={styles.flex}>
+              Randevu: {formatAppointment(lead.appointmentAt)}
+            </Text>
+          </View>
+        ) : null}
         {!isAdmin && open ? (
           <View style={styles.info} testID="lead-advisor-notice">
             <Icon name="phone-call" size={18} color={INFO} />
@@ -165,6 +173,7 @@ function LeadContent({ lead }: { lead: Lead }) {
             ) : null}
             <Text variant="caption">Durum veya danışman değiştiğinde müşteriye bildirim gider.</Text>
           </Card>
+          <AppointmentEditor lead={lead} />
           <Button title="Müşteriyi Ara" icon="phone" variant="navy" onPress={() => void Linking.openURL(telUrl(lead.contactPhone)).catch(() => undefined)} testID="lead-call-customer" />
           <OptionSheet
             visible={pickAdvisor}
@@ -179,6 +188,56 @@ function LeadContent({ lead }: { lead: Lead }) {
         </>
       ) : null}
     </ScrollView>
+  );
+}
+
+/** Madde 31: yönetici randevu tarihi ve saatini atar / değiştirir / kaldırır. Müşteriye bildirim gider; 24 saat kala hatırlatma otomatik. */
+function AppointmentEditor({ lead }: { lead: Lead }) {
+  const update = useUpdateLead(lead.id);
+  const current = lead.appointmentAt ? new Date(lead.appointmentAt) : null;
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const [day, setDay] = useState<string>(current ? toLocalDateKey(current) : (lead.preferredDate ?? toLocalDateKey(new Date())));
+  const [time, setTime] = useState<string>(
+    current ? `${pad(current.getHours())}:${pad(current.getMinutes())}` : lead.preferredSlot === 'noon' ? '12:00' : lead.preferredSlot === 'afternoon' ? '15:00' : '10:00',
+  );
+  const days = upcomingDays(14);
+  const iso = appointmentIso(day, time);
+  const unchanged = iso !== null && current !== null && new Date(iso).getTime() === current.getTime();
+
+  return (
+    <Card style={styles.statusCard}>
+      <Text variant="subheading">Randevu</Text>
+      <Text variant="small">
+        {lead.appointmentAt ? `Mevcut randevu: ${formatAppointment(lead.appointmentAt)}` : `Müşterinin tercihi: ${leadWhen(lead)}`}
+      </Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
+        {days.map((key) => (
+          <Chip key={key} label={dayLabel(key)} selected={day === key} onPress={() => setDay(key)} />
+        ))}
+      </ScrollView>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
+        {APPOINTMENT_TIMES.map((value) => (
+          <Chip key={value} label={value} selected={time === value} onPress={() => setTime(value)} />
+        ))}
+      </ScrollView>
+      <Button
+        title={lead.appointmentAt ? 'Randevuyu Güncelle' : 'Randevu Oluştur'}
+        icon="calendar"
+        disabled={iso === null || unchanged}
+        loading={update.isPending}
+        onPress={() => iso && update.mutate({ appointmentAt: iso })}
+        testID="lead-appointment-save"
+      />
+      {lead.appointmentAt ? (
+        <Button title="Randevuyu Kaldır" variant="outline" disabled={update.isPending} onPress={() => update.mutate({ appointmentAt: null })} testID="lead-appointment-clear" />
+      ) : null}
+      {update.isError ? (
+        <Text variant="small" color="danger" accessibilityRole="alert">
+          {userMessage(update.error)}
+        </Text>
+      ) : null}
+      <Text variant="caption">Müşteriye bildirim gider; randevudan 24 saat önce müşteriye ve yöneticilere hatırlatma gönderilir.</Text>
+    </Card>
   );
 }
 
@@ -236,6 +295,17 @@ const styles = StyleSheet.create({
   value: { flexShrink: 1, textAlign: 'right' },
   noteBox: { padding: Spacing.three, gap: Spacing.one },
   statusCard: { padding: Spacing.three, gap: Spacing.three },
+  chipRow: { gap: Spacing.two, paddingRight: Spacing.three },
+  appointment: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    backgroundColor: Colors.successSoft,
+    borderRadius: Radius.md,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
+    marginTop: Spacing.one,
+  },
   planCard: { padding: Spacing.three, gap: Spacing.two },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
 });

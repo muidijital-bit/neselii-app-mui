@@ -1,0 +1,365 @@
+# MVP Test Rehberi
+
+Bu rehber, `docs/MVP_DEGISIKLIKLER.md` dosyasındaki her maddenin uygulamada **müşteri** ve **yönetici** tarafından nasıl test edileceğini adım adım anlatır. Madde numaraları müşterinin modül seçim formundaki numaralardır.
+
+Her test adımı bir kutucuktur (`- [ ]`); test ederken işaretleyebilirsiniz. **Beklenen** satırı, adım doğru çalışıyorsa ne görmeniz gerektiğini söyler.
+
+---
+
+## 0. Hazırlık
+
+### Hesaplar
+
+| Rol | E-posta | Şifre |
+| --- | --- | --- |
+| Müşteri | `demo.musteri@neseli.test` | `Neseli2026` |
+| Yönetici | `demo.yonetici@neseli.test` | `Neseli2026` |
+
+- Yönetici girişinde ekran başlıklarının sağında lacivert **"Yönetici"** rozeti görünür. Rozet yoksa müşteri hesabıyla girmişsinizdir.
+- Yönetici yetkisi uygulamadan verilemez, yalnızca veritabanından verilir. Yeni bir hesabı yönetici yapmak gerekirse geliştiriciye iletin.
+
+### Hangi uygulama sürümü?
+
+- **TestFlight 1.0.0 (2)** yalnızca Adım 1'i (Talepler) içerir. Bu rehberin tamamını test etmek için yeni bir sürüm gerekir:
+  - **Expo Go önizlemesi** (en hızlısı): geliştirici yeni önizlemeyi yayımlar (`npm run preview:expo-go`). Test eden kişi Expo Go'da, `neseli-otomotiv` organizasyonuna davet edilmiş Expo hesabıyla giriş yapar.
+  - **Yeni TestFlight build'i** (build 3 ve sonrası).
+- Veritabanı tarafındaki tüm değişiklikler zaten canlıdadır. Yeni sürümü açan herkes aynı verileri görür.
+
+### Önerilen düzen
+
+- **İki telefon** (biri müşteri, biri yönetici) en kolayıdır: bir tarafta yapılan işlemin diğer tarafa bildirim olarak düştüğünü anında görürsünüz.
+- Tek telefonla test ediyorsanız: Profil → **Çıkış Yap** → diğer hesapla giriş yapın.
+- Bildirimleri görmek için alt menüdeki **Bildirimler** sekmesini kullanın. Telefona gelen (push) bildirimler için bkz. Madde 6.
+
+### Test verisini temizleme
+
+- Test talepleri yönetici tarafında **"İptal edildi"** durumuna alınabilir. Uygulamada talep silme yok.
+- Test için girilen ilan bilgileri (güven puanı, teknik bilgiler) yönetici ekranından boşaltılıp kaydedilerek kaldırılır.
+
+---
+
+## Adım 1: Talepler
+
+### Madde 28: Beni arayın · Madde 18: Finansman talebi · Madde 14: Görüntülü inceleme
+
+**Müşteri**
+- [ ] Ana sayfadan satılmamış bir ilan açın. Fiyatın altında **"Sizi arayalım"** bölümünü ve **Beni Arayın** butonunu bulun.
+  - **Beklenen:** Satılmış ilanda bu bölüm görünmez.
+- [ ] **Beni Arayın** → formun üstünde ilanın fotoğrafı, başlığı ve fiyatı görünür.
+- [ ] Konu seçeneklerini kontrol edin: *Bilgi almak istiyorum, Finansman / kredi, Görüntülü inceleme, Yerinde inceleme randevusu, Ekspertiz randevusu*.
+- [ ] Bir gün (Bugün, Yarın, …) ve saat aralığı seçin.
+- [ ] Telefon alanını kontrol edin.
+  - **Beklenen:** Profilde telefon kayıtlıysa alan dolu gelir.
+- [ ] Telefonu silip **Talebi Gönder**'e basın.
+  - **Beklenen:** "Geçerli bir telefon numarası girin" uyarısı.
+- [ ] Geçerli telefonla gönderin.
+  - **Beklenen:** "Talebiniz alındı · **Danışmanınız *Ad Soyad* sizi arayacaktır.**" Altında arama zamanı ve telefon görünür.
+- [ ] **Talebimi Gör** → talep detayı açılır: konu, "Yeni" durumu, danışman adı, "Danışmanınız … sizi arayacaktır" notu.
+- [ ] Profil → **Taleplerim** → talep listede görünür: konu, ilan, arama zamanı, danışman.
+
+**Yönetici**
+- [ ] **Bildirimler** sekmesine bakın.
+  - **Beklenen:** "Yeni talep: *Müşteri adı*" (konu · ilan). Dokununca talep detayı açılır.
+- [ ] Profil → **Talepler** satırını kontrol edin.
+  - **Beklenen:** Yanında yeni talep sayısı var.
+- [ ] Talepler listesinde üstteki süzgeçleri deneyin (Tümü / Yeni / Görüşülüyor / Tamamlandı / İptal edildi).
+  - **Beklenen:** Liste varsayılan olarak "Yeni" açılır.
+- [ ] Talep detayına girin: müşteri adı, telefon, arama zamanı, danışman, not.
+- [ ] **Müşteriyi Ara** → telefon uygulaması müşterinin numarasıyla açılır.
+- [ ] **Durum** bölümünde **Görüşülüyor**'a basın.
+
+**Müşteri (kontrol)**
+- [ ] Bildirimler'de **"Talebiniz güncellendi · Bilgi talebi · Görüşülüyor"** görünür; dokununca talep açılır.
+
+### Madde 30: Danışman atama
+
+**Yönetici**
+- [ ] Talep detayında **Danışman** satırına dokunun → listeden başka bir danışman seçin.
+
+**Müşteri (kontrol)**
+- [ ] Bildirim gelir: **"Danışmanınız: *Yeni ad*"**.
+- [ ] Talep detayında yeni danışman adı görünür.
+
+---
+
+## Danışman yönetimi (Madde 30 devamı)
+
+**Yönetici**
+- [ ] Profil → **Danışmanlar** → danışmanlar listelenir. Üstte aktif danışman sayısı yazar.
+- [ ] **Danışman Ekle** → ad soyad ve telefon girin → **Kaydet**.
+  - **Beklenen:** Yeni danışman listede görünür.
+- [ ] Ad alanını boş bırakıp kaydetmeyi deneyin.
+  - **Beklenen:** "Danışmanın adını girin" uyarısı.
+- [ ] Bir danışmana dokunun → adını değiştirin → **Aktif** anahtarını kapatın → Kaydet.
+  - **Beklenen:** Listede gri avatar ve **"Pasif"** etiketi.
+- [ ] Pasif danışmanın yeni talep almadığını doğrulayın.
+  - **Beklenen:** Müşteri tarafında birkaç yeni talep açın; hiçbiri pasif danışmana atanmaz.
+- [ ] Açık talebi olan bir danışmanı silin: düzenleme ekranında **Danışmanı Sil** → onay penceresinde **Sil**.
+  - **Beklenen:** Danışman listeden kalkar; açık talepleri başka bir aktif danışmana geçer.
+
+**Müşteri (kontrol)**
+- [ ] Silinen danışmanın açık talebi olan müşteriye **"Danışmanınız: *Yeni ad*"** bildirimi gelir.
+
+---
+
+## Adım 2: Finansman
+
+### Madde 17: Aylık ödeme hesaplayıcı
+
+**Yönetici (önce ayarlar)**
+- [ ] Profil → **Finansman Ayarları**. Aylık faiz, en düşük peşinat oranı ve vadeleri görün.
+- [ ] Faizi değiştirin (ör. `3,10`) → alttaki **"Örnek: 1.000.000 TL araç"** planı anında değişir → **Kaydet**.
+  - **Beklenen:** "Ayarlar kaydedildi" mesajı.
+- [ ] Tüm vadelerin seçimini kaldırın.
+  - **Beklenen:** "En az bir vade seçin" uyarısı; Kaydet pasif.
+
+**Müşteri**
+- [ ] Bir ilan açın → **"Aylık ödeme hesapla"** bölümü.
+- [ ] Peşinat oranını (%30, %40, …) ve vadeyi değiştirin.
+  - **Beklenen:** Aylık taksit, peşinat, kredi tutarı, vade ve toplam ödeme anında değişir.
+- [ ] Bölümün açıklamasını kontrol edin.
+  - **Beklenen:** Yöneticinin girdiği faiz oranı yazar (ör. "aylık %3,10 faizle").
+
+### Madde 18: Hesaplayıcıdan finansman talebi
+
+**Müşteri**
+- [ ] Hesaplayıcıda bir plan seçin → **"Bu plan için beni arayın"**.
+  - **Beklenen:** Talep formu, konu **Finansman / kredi** seçili olarak açılır; "Ödeme planınız" kutusunda seçilen plan görünür.
+- [ ] Konuyu "Bilgi"ye çevirin.
+  - **Beklenen:** Plan kutusu kaybolur.
+- [ ] Konuyu tekrar "Finansman"a alıp gönderin.
+
+**Yönetici**
+- [ ] Talep detayında **"Ödeme planı"** kartını kontrol edin.
+  - **Beklenen:** Peşinat, kredi, vade, aylık taksit, toplam ödeme görünür.
+
+### Madde 23: Aylık bütçeye göre araç bulma
+
+**Müşteri**
+- [ ] Ana sayfada kısayolların ilki **"Bütçeme göre"**.
+- [ ] Aylık tutar (ör. `100.000`) ve peşinat (ör. `750.000`) girin; vadeyi değiştirin.
+  - **Beklenen:** "Alabileceğiniz en yüksek araç fiyatı" hesaplanır.
+- [ ] Peşinatı çok düşük girin (ör. `100.000`).
+  - **Beklenen:** En yüksek fiyat, en düşük peşinat oranına göre sınırlanır. Örneğin en düşük oran %30 ise 100.000 TL peşinatla en fazla ~333.333 TL çıkar.
+- [ ] **"N ilanı göster"** → sonuç ekranı.
+  - **Beklenen:** Fiyat çipi "En fazla … TL"; listedeki ilanlar bu fiyatın altında.
+
+---
+
+## Adım 3: Araç bilgileri
+
+### Madde 11, 12, 13: Yönetici girişi
+
+**Yönetici**
+- [ ] Bir ilan açın → aşağıda **"Yönetici: araç bilgileri"** bölümü → **Bilgileri Gir**.
+- [ ] **Güven kontrolleri**: birkaç anahtarı açın.
+  - **Beklenen:** Sağ üstteki **"Puan: N/100"** anında değişir. Örneğin 6 maddeden 5'i açıksa 83.
+- [ ] **Araç geçmişi**: "Uzun yol" çipini seçin. Sahip sayısı `1`, son bakım km `480000` girin. Tarihi önce `31.02.2026` girin.
+  - **Beklenen:** Kaydette "GG.AA.YYYY biçiminde girin" uyarısı.
+- [ ] Tarihi geçerli bir değerle düzeltin, not yazın.
+- [ ] **Uzman görüşü**: danışman seçin.
+- [ ] Güçlü yönlere her satıra bir madde yazın (2–3 satır); aynısını dikkat edilecekler için yapın.
+- [ ] **Kaydet**.
+  - **Beklenen:** İlan detayına dönülür; yönetici bölümünde "… müşteriye bu ilanda gösteriliyor".
+
+### Madde 12: Neşeli güven puanı · Madde 11: Araç geçmişi · Madde 13: Uzman görüşü
+
+**Müşteri**
+- [ ] Aynı ilanı açın. **Özellikler**'in altında **"Neşeli Güven Puanı"** bölümü olmalı.
+  - **Beklenen:** Puan, değerlendirme (Çok iyi / İyi / Sınırlı bilgi), ilerleme çubuğu. Karşılanan maddeler yeşil tikli, karşılanmayanlar gri.
+- [ ] **"Araç Geçmişi"** bölümünü kontrol edin.
+  - **Beklenen:** Önceki kullanım, sahip sayısı, son bakım (tarih · km), not.
+- [ ] **"Uzman Görüşü"** bölümünü kontrol edin.
+  - **Beklenen:** Danışman adı ve baş harfleri, yeşil "Güçlü yönler", turuncu "Dikkat edilecekler".
+- [ ] Bilgi girilmemiş başka bir ilan açın.
+  - **Beklenen:** Bu üç bölüm hiç görünmez.
+
+---
+
+## Adım 4: Arama ve karar destek
+
+### Madde 3: Ticari araca özel filtreler
+
+**Yönetici (önce veri)**
+- [ ] Bir **çekici** ilanında **Bilgileri Düzenle** → **Teknik bilgiler**: Tonaj `40`, Motor gücü `480`, Kabin **Yüksek tavan**, Şasi ve Üstyapı → Kaydet.
+- [ ] İkinci bir çekici ilanına farklı değerler girin (ör. `26` ton, `420` HP, **Normal**).
+- [ ] İlan detayında **Özellikler** tablosunu kontrol edin.
+  - **Beklenen:** Tonaj, Motor Gücü, Kabin, Şasi, Üstyapı satırları görünür.
+
+**Müşteri**
+- [ ] Ana sayfa → filtre düğmesi → kategori **Çekici**.
+  - **Beklenen:** **Tonaj**, **Motor gücü**, **Kabin tipi** bölümleri görünür.
+- [ ] Tonaj en az `30` girin.
+  - **Beklenen:** Alttaki "N ilanı göster" sayısı yalnızca 40 tonluk ilanı sayar.
+- [ ] Kabin tipi **Yüksek tavan** seçip sonuçları açın.
+  - **Beklenen:** Sonuç ekranında "En az 30 ton", "Yüksek tavan kabin" çipleri; çipe dokununca o filtre kalkar.
+- [ ] Tonaj en az `50`, en fazla `30` girin.
+  - **Beklenen:** "En az değer en çok değerden büyük olamaz".
+- [ ] Bu aramayı zil simgesiyle kaydedin → Profil → Kayıtlı Aramalarım'dan açın.
+  - **Beklenen:** Aynı filtreler gelir.
+- [ ] Kategori **Dorse** seçin.
+  - **Beklenen:** Tonaj / motor / kabin bölümleri gizlenir.
+- **Not:** sahibinden'den aktarılan ilanlarda bu bilgiler yok. Filtre, yalnızca yöneticinin bilgi girdiği ilanlarla eşleşir.
+
+### Madde 4: Araç karşılaştırma
+
+**Müşteri**
+- [ ] Bir ilan açın → üstte paylaş ve kalbin solundaki **karşılaştır** düğmesine (iki yönlü simge) basın.
+  - **Beklenen:** Altta "Karşılaştırmaya eklendi (1/3)"; düğme lacivert dolar; **"Karşılaştır (1/3)"** hap düğmesi çıkar.
+- [ ] İki ilan daha ekleyin, sonra dördüncüyü deneyin.
+  - **Beklenen:** "En fazla 3 ilan karşılaştırabilirsiniz…"
+- [ ] Bir arama sonuç ekranına gidin.
+  - **Beklenen:** Altta "Karşılaştır (3/3)".
+- [ ] **Karşılaştır** ekranını açın.
+  - **Beklenen:** Üç ilanın fotoğrafı ve başlığı yan yana. Satırlar: fiyat, tahmini aylık (en düşük peşinat ve en uzun vadeyle), yıl, km, kategori, marka/model, teknik bilgiler, güven puanı, finansman, konum. **Farklı olan satırlar mavi zeminli ve kalın.**
+- [ ] Bir ilanın köşesindeki **×** ile çıkarın; **Temizle** ile listeyi boşaltın.
+  - **Beklenen:** "Karşılaştırma listeniz boş".
+- [ ] Uygulamayı kapatıp açın.
+  - **Beklenen:** Liste korunur (cihazda tutulur).
+
+### Madde 1: Sektöre göre başlangıç
+
+**Müşteri**
+- [ ] Tanıtımdaki sektör sorusunu görmek için: Profil → **"Tanıtımı yeniden göster (test)"**. Bu satır yalnızca Expo Go / geliştirme sürümünde görünür.
+  - **Beklenen:** 2. adımda **"Aracı hangi iş için kullanacaksınız?"** ve 6 sektör çipi.
+- [ ] Bir sektör seçin (ör. *İnşaat / şantiye*) → Devam → tanıtımı bitirin.
+- [ ] Ana sayfada kısayolların altındaki **"Size uygun araçlar · İnşaat / şantiye"** kartını kontrol edin.
+  - **Beklenen:** Damperli kamyon, Damper dorse, Çekici çipleri; dokununca ilgili sonuçlar açılır.
+- [ ] **Değiştir** → başka sektör seçin.
+  - **Beklenen:** Kart yeni sektörün araç türlerini gösterir.
+- [ ] Tanıtımda "Şimdi Değil" denmişse kartı kontrol edin.
+  - **Beklenen:** Kart soruyu ve sektör çiplerini gösterir.
+
+### Madde 2: Akıllı araç bulucu
+
+**Müşteri**
+- [ ] Bulucuyu açın: ana sayfada 2. kısayol **"Araç bulucu"** ya da sektör kartındaki **"Araç Bulucu: 4 soruda…"**.
+- [ ] **1/4 Kullanım:** sektör seçin.
+  - **Beklenen:** Ana sayfada seçili sektör ön seçili gelir.
+- [ ] **2/4 Yük:** seçmeden **Devam**'a basmayı deneyin.
+  - **Beklenen:** Devam pasif. Ardından Orta yük seçin.
+- [ ] **3/4 Bütçe:** **Kredili / taksitli** → aylık tutar ve peşinat girin.
+  - **Beklenen:** "En yüksek araç fiyatı" hesaplanır.
+- [ ] **4/4 Özet:** kullanım, yük ve bütçe satırlarını kontrol edin → **"N ilanı göster"**.
+  - **Beklenen:** Sonuçta kategori ve alt tür çipleri (ör. Kamyon · Damperli) ve fiyat sınırı.
+- [ ] Bütçeyi çok düşük girin (ör. peşin `50.000`).
+  - **Beklenen:** Özette "Bu bütçede uygun ilan yok" ve **"Bütçesiz göster"** düğmesi.
+- [ ] **Geri** ile adımlar arasında dönün.
+  - **Beklenen:** Cevaplar korunur.
+
+### Madde 24: Toplam sahip olma maliyeti
+
+**Yönetici (önce ayarlar)**
+- [ ] Profil → **Finansman Ayarları** → **"Maliyet varsayılanları"**.
+- [ ] Motorin fiyatı, kategoriye göre tüketim, bakım ve lastik (TL/km), sigorta ve vergi (TL/yıl) değerlerini kontrol edip güncelleyin → Kaydet.
+
+**Müşteri**
+- [ ] Bir kamyon/çekici ilanı açın → "Aylık ödeme hesapla" bölümünde **"Toplam sahip olma maliyetini hesapla"**.
+- [ ] Tüketim alanını kontrol edin.
+  - **Beklenen:** İlanın kategorisine göre dolu gelir.
+- [ ] Yıllık km çiplerini (50.000 – 200.000) deneyin.
+  - **Beklenen:** Aylık ve yıllık maliyet ile yakıt, bakım, lastik kalemleri değişir.
+- [ ] Sonucu elle kontrol edin: 100.000 km, 32 L/100 km, motorin 55 TL.
+  - **Beklenen:** Yakıt yıllık **1.760.000 TL**.
+- [ ] **Kredili**'ye geçin.
+  - **Beklenen:** "Kredi taksitleri (ilk yıl)" satırı eklenir; altta peşinat ve vade açıklaması.
+
+---
+
+## Adım 5: İletişim, randevu ve bildirimler
+
+### Madde 27: Sabit telefon araması kaydı
+
+**Müşteri**
+- [ ] Bir ilan detayında **Hemen Ara**'ya basın.
+  - **Beklenen:** Telefon uygulaması açılır. Aramayı yapmadan geri dönebilirsiniz; kayıt dokunuşta düşer.
+- [ ] Ana sayfanın en altındaki "Aradığını bulamadın mı?" kartında **Hemen Ara**'ya basın.
+  - **Beklenen:** Bu dokunuş genel arama olarak kaydedilir.
+
+**Yönetici**
+- [ ] Aynı ilanı açın → "Yönetici: araç bilgileri" bölümünü kontrol edin.
+  - **Beklenen:** **"Hemen Ara: toplam N · son 30 gün M"**; sayı arttı.
+- [ ] Profil → **Arama Kayıtları** → üstteki sayıları kontrol edin.
+  - **Beklenen:** Bugün / Son 7 gün / Toplam.
+- [ ] Listeyi kontrol edin.
+  - **Beklenen:** Müşteri adı, ilan başlığı (ana sayfadan aramada "Genel arama"), tarih-saat.
+- [ ] İlan başlığına dokunun → ilan açılır.
+- [ ] Yeşil telefon düğmesine dokunun (müşterinin profilinde telefon varsa görünür) → müşteri aranır.
+
+### Madde 31: Randevu yönetimi (Madde 14, 15 dahil)
+
+**Müşteri**
+- [ ] Bir ilandan **Beni Arayın** → konu **Yerinde inceleme randevusu** → gün ve saat aralığı seçip gönderin.
+
+**Yönetici**
+- [ ] Talep detayında **Randevu** kartını kontrol edin.
+  - **Beklenen:** "Müşterinin tercihi: …"; gün ve saat çipleri müşterinin tercihine göre ön seçili.
+- [ ] Gün ve saat (ör. yarın 14:00) seçin → **Randevu Oluştur**.
+  - **Beklenen:** Durum otomatik **Görüşülüyor** olur; başlıkta yeşil "Randevu: Yarın, 14:00".
+- [ ] Profil → **Randevular** → randevu "Yarın" başlığı altında görünür (saat, müşteri, konu, ilan, danışman); dokununca talep açılır.
+- [ ] Randevuyu başka saate alın (**Randevuyu Güncelle**), sonra **Randevuyu Kaldır**'ı deneyin.
+
+**Müşteri (kontrol)**
+- [ ] Randevu oluşturulunca bildirim gelir: **"Randevunuz oluşturuldu · Yerinde inceleme · GG.AA.YYYY 14:00"**.
+- [ ] Randevu kaldırılınca bildirim gelir: "… randevunuz iptal edildi".
+- [ ] Taleplerim listesinde ve talep detayında **"Randevu: Yarın, 14:00"** görünür.
+
+**Hatırlatma**
+- [ ] Önümüzdeki 24 saat içinde bir randevu oluşturun (ör. bugün, 2 saat sonrası).
+  - **Beklenen:** En geç 15 dakika içinde müşteriye **"Randevu hatırlatması"**, yöneticilere **"Yaklaşan randevu: *Müşteri*"** bildirimi gelir. Aynı randevu için hatırlatma bir kez gider; randevu saati değiştirilirse yeniden gider.
+
+### Madde 6: Telefona bildirim (push) ve benzer araç
+
+**Telefona bildirim**
+
+Ön koşullar:
+- Bildirim izni verilmiş olmalı (tanıtımda "Bildirimlere İzin Ver" ya da telefon ayarları).
+- **iPhone / TestFlight:** APNs kurulumu yapılmadan telefona bildirim **gelmez** (bkz. "Bilinen sınırlar").
+- **Android / Expo Go:** Expo Go Android'de push'u desteklemez.
+
+Kurulum tamamlandıktan sonra:
+- [ ] Müşteri telefonunu kilitleyin. Yönetici, müşterinin bir talebinin durumunu değiştirsin.
+  - **Beklenen:** Kilit ekranına "Talebiniz güncellendi" düşer. Dokununca uygulama ilgili talebi açar.
+- [ ] Uygulama açıkken başka bir bildirim tetikleyin.
+  - **Beklenen:** Üstte banner çıkar; Bildirimler sekmesindeki sayı artar.
+- [ ] Müşteri hesabından **Çıkış Yap**. Yönetici yeni bir güncelleme yapsın.
+  - **Beklenen:** Bu telefona artık o hesabın bildirimi gelmez.
+- [ ] Aynı telefonda yönetici hesabıyla giriş yapın.
+  - **Beklenen:** Yönetici bildirimleri bu telefona gelir.
+
+**Benzer araç bildirimi**
+
+Ön koşullar:
+- Uygulamada yeni ilan ekleme ekranı yoktur. Bu bildirim, bir ilan **yayına girdiğinde** tetiklenir.
+- Test için ilanın durumu Supabase panelinden değiştirilir; bunu geliştirici ya da panel erişimi olan kişi yapar.
+- Durum değişikliği, o ilanı favorileyen kullanıcılara "İlan durumu değişti" bildirimi de gönderir.
+
+Adımlar:
+- [ ] **Müşteri:** Bildirim Tercihleri'nde **"Yeni ilanlar"** açık olmalı ("…ve favorilerinize benzer ilanlar").
+- [ ] **Müşteri:** Bir ilanı favorilere ekleyin (ör. Damperli kamyon, 2.000.000 TL).
+- [ ] **Panel:** Aynı kategori ve alt türde, fiyatı ±%15 içinde başka bir ilanın durumunu `unpublished` → `published` yapın.
+- [ ] **Müşteri:** Bildirimi kontrol edin.
+  - **Beklenen:** **"Beğendiğiniz araca benzer yeni ilan"** (ilan başlığı). Dokununca ilan açılır.
+- [ ] **Panel:** Aynı gün ikinci bir benzer ilanı yayına alın.
+  - **Beklenen:** Aynı kullanıcıya ikinci benzer araç bildirimi **gitmez** (günde en fazla bir).
+- [ ] **Müşteri:** "Yeni ilanlar" tercihini kapatıp tekrar deneyin.
+  - **Beklenen:** Bildirim gelmez.
+
+**Fiyat / durum bildirimi (telefona)**
+- [ ] Favorideki bir ilanın fiyatı panelden değiştirildiğinde bildirim gelir: "Fiyat güncellendi: *ilan*" (uygulama içinde eski → yeni fiyat; telefonda "Yeni fiyat: … TL").
+
+---
+
+## Bilinen sınırlar / dikkat edilecekler
+
+- **iOS'ta telefona bildirim:** Apple Developer hesabında APNs anahtarı (.p8) oluşturulup Expo'ya yüklenmeli, uygulama kimliğinde Push Notifications yeteneği açılmalı ve yeni TestFlight build'i alınmalı. O zamana kadar bildirimler yalnızca uygulama içinde (Bildirimler sekmesi) görünür.
+- **Teknik bilgiler (Madde 3):** sahibinden'den aktarılan 94 ilanda tonaj, motor gücü ve kabin bilgisi yok. Yönetici girdikçe filtreler çalışır.
+- **Varsayılan değerler tahminidir:**
+  - Faiz %2,99, en düşük peşinat %30.
+  - Motorin 55 TL; tüketim kamyon 28, çekici 32, ticari 11 L/100 km.
+  - Bakım 2,5 TL/km, lastik 1,2 TL/km.
+  - Sigorta 75.000 TL/yıl, vergi 25.000 TL/yıl.
+  - Firmanın gerçek değerleri Finansman Ayarları'ndan girilmeli.
+- **Danışmanlar** başlangıçta örnek isimlerdir (Ahmet Yılmaz, Mehmet Kaya, Ayşe Demir). Profil → Danışmanlar'dan gerçek ekiple değiştirilmeli.
+- **Karşılaştırma listesi ve sektör seçimi** cihazda tutulur: başka telefonda ya da uygulama silinip yüklenince sıfırlanır.
+- Hata bulursanız not alırken **madde numarasını**, **hesap türünü** (müşteri/yönetici), **adımı** ve mümkünse **ekran görüntüsünü** ekleyin.

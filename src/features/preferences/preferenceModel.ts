@@ -3,7 +3,7 @@ import type { PermissionState } from '@/permissions';
 
 /** Bildirim türü satırları (tasarım 12b `PREFS`): anahtar, başlık, alt metin. Sıra tasarımdaki gibidir. */
 export const TYPE_ROWS = [
-  { key: 'newListings', label: 'Yeni ilanlar', sub: 'Kayıtlı aramalarınızla eşleşen ilanlar' },
+  { key: 'newListings', label: 'Yeni ilanlar', sub: 'Kayıtlı aramalarınızla eşleşen ve favorilerinize benzer ilanlar' },
   { key: 'priceChanges', label: 'Fiyat değişiklikleri', sub: 'Favori ilanlarınızdaki fiyat güncellemeleri' },
   { key: 'statusChanges', label: 'Durum değişiklikleri', sub: 'Rezerve ve satıldı bilgisi' },
   { key: 'messageReplies', label: 'Mesaj cevapları', sub: 'Neşeli Otomotiv mesajınıza cevap verdiğinde' },

@@ -20,6 +20,7 @@ export const leadsKeys = {
   list: (userId: string | null, status: LeadStatus | null) => [...leadsKeys.all(userId), 'list', status] as const,
   detail: (userId: string | null, id: string) => [...leadsKeys.all(userId), 'detail', id] as const,
   newCount: (userId: string | null) => [...leadsKeys.all(userId), 'new-count'] as const,
+  appointments: (userId: string | null) => [...leadsKeys.all(userId), 'appointments'] as const,
 };
 
 /** Talep listesi (en yeni önce). Yönetici tüm talepleri (isteğe bağlı durum süzgeciyle), müşteri yalnız kendi taleplerini görür. */
@@ -52,6 +53,20 @@ export function useNewLeadsCount() {
   return useQuery({ queryKey: leadsKeys.newCount(userId), queryFn: () => leads.countNew(), enabled: enabled && isAdmin });
 }
 
+/** Yönetici: bugünden itibaren randevulu talepler (madde 31). */
+export function useAppointmentsQuery() {
+  const { leads } = useServices();
+  const { enabled, userId, isAdmin } = useQueryScope();
+  return useQuery({
+    queryKey: leadsKeys.appointments(userId),
+    queryFn: () => {
+      const now = new Date();
+      return leads.listAppointments(new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString());
+    },
+    enabled: enabled && isAdmin,
+  });
+}
+
 /** Yeni talep. Oturum eylem anında yakalanır; arada çıkış/hesap değişimi olduysa servis çağrılmaz. */
 export function useCreateLead() {
   const { leads } = useServices();
@@ -81,6 +96,7 @@ export function useUpdateLead(id: string) {
     onSuccess: (lead) => {
       queryClient.setQueryData(leadsKeys.detail(userId, lead.id), lead);
       void queryClient.invalidateQueries({ queryKey: [...leadsKeys.all(userId), 'list'] });
+      void queryClient.invalidateQueries({ queryKey: leadsKeys.appointments(userId) });
       void queryClient.invalidateQueries({ queryKey: leadsKeys.newCount(userId) });
     },
   });

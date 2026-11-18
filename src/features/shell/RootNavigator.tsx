@@ -1,7 +1,7 @@
 import { Stack } from 'expo-router';
 import type { ComponentProps } from 'react';
 
-import { PendingTargetConsumer } from '@/features/notifications';
+import { PendingTargetConsumer, PushRegistration } from '@/features/notifications';
 import { useOnboarding } from '@/features/onboarding';
 import { Colors } from '@/ui/theme';
 
@@ -73,6 +73,10 @@ export function RootNavigator() {
           <Stack.Screen name="compare" />
           {/* Madde 2: akıllı araç bulucu. */}
           <Stack.Screen name="finder" />
+          {/* Madde 27: yönetici arama kayıtları. */}
+          <Stack.Screen name="call-logs" />
+          {/* Madde 31: yönetici randevu takvimi. */}
+          <Stack.Screen name="appointments" />
           <Stack.Screen name="conversations/[conversationId]" />
           <Stack.Screen name="announcements/[announcementId]" />
           <Stack.Screen name="notification-unavailable" />
@@ -87,6 +91,8 @@ export function RootNavigator() {
         <Stack.Screen name="notification-target" />
       </Stack>
       <PendingTargetConsumer />
+      {/* Madde 6: push belirteci kaydı ve push'a dokununca hedefi açma. */}
+      <PushRegistration />
     </>
   );
 }

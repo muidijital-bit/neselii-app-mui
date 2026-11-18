@@ -280,7 +280,7 @@ Her maddenin müşteri ve yönetici tarafında nasıl test edileceği: **`docs/M
 - Araç ekranında **"Yenileme zamanı"** kartı: **Benzer araçlar** (aynı kategorideki ilanlar) ve **Takasa ver** (takas formu) kısayolları; listede "Yenileme zamanı" rozeti.
 - **Veritabanı:** `fleet_reminders` (aynı hatırlatmanın tekrarını önler), `notifications.fleet_vehicle_id`, yeni bildirim türü `fleet_reminder`, `fleet-reminders` zamanlanmış görevi (her gün 06:00 UTC).
 
-## Adım 12 — Süreç takibi, hesaplayıcılar ve paketler ("Gerekli değil" maddeleri) (2026-11-18)
+## Adım 12 — Süreç takibi, hesaplayıcılar ve paketler ("Gerekli değil" maddeleri) (2026-11-18) · TestFlight 1.0.0 (5) Adım 1–12'nin tamamını içerir
 
 ### Madde 22 — Finansman başvuru takibi
 - **Yönetici:** Finansman talebinin detayında **"Finansman başvurusu"** kartı: Başvuru alındı → Belgeler bekleniyor → Bankada → Onaylandı → Sonuçlandı (+ Olumsuz sonuçlandı); adıma dokunarak günceller.
@@ -304,4 +304,4 @@ Her maddenin müşteri ve yönetici tarafında nasıl test edileceği: **`docs/M
 ## Sıradaki adımlar
 - iOS push için APNs kurulumu (Apple hesabında anahtar gerekir) ve yeni TestFlight build'i.
 - Formdaki **"İlk aşama" ve "Sonraki"** maddelerinin tamamı uygulandı (kapora/online ödeme ve banka API'si gibi tartışılabilir alt parçalar hariç).
-- Formdaki maddelerin tamamı uygulandı (Madde 15 Adım 5'teki randevu yapısıyla karşılanıyor). Kalan: tartışılabilir alt parçalar (Madde 19 banka ön başvurusu/API, Madde 33 kapora-online ödeme, Madde 8 sahibinden entegrasyonu), iOS push için APNs kurulumu ve yeni TestFlight build'i.
+- Formdaki maddelerin tamamı uygulandı (Madde 15 Adım 5'teki randevu yapısıyla karşılanıyor). Kalan: tartışılabilir alt parçalar (Madde 19 banka ön başvurusu/API, Madde 33 kapora-online ödeme, Madde 8 sahibinden entegrasyonu), iOS push için APNs kurulumu.

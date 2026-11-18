@@ -60,6 +60,7 @@ export function RootNavigator() {
           <Stack.Screen name="listings/[listingId]/request" />
           <Stack.Screen name="listings/[listingId]/insights" />
           <Stack.Screen name="listings/[listingId]/cost" />
+          <Stack.Screen name="listings/[listingId]/profit" />
           {/* Talepler: müşteride "Taleplerim", yöneticide firma gelen kutusu. */}
           <Stack.Screen name="leads/index" />
           <Stack.Screen name="leads/[leadId]" />
@@ -92,6 +93,14 @@ export function RootNavigator() {
           {/* Madde 48–50: filo envanteri ve hatırlatmalar. */}
           <Stack.Screen name="fleet/index" />
           <Stack.Screen name="fleet/[vehicleId]" />
+          {/* Madde 34: yönetici satış süreci. */}
+          <Stack.Screen name="sales-pipeline" />
+          {/* Madde 42: lojistik maliyet simülatörü. */}
+          <Stack.Screen name="cost-simulator" />
+          {/* Madde 45: araç paketleri. */}
+          <Stack.Screen name="packages/index" />
+          <Stack.Screen name="packages/[packageId]/index" />
+          <Stack.Screen name="packages/[packageId]/edit" />
           <Stack.Screen name="leads/[leadId]/quote" />
           <Stack.Screen name="conversations/[conversationId]" />
           <Stack.Screen name="announcements/[announcementId]" />

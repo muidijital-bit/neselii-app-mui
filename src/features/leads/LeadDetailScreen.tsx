@@ -24,6 +24,7 @@ import { Badge, Card, Chip, Divider } from '@/ui/Ui';
 import { Colors, Radius, Spacing } from '@/ui/theme';
 
 import { APPOINTMENT_TIMES, LEAD_STATUS_TONES, appointmentIso, dayLabel, formatAppointment, formatLeadDate, leadStatusLabel, leadWhen, telUrl } from './presentation';
+import { FinanceStageCard, SalesStageCard } from './StageCards';
 import { useLeadQuery, useReservation, useUpdateLead } from './useLeadsQueries';
 
 /**
@@ -143,6 +144,10 @@ function LeadContent({ lead }: { lead: Lead }) {
 
       {/* Adım 7: takas / satış aracı, medya, ön değerlendirme ve takas farkı. */}
       {lead.topic === 'trade_in' || lead.topic === 'sell_vehicle' ? <TradeInLeadSection lead={lead} isAdmin={isAdmin} /> : null}
+
+      {/* Madde 22: finansman başvuru takibi; madde 34: satış süreci (yönetici). */}
+      {lead.topic === 'financing' || lead.financeStage ? <FinanceStageCard lead={lead} isAdmin={isAdmin} /> : null}
+      {isAdmin ? <SalesStageCard lead={lead} /> : null}
 
       {/* Madde 52, 32: talebe gönderilen belgeler; yönetici belge yükler ve PDF teklif oluşturur. */}
       <LeadDocumentsCard lead={lead} isAdmin={isAdmin} />

@@ -31,6 +31,7 @@ import type {
   GuideInput,
   FinancePlan,
   FinanceSettings,
+  FinanceStage,
   FleetVehicle,
   FleetVehicleInput,
   KurusRange,
@@ -56,12 +57,15 @@ import type {
   Page,
   PageInput,
   SavedSearch,
+  SalesStage,
   SavedSearchId,
   SectorId,
   Session,
   Unsubscribe,
   UserId,
   UserProfile,
+  VehiclePackage,
+  VehiclePackageInput,
   VideoSection,
 } from '@/domain';
 
@@ -259,6 +263,9 @@ export type UpdateLeadInput = {
   readonly appointmentAt?: string | null;
   /** Madde 39: randevu yeri; `null` kaldırır. */
   readonly appointmentLocation?: string | null;
+  /** Madde 22 / 34: süreç adımları; `null` kaldırır. */
+  readonly financeStage?: FinanceStage | null;
+  readonly salesStage?: SalesStage | null;
 };
 
 /**
@@ -277,6 +284,8 @@ export interface LeadsService {
   countNew(): Promise<number>;
   /** Yönetici: `from` zamanından sonraki randevulu talepler, yakından uzağa (en çok 200). */
   listAppointments(from: string): Promise<readonly Lead[]>;
+  /** Madde 34 (yönetici): satış adımı atanmış talepler (en çok 300). */
+  listSalesPipeline(): Promise<readonly Lead[]>;
   /** Madde 33 (yönetici): talebin ilanını `days` gün rezerve eder; bitiş zamanını döner. */
   approveReservation(id: LeadId, days: number): Promise<string>;
   /** Madde 33 (yönetici): rezervasyonu kaldırır, ilan yeniden yayına girer. */
@@ -398,6 +407,17 @@ export interface FleetService {
   remove(id: string): Promise<void>;
 }
 
+// --- Vehicle packages (madde 45) -----------------------------------------------------------------------------------
+
+/** Araç paketleri: herkes yayımlananları okur; yönetici taslakları görür, oluşturur, düzenler, siler. */
+export interface PackagesService {
+  list(input?: { readonly includeDrafts?: boolean }): Promise<readonly VehiclePackage[]>;
+  get(id: string): Promise<VehiclePackage>;
+  /** Paket ve ilanları kaydeder (ilan listesi tümüyle değiştirilir). Başlık kısa ya da ilan yoksa `validation`. */
+  save(id: string | null, input: VehiclePackageInput): Promise<VehiclePackage>;
+  remove(id: string): Promise<void>;
+}
+
 // --- Birleşik kap --------------------------------------------------------------------------------------------------
 
 export interface Services {
@@ -417,6 +437,7 @@ export interface Services {
   readonly companies: CompaniesService;
   readonly guides: GuidesService;
   readonly fleet: FleetService;
+  readonly packages: PackagesService;
 }
 
 export type ServiceName = keyof Services;

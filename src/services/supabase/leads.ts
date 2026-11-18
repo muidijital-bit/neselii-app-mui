@@ -8,7 +8,9 @@ import {
   isLeadTimeSlot,
   isLeadTopic,
   isPlausiblePhone,
+  isFinanceStage,
   isRevenueRange,
+  isSalesStage,
   parseFinancePlan,
   type CorporateInfo,
   type Lead,
@@ -23,7 +25,7 @@ import { call, ensure, offsetOf, pageRange, requireUserId, tlToKurus, toIso, toP
 
 type Row = Pick<
   Tables<'leads'>,
-  'id' | 'user_id' | 'topic' | 'status' | 'preferred_date' | 'preferred_slot' | 'contact_phone' | 'note' | 'data' | 'appointment_at' | 'appointment_location' | 'approval_status' | 'created_at' | 'updated_at'
+  'id' | 'user_id' | 'topic' | 'status' | 'preferred_date' | 'preferred_slot' | 'contact_phone' | 'note' | 'data' | 'appointment_at' | 'appointment_location' | 'approval_status' | 'finance_stage' | 'sales_stage' | 'created_at' | 'updated_at'
 > & {
   advisor: { id: string; full_name: string; phone: string | null; active: boolean } | null;
   listing: { id: string; title: string; listing_no: number; price: number; cover_url: string | null; reserved_until: string | null; reserved_lead_id: string | null } | null;
@@ -32,7 +34,7 @@ type Row = Pick<
 };
 
 const COLUMNS =
-  'id, user_id, topic, status, preferred_date, preferred_slot, contact_phone, note, data, appointment_at, appointment_location, approval_status, created_at, updated_at, ' +
+  'id, user_id, topic, status, preferred_date, preferred_slot, contact_phone, note, data, appointment_at, appointment_location, approval_status, finance_stage, sales_stage, created_at, updated_at, ' +
   'advisor:advisors!leads_advisor_id_fkey(id, full_name, phone, active), ' +
   'listing:listings!leads_listing_id_fkey(id, title, listing_no, price, cover_url, reserved_until, reserved_lead_id), ' +
   'customer:profiles!leads_user_id_fkey(full_name), company:companies!leads_company_id_fkey(id, name)';
@@ -95,6 +97,8 @@ function toLead(row: Row): Lead {
     reservedUntil: row.listing?.reserved_lead_id === row.id && row.listing.reserved_until ? toIso(row.listing.reserved_until) : null,
     appointmentAt: row.appointment_at ? toIso(row.appointment_at) : null,
     appointmentLocation: row.appointment_location,
+    financeStage: isFinanceStage(row.finance_stage) ? row.finance_stage : null,
+    salesStage: isSalesStage(row.sales_stage) ? row.sales_stage : null,
     advisor: row.advisor ? { id: asAdvisorId(row.advisor.id), fullName: row.advisor.full_name, phone: row.advisor.phone, active: row.advisor.active } : null,
     listing: row.listing
       ? {
@@ -128,7 +132,7 @@ export function createSupabaseLeads(sb: Supabase): LeadsService {
         const note = input.note?.trim();
         let fleet: FleetItem[] | undefined;
         if (input.fleetListingIds?.length) {
-          const rows = unwrap(await sb.from('listings').select('id, title, listing_no, price, cover_url').in('id', [...input.fleetListingIds].slice(0, 3)));
+          const rows = unwrap(await sb.from('listings').select('id, title, listing_no, price, cover_url').in('id', [...input.fleetListingIds].slice(0, 10)));
           fleet = rows.map((l) => ({ id: l.id, title: l.title, listingNo: String(l.listing_no), priceKurus: tlToKurus(l.price), coverUrl: l.cover_url }));
         }
         const data: Record<string, Json> = {};
@@ -172,10 +176,19 @@ export function createSupabaseLeads(sb: Supabase): LeadsService {
 
     update: (id: LeadId, patch: UpdateLeadInput) =>
       call(async () => {
-        const update: { status?: string; advisor_id?: string | null; appointment_at?: string | null; appointment_location?: string | null } = {};
+        const update: {
+          status?: string;
+          advisor_id?: string | null;
+          appointment_at?: string | null;
+          appointment_location?: string | null;
+          finance_stage?: string | null;
+          sales_stage?: string | null;
+        } = {};
         if (patch.status !== undefined) update.status = patch.status;
         if (patch.advisorId !== undefined) update.advisor_id = patch.advisorId;
         if (patch.appointmentAt !== undefined) update.appointment_at = patch.appointmentAt;
+        if (patch.financeStage !== undefined) update.finance_stage = patch.financeStage;
+        if (patch.salesStage !== undefined) update.sales_stage = patch.salesStage;
         if (patch.appointmentLocation !== undefined) update.appointment_location = patch.appointmentLocation?.trim().slice(0, 120) || null;
         if (Object.keys(update).length === 0) return fetchOne(id);
         const row = unwrapMaybe(await sb.from('leads').update(update).eq('id', id).select(COLUMNS).maybeSingle()) as unknown as Row | null;
@@ -188,6 +201,12 @@ export function createSupabaseLeads(sb: Supabase): LeadsService {
         const rows = unwrap(
           await sb.from('leads').select(COLUMNS).not('appointment_at', 'is', null).gte('appointment_at', from).order('appointment_at').limit(200),
         ) as unknown as Row[];
+        return rows.map(toLead);
+      }),
+
+    listSalesPipeline: () =>
+      call(async () => {
+        const rows = unwrap(await sb.from('leads').select(COLUMNS).not('sales_stage', 'is', null).order('updated_at', { ascending: false }).limit(300)) as unknown as Row[];
         return rows.map(toLead);
       }),
 

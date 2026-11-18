@@ -280,7 +280,28 @@ Her maddenin müşteri ve yönetici tarafında nasıl test edileceği: **`docs/M
 - Araç ekranında **"Yenileme zamanı"** kartı: **Benzer araçlar** (aynı kategorideki ilanlar) ve **Takasa ver** (takas formu) kısayolları; listede "Yenileme zamanı" rozeti.
 - **Veritabanı:** `fleet_reminders` (aynı hatırlatmanın tekrarını önler), `notifications.fleet_vehicle_id`, yeni bildirim türü `fleet_reminder`, `fleet-reminders` zamanlanmış görevi (her gün 06:00 UTC).
 
+## Adım 12 — Süreç takibi, hesaplayıcılar ve paketler ("Gerekli değil" maddeleri) (2026-11-18)
+
+### Madde 22 — Finansman başvuru takibi
+- **Yönetici:** Finansman talebinin detayında **"Finansman başvurusu"** kartı: Başvuru alındı → Belgeler bekleniyor → Bankada → Onaylandı → Sonuçlandı (+ Olumsuz sonuçlandı); adıma dokunarak günceller.
+- **Müşteri:** Aynı kartta adımlar salt okunur (tamamlananlar yeşil tik, güncel adım lacivert); her değişiklikte **"Finansman başvurunuz güncellendi · *adım*"** bildirimi; Taleplerim'de "Finansman: *adım*".
+
+### Madde 34 — Satış süreci takibi (firma içi)
+- **Yönetici:** Her talep detayında **"Satış süreci (firma içi)"**: Görüşme, Teklif, Finansman, Noter, Teslimat, Satış tamamlandı, Kaybedildi. Profil → **Satış Süreci**: adım atanmış talepler adıma göre gruplu (müşteri, konu, ilan ve fiyat, danışman, son güncelleme).
+- Müşteri satış adımlarını görmez.
+
+### Madde 25 — Amortisman ve kârlılık hesabı
+- **Müşteri:** İlan detayındaki ödeme hesaplayıcısında **"Kârlılık ve amortisman hesapla"**: aylık sefer, sefer başı gelir ve km, tüketim, şoför ve diğer giderler, peşin/kredili → **aylık net kazanç** (eksi ise kırmızı), **başa baş süresi** (ay / yıl), gelir, işletme gideri (yakıt, bakım, lastik, sigorta, vergi + şoför + diğer), kredili alımda taksit.
+
+### Madde 42 — Lojistik maliyet simülatörü
+- **Müşteri:** **Karşılaştır** ekranında **"Lojistik maliyet simülasyonu"**: rota (sefer km'si), aylık sefer, motorin fiyatı, yük durumu (Çoğunlukla boş / Karışık / Tam yük) → seçilen araçların **yıllık, aylık ve km başı** işletme maliyeti yan yana; **en düşük maliyetli araç vurgulu**.
+
+### Madde 45 — Projeye göre araç paketi
+- **Yönetici:** Profil → **Araç Paketleri** → **Yeni Paket**: ad, açıklama, sektör, **ilan arama** (başlık, marka, ilan no) ile en çok 10 ilan ekleme/çıkarma, Yayında anahtarı; düzenleme ve silme.
+- **Müşteri:** Profil → **Araç Paketleri**: paket kartları (kapak görselleri, araç sayısı, toplam fiyat) → paket detayı (ilan kartları) → **"Bu paket için teklif iste"** → toplu teklif formu (tüm paket araçlarıyla tek talep).
+- **Veritabanı:** `vehicle_packages`, `vehicle_package_items`; `leads.finance_stage`, `leads.sales_stage`; finansman adımı bildirimi tetikleyicisi. Toplu teklif en çok 10 araca çıkarıldı.
+
 ## Sıradaki adımlar
 - iOS push için APNs kurulumu (Apple hesabında anahtar gerekir) ve yeni TestFlight build'i.
 - Formdaki **"İlk aşama" ve "Sonraki"** maddelerinin tamamı uygulandı (kapora/online ödeme ve banka API'si gibi tartışılabilir alt parçalar hariç).
-- **Adım 12 önerisi:** Madde 22 (finansman başvuru takibi), 34 (satış süreci takibi), 42 (lojistik maliyet simülatörü), 45 (projeye göre araç paketi), 25 (amortisman / kârlılık hesabı). Madde 15 (ekspertiz randevusu) Adım 5'teki randevu yapısıyla zaten karşılanıyor.
+- Formdaki maddelerin tamamı uygulandı (Madde 15 Adım 5'teki randevu yapısıyla karşılanıyor). Kalan: tartışılabilir alt parçalar (Madde 19 banka ön başvurusu/API, Madde 33 kapora-online ödeme, Madde 8 sahibinden entegrasyonu), iOS push için APNs kurulumu ve yeni TestFlight build'i.

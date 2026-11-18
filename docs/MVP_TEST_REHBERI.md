@@ -573,6 +573,40 @@ Adımlar:
 
 ---
 
+## Adım 12 — Süreç takibi, hesaplayıcılar ve paketler
+
+### Madde 22 — Finansman başvuru takibi
+**Yönetici**
+- [ ] Bir **Finansman** talebinin detayında **"Finansman başvurusu"** kartı → "Belgeler bekleniyor"a dokun → sonra "Bankada".
+**Müşteri**
+- [ ] İki bildirim: **"Finansman başvurunuz güncellendi · Belgeler bekleniyor"**, "… Bankada değerlendiriliyor". Talep detayında adımlar (ilk adım yeşil tik, "Bankada" lacivert); Taleplerim'de "Finansman: Bankada". Müşteride adım düğmeleri yok.
+- [ ] Yönetici "Olumsuz sonuçlandı" seçince kırmızı satır.
+
+### Madde 34 — Satış süreci
+**Yönetici**
+- [ ] Birkaç talepte **"Satış süreci (firma içi)"** kartından adım seç (Görüşme, Teklif, Noter…). Seçili adıma tekrar dokununca kaldırılır.
+- [ ] Profil → **Satış Süreci**: talepler adım başlıkları altında (sayılarıyla); dokununca talep açılır.
+**Müşteri**
+- [ ] Talep detayında satış süreci kartı **görünmez**.
+
+### Madde 25 — Kârlılık hesabı
+**Müşteri**
+- [ ] İlan → "Aylık ödeme hesapla" → **"Kârlılık ve amortisman hesapla"** → varsayılan değerlerle aylık net kazanç ve "Başa baş: yaklaşık N ay". Sefer başı geliri çok düşük gir (ör. `1.000`) → net kırmızı, "Bu gelirle araç kendini amorti etmiyor". **Kredili** seç → taksit satırı eklenir, net azalır.
+
+### Madde 42 — Lojistik maliyet simülatörü
+**Müşteri**
+- [ ] 2–3 ilanı karşılaştırmaya ekle → **Karşılaştır** → **"Lojistik maliyet simülasyonu"** → sefer km, aylık sefer, yük durumu, motorin → araçlar en düşük yıllık maliyetten sıralı; ilk kart yeşil çerçeveli "En düşük işletme maliyeti"; yıllık / aylık / km başı. "Tam yük" seçince maliyetler artar.
+
+### Madde 45 — Araç paketleri
+**Yönetici**
+- [ ] Profil → **Araç Paketleri** → **Yeni Paket**: ad "Şantiye paketi", sektör İnşaat, **İlan ekle** kutusuna "damperli" yaz → sonuçlardan 2–3 ilanı (+) ekle; birini (x) çıkar. İlansız kaydetmeyi dene → "Pakete en az bir ilan ekleyin". Yayında kapalı → Kaydet → listede "Taslak".
+**Müşteri**
+- [ ] Taslak paket görünmez. Yönetici **Yayında** yapınca: paket kartı (görseller, araç sayısı, toplam fiyat) → detay (ilan kartları) → **"Bu paket için teklif iste"** → "Toplu Teklif" formunda tüm paket araçları → gönder.
+**Yönetici**
+- [ ] Talep detayında "Toplu teklif istenen araçlar (N)" paket araçlarıyla.
+
+---
+
 ## Bilinen sınırlar / dikkat edilecekler
 
 - **iOS'ta telefona bildirim:** Apple Developer hesabında APNs anahtarı (.p8) oluşturulup Expo'ya yüklenmeli, uygulama kimliğinde Push Notifications yeteneği açılmalı ve yeni TestFlight build'i alınmalı. O zamana kadar bildirimler yalnızca uygulama içinde (Bildirimler sekmesi) görünür.

@@ -177,3 +177,65 @@ export function compareBanks(priceKurus: number, downPaymentKurus: number, termM
     .sort((a, b) => a.plan.monthlyPaymentKurus - b.plan.monthlyPaymentKurus);
   return offers.map((offer, i) => ({ ...offer, cheapest: i === 0 && offers.length > 1 }));
 }
+
+// --- Amortisman ve kârlılık (madde 25) ------------------------------------------------------------------------------
+
+export type ProfitInput = {
+  readonly priceKurus: number;
+  readonly tripsPerMonth: number;
+  readonly revenuePerTripKurus: number;
+  readonly kmPerTrip: number;
+  /** Litre / 100 km. */
+  readonly consumption: number;
+  readonly driverMonthlyKurus: number;
+  readonly otherMonthlyKurus: number;
+  readonly financed: boolean;
+};
+
+export type ProfitResult = {
+  readonly monthlyRevenueKurus: number;
+  /** Yakıt, bakım, lastik, sigorta, vergi, şoför ve diğer giderler. */
+  readonly monthlyOperatingKurus: number;
+  readonly monthlyInstallmentKurus: number;
+  /** Gelir − işletme gideri (taksit hariç). */
+  readonly monthlyNetBeforeFinanceKurus: number;
+  /** Gelir − işletme gideri − taksit. */
+  readonly monthlyNetKurus: number;
+  /** Başa baş: araç bedelinin taksit öncesi net kazançla kaç ayda çıkacağı; kazanç yoksa `null`. */
+  readonly paybackMonths: number | null;
+  readonly plan: FinancePlan | null;
+};
+
+/** Sefer geliri ve giderlerle aylık net kazanç ve başa baş süresi (madde 25). */
+export function profitability(input: ProfitInput, settings: FinanceSettings): ProfitResult {
+  const annualKm = Math.max(0, input.kmPerTrip) * Math.max(0, input.tripsPerMonth) * 12;
+  const operating = ownershipCost({ priceKurus: input.priceKurus, annualKm, consumption: input.consumption, financed: false }, settings);
+  const monthlyOperating = operating.monthlyKurus + Math.max(0, input.driverMonthlyKurus) + Math.max(0, input.otherMonthlyKurus);
+  const monthlyRevenue = Math.max(0, input.tripsPerMonth) * Math.max(0, input.revenuePerTripKurus);
+  const term = settings.terms.length ? Math.max(...settings.terms) : 12;
+  const plan = input.financed
+    ? computePlan(input.priceKurus, Math.round((input.priceKurus * settings.minDownPaymentPercent) / 100), term, settings.monthlyRatePercent)
+    : null;
+  const installment = plan?.monthlyPaymentKurus ?? 0;
+  const netBefore = monthlyRevenue - monthlyOperating;
+  return {
+    monthlyRevenueKurus: monthlyRevenue,
+    monthlyOperatingKurus: monthlyOperating,
+    monthlyInstallmentKurus: installment,
+    monthlyNetBeforeFinanceKurus: netBefore,
+    monthlyNetKurus: netBefore - installment,
+    paybackMonths: netBefore > 0 ? Math.ceil(input.priceKurus / netBefore) : null,
+    plan,
+  };
+}
+
+// --- Lojistik maliyet simülatörü (madde 42) ------------------------------------------------------------------------
+
+export type LoadLevel = 'empty' | 'mixed' | 'full';
+
+/** Yük durumuna göre tüketim çarpanı (boş dönüş ağırlıklı / karışık / tam yük). */
+export const LOAD_LEVELS: readonly { readonly id: LoadLevel; readonly label: string; readonly factor: number }[] = [
+  { id: 'empty', label: 'Çoğunlukla boş', factor: 0.85 },
+  { id: 'mixed', label: 'Karışık', factor: 1 },
+  { id: 'full', label: 'Tam yük', factor: 1.15 },
+];

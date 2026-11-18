@@ -2,7 +2,7 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 
-import { LEAD_STATUSES, LEAD_TOPIC_SHORT, TRADE_LEAD_TOPICS, userMessage, type Lead, type LeadStatus } from '@/domain';
+import { LEAD_STATUSES, LEAD_TOPIC_SHORT, TRADE_LEAD_TOPICS, financeStageLabel, userMessage, type Lead, type LeadStatus } from '@/domain';
 import { StateMessage } from '@/features/listings/ListStates';
 import { PageHeader } from '@/features/notifications/PageHeader';
 import { AdminBadge } from '@/features/session/AdminBadge';
@@ -132,6 +132,11 @@ function LeadRow({ lead, isAdmin, onPress }: { lead: Lead; isAdmin: boolean; onP
               {lead.advisor ? ` · ${lead.advisor.fullName}` : ''}
             </Text>
           </View>
+          {lead.financeStage ? (
+            <Text variant="caption" color="success">
+              Finansman: {financeStageLabel(lead.financeStage)}
+            </Text>
+          ) : null}
           <Text variant="caption" color="textTertiary">
             {formatLeadDate(lead.createdAt)}
           </Text>

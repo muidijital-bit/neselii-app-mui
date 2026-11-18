@@ -1,6 +1,7 @@
 import type { IsoDateTime, Money } from './common';
 import type { ApprovalStatus } from './companies';
 import type { FinancePlan } from './finance';
+import type { FinanceStage, SalesStage } from './stages';
 import type { AdvisorId, LeadId, ListingId, UserId } from './ids';
 
 /**
@@ -138,6 +139,10 @@ export type Lead = {
   readonly advisor: Advisor | null;
   /** Yöneticinin atadığı randevu (madde 31); yoksa `null`. */
   readonly appointmentAt: IsoDateTime | null;
+  /** Madde 22: finansman başvuru adımı (müşteri görür). */
+  readonly financeStage: FinanceStage | null;
+  /** Madde 34: satış süreci adımı (firma içi). */
+  readonly salesStage: SalesStage | null;
   /** Randevu yeri (madde 39; ör. "Firmamızda"). */
   readonly appointmentLocation: string | null;
   readonly listing: LeadListing | null;

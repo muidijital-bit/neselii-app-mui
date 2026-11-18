@@ -11,6 +11,12 @@ export const BUDGET_HREF: Href = '/budget';
 /** Madde 24: ilanın toplam sahip olma maliyeti. */
 export const ownershipCostHref = (listingId: string): Href => ({ pathname: '/listings/[listingId]/cost', params: { listingId } });
 
+/** Madde 25: ilanın amortisman / kârlılık hesabı. */
+export const profitHref = (listingId: string): Href => ({ pathname: '/listings/[listingId]/profit', params: { listingId } });
+
+/** Madde 42: karşılaştırmadaki araçlar için lojistik maliyet simülatörü. */
+export const costSimulatorHref = (listingIds: readonly string[]): Href => ({ pathname: '/cost-simulator', params: { ids: listingIds.join(',') } });
+
 /** Hesaplayıcıdan finansman talebi: talep formu konu "Finansman" ve ödeme planıyla açılır. */
 export const financeLeadHref = (listingId: string, plan: FinancePlan): Href => ({
   pathname: '/listings/[listingId]/request',

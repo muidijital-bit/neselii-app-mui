@@ -515,6 +515,8 @@ export type Database = {
       }
       leads: {
         Row: {
+          finance_stage: string | null
+          sales_stage: string | null
           approval_status: string
           approved_at: string | null
           approved_by: string | null
@@ -537,6 +539,8 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          finance_stage?: string | null
+          sales_stage?: string | null
           approval_status?: string
           approved_at?: string | null
           approved_by?: string | null
@@ -559,6 +563,8 @@ export type Database = {
           user_id: string
         }
         Update: {
+          finance_stage?: string | null
+          sales_stage?: string | null
           approval_status?: string
           approved_at?: string | null
           approved_by?: string | null
@@ -1167,6 +1173,73 @@ export type Database = {
             referencedRelation: "leads"
             referencedColumns: ["id"]
           },
+        ]
+      }
+      vehicle_package_items: {
+        Row: {
+          listing_id: string
+          package_id: string
+          sort_order: number
+        }
+        Insert: {
+          listing_id: string
+          package_id: string
+          sort_order?: number
+        }
+        Update: {
+          listing_id?: string
+          package_id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicle_package_items_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicle_package_items_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "vehicle_packages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vehicle_packages: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          published: boolean
+          sector: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          published?: boolean
+          sector?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          published?: boolean
+          sector?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
         ]
       }
     }

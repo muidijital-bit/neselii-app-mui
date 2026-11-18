@@ -21,6 +21,8 @@ export const PROFILE_TARGETS = {
   company: { href: '/company', title: 'Kurumsal Hesap' },
   guides: { href: '/guides', title: 'Sektör Rehberi' },
   fleet: { href: '/fleet', title: 'Filom' },
+  salesPipeline: { href: '/sales-pipeline', title: 'Satış Süreci' },
+  packages: { href: '/packages', title: 'Araç Paketleri' },
   tradeLeads: { href: { pathname: '/leads', params: { group: 'trade' } }, title: 'Takas ve Alım Talepleri' },
   notificationPreferences: { href: '/notification-preferences', title: 'Bildirim Tercihleri' },
   privacy: { href: '/privacy', title: 'Gizlilik ve Güvenlik' },

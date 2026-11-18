@@ -4,6 +4,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'reac
 
 import { asListingId, type ListingDetail } from '@/domain';
 import { useFinanceSettings } from '@/features/finance/useFinance';
+import { costSimulatorHref } from '@/features/finance/routes';
 import { fleetQuoteHref } from '@/features/leads/routes';
 import { useIsAdmin } from '@/features/session/useIsAdmin';
 import { Button } from '@/ui/Button';
@@ -101,6 +102,10 @@ export function CompareScreen() {
               </View>
             ))}
           </View>
+          {/* Madde 42: seçilen araçların işletme maliyetini karşılaştırma. */}
+          {details.length > 0 ? (
+            <Button title="Lojistik maliyet simülasyonu" icon="bar-chart-2" variant="outline" onPress={() => router.push(costSimulatorHref(details.map((d) => d.id)))} testID="compare-cost-simulator" />
+          ) : null}
           {/* Madde 44: seçilen araçlar için tek toplu teklif talebi. */}
           {!isAdmin && details.length > 1 ? (
             <Button

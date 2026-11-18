@@ -10,7 +10,7 @@ import { Chip } from '@/ui/Ui';
 import { Colors, Radius, Spacing } from '@/ui/theme';
 
 import { FinancePlanSummary } from './FinancePlanSummary';
-import { financeLeadHref, ownershipCostHref } from './routes';
+import { financeLeadHref, ownershipCostHref, profitHref } from './routes';
 import { useBanks, useFinanceSettings } from './useFinance';
 
 /**
@@ -98,6 +98,18 @@ export function FinanceCalculatorCard({ listingId, price, showLeadAction }: { li
         </Text>
         <Icon name="chevron-right" size={20} color="textTertiary" />
       </Pressable>
+      {/* Madde 25: sefer geliriyle aylık net kazanç ve başa baş süresi. */}
+      <Pressable
+        accessibilityRole="button"
+        onPress={() => router.push(profitHref(listingId))}
+        style={({ pressed }) => [styles.costLink, styles.costLinkNext, pressed && styles.pressed]}
+        testID="listing-profit">
+        <Icon name="trending-up" size={20} color="heading" />
+        <Text variant="bodySemibold" color="heading" style={styles.flex}>
+          Kârlılık ve amortisman hesapla
+        </Text>
+        <Icon name="chevron-right" size={20} color="textTertiary" />
+      </Pressable>
       {showLeadAction ? (
         <Button
           title="Bu plan için beni arayın"
@@ -126,6 +138,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderColor: Colors.border,
   },
+  costLinkNext: { borderTopWidth: 0, marginTop: -Spacing.two },
   pressed: { opacity: 0.7 },
   banks: { gap: Spacing.two, marginTop: Spacing.two },
   bankRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two, padding: Spacing.three, borderRadius: Radius.md, borderWidth: 1, borderColor: Colors.border },

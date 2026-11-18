@@ -66,7 +66,7 @@ export function LeadRequestScreen() {
   }, [params.plan]);
   // Madde 44: karşılaştırma ekranından toplu teklif (virgülle ayrılmış ilan kimlikleri, en çok 3).
   const fleetIds = useMemo(
-    () => (typeof params.fleet === 'string' ? params.fleet.split(',').map((v) => v.trim()).filter(isSafeEntityId).slice(0, 3) : []),
+    () => (typeof params.fleet === 'string' ? params.fleet.split(',').map((v) => v.trim()).filter(isSafeEntityId).slice(0, 10) : []),
     [params.fleet],
   );
   const [created, setCreated] = useState<Lead | null>(null);

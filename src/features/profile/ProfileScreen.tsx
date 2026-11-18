@@ -111,6 +111,9 @@ export function ProfileScreen() {
             onPress={go(PROFILE_TARGETS.leads.href)}
             testID="profile-menu-leads"
           />
+          {/* Madde 45: araç paketleri (yönetici paketleri buradan yönetir). */}
+          <Divider />
+          <MenuRow icon="package" title={PROFILE_TARGETS.packages.title} onPress={go(PROFILE_TARGETS.packages.href)} testID="profile-menu-packages" />
           {/* Madde 46: sektör rehberi (yönetici yazıları da buradan yönetir). */}
           <Divider />
           <MenuRow icon="book-open" title={PROFILE_TARGETS.guides.title} onPress={go(PROFILE_TARGETS.guides.href)} testID="profile-menu-guides" />
@@ -136,6 +139,8 @@ export function ProfileScreen() {
             <>
               <Divider />
               <MenuRow icon="calendar" title={PROFILE_TARGETS.appointments.title} onPress={go(PROFILE_TARGETS.appointments.href)} testID="profile-menu-appointments" />
+              <Divider />
+              <MenuRow icon="trending-up" title={PROFILE_TARGETS.salesPipeline.title} onPress={go(PROFILE_TARGETS.salesPipeline.href)} testID="profile-menu-sales-pipeline" />
               <Divider />
               <MenuRow icon="users" title={PROFILE_TARGETS.advisors.title} onPress={go(PROFILE_TARGETS.advisors.href)} testID="profile-menu-advisors" />
               <Divider />

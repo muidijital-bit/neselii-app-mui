@@ -13,6 +13,7 @@ import { createSupabaseLeads } from './leads';
 import { createSupabaseListings } from './listings';
 import { createSupabaseMessaging } from './messaging';
 import { createSupabaseNotifications } from './notifications';
+import { createSupabasePackages } from './packages';
 import { createSupabaseProfile } from './profile';
 import { createSupabaseSavedSearches } from './savedSearches';
 import { createSupabaseTradeIns } from './tradeIns';
@@ -39,6 +40,7 @@ export function createSupabaseServices(): Services {
     companies: createSupabaseCompanies(sb),
     guides: createSupabaseGuides(sb),
     fleet: createSupabaseFleet(sb),
+    packages: createSupabasePackages(sb),
   };
 }
 

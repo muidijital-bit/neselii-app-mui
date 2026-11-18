@@ -11,6 +11,7 @@ import {
   type CommercialSpecs,
   type ListingInsightsInput,
   type LocalFile,
+  type VideoSection,
   type ListingSearch,
   type Range,
 } from '@/domain';
@@ -175,7 +176,7 @@ export function createSupabaseListings(sb: Supabase): ListingsService {
         const row = unwrapMaybe(
           await sb
             .from('listings')
-            .select(`${SUMMARY_COLUMNS}, description, reserved_until, listing_media(id, url, type, sort_order), listing_insights(${INSIGHTS_COLUMNS})`)
+            .select(`${SUMMARY_COLUMNS}, description, reserved_until, listing_media(id, url, type, sort_order, section), listing_insights(${INSIGHTS_COLUMNS})`)
             .eq('id', id)
             .maybeSingle(),
         ) as unknown as (ListingRow & { description: string | null; listing_media: MediaRow[]; listing_insights: InsightsRow | null; reserved_until: string | null }) | null;
@@ -200,6 +201,25 @@ export function createSupabaseListings(sb: Supabase): ListingsService {
         const { error } = await sb.storage.from(LISTING_DOCUMENTS_BUCKET).upload(path, body, { contentType, upsert: false });
         if (error) throw error;
         return path;
+      }),
+
+    addListingVideo: (id: ListingId, file: LocalFile, section: VideoSection) =>
+      call(async () => {
+        const contentType = file.mimeType === 'video/quicktime' ? 'video/quicktime' : 'video/mp4';
+        const path = `${id}/video-${section}-${Date.now()}.${contentType === 'video/quicktime' ? 'mov' : 'mp4'}`;
+        const body = await (await fetch(file.uri)).arrayBuffer();
+        const { error } = await sb.storage.from('listing-media').upload(path, body, { contentType, upsert: false });
+        if (error) throw error;
+        const url = sb.storage.from('listing-media').getPublicUrl(path).data.publicUrl;
+        const last = unwrapMaybe(await sb.from('listing_media').select('sort_order').eq('listing_id', id).order('sort_order', { ascending: false }).limit(1).maybeSingle());
+        ensure(await sb.from('listing_media').insert({ listing_id: id, type: 'video', url, storage_path: path, section, sort_order: (last?.sort_order ?? 0) + 1 }));
+      }),
+
+    removeListingMedia: (mediaId: string) =>
+      call(async () => {
+        const row = unwrapMaybe(await sb.from('listing_media').select('storage_path').eq('id', mediaId).maybeSingle());
+        ensure(await sb.from('listing_media').delete().eq('id', mediaId));
+        if (row?.storage_path) await sb.storage.from('listing-media').remove([row.storage_path]);
       }),
 
     saveSpecs: (id: ListingId, specs: CommercialSpecs) =>

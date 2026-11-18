@@ -83,6 +83,12 @@ export function RootNavigator() {
           <Stack.Screen name="trade-in" />
           {/* Adım 8: müşteri belge arşivi ve yönetici PDF teklif. */}
           <Stack.Screen name="my-documents" />
+          {/* Madde 47, 51: kurumsal hesap ve onay akışı. */}
+          <Stack.Screen name="company" />
+          {/* Madde 46: sektör rehberi. */}
+          <Stack.Screen name="guides/index" />
+          <Stack.Screen name="guides/[guideId]/index" />
+          <Stack.Screen name="guides/[guideId]/edit" />
           <Stack.Screen name="leads/[leadId]/quote" />
           <Stack.Screen name="conversations/[conversationId]" />
           <Stack.Screen name="announcements/[announcementId]" />

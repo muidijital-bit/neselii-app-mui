@@ -18,6 +18,8 @@ export const PROFILE_TARGETS = {
   appointments: { href: '/appointments', title: 'Randevular' },
   tradeIn: { href: '/trade-in', title: 'Aracımı Sat / Takasla' },
   myDocuments: { href: '/my-documents', title: 'Belgelerim' },
+  company: { href: '/company', title: 'Kurumsal Hesap' },
+  guides: { href: '/guides', title: 'Sektör Rehberi' },
   tradeLeads: { href: { pathname: '/leads', params: { group: 'trade' } }, title: 'Takas ve Alım Talepleri' },
   notificationPreferences: { href: '/notification-preferences', title: 'Bildirim Tercihleri' },
   privacy: { href: '/privacy', title: 'Gizlilik ve Güvenlik' },

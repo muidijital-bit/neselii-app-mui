@@ -4,7 +4,7 @@ import { FlatList, Pressable, ScrollView, Share, StyleSheet, useWindowDimensions
 import Animated, { type AnimatedStyle } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AppError, userMessage, type ListingDetail } from '@/domain';
+import { AppError, VIDEO_SECTIONS, userMessage, type ListingDetail } from '@/domain';
 import { useCompanyCall } from '@/features/calls/useCompanyCall';
 import { CompareBar, MAX_COMPARE, useCompare } from '@/features/compare';
 import { FinanceCalculatorCard } from '@/features/finance';
@@ -159,7 +159,8 @@ function DetailContent({ detail, onBack }: { detail: ListingDetail; onBack: () =
 
   const view = toListingView(detail);
   const photos = heroPhotos(detail);
-  const hasVideo = detail.media.some((m) => m.kind === 'video');
+  const videos = detail.media.filter((m) => m.kind === 'video');
+  const hasVideo = videos.length > 0;
   // Galeride video, gerçek fotoğrafların hemen ardındadır (kapak yedeği galeride sayılmaz).
   const videoIndex = detail.media.filter((m) => m.kind === 'photo').length;
   const sold = detail.status === 'sold';
@@ -307,6 +308,30 @@ function DetailContent({ detail, onBack }: { detail: ListingDetail; onBack: () =
         </View>
 
         {/* Beni Arayın (talep): müşteride, satılmamış ilanda. Yönetici firmanın kendisidir. */}
+        {/* Madde 7: bölüm etiketli videolar; dokununca galeri o videoda açılır. */}
+        {videos.length ? (
+          <View style={styles.section} testID="listing-video-sections">
+            <Text variant="heading" accessibilityRole="header">
+              Video İnceleme
+            </Text>
+            <View style={styles.videoChips}>
+              {videos.map((video, i) => (
+                <Pressable
+                  key={video.id}
+                  accessibilityRole="button"
+                  onPress={() => openGallery(videoIndex + i)}
+                  style={styles.videoChip}
+                  testID={`listing-video-${video.section ?? i}`}>
+                  <Icon name="play-circle" size={18} color="white" />
+                  <Text variant="smallSemibold" style={styles.white}>
+                    {VIDEO_SECTIONS.find((s) => s.id === video.section)?.label ?? `Video ${i + 1}`}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+        ) : null}
+
         {/* Aylık ödeme hesaplayıcı: firmanın oranıyla; müşteride plan finansman talebine eklenebilir. */}
         {!sold ? <FinanceCalculatorCard listingId={detail.id} price={detail.price} showLeadAction={!isAdmin} /> : null}
         {!isAdmin && !sold ? <LeadCallbackCard listingId={detail.id} canReserve={detail.status === 'published'} /> : null}
@@ -449,6 +474,16 @@ const styles = StyleSheet.create({
     boxShadow: '0 2px 8px rgba(10,33,63,0.15)',
   },
   roundFilled: { backgroundColor: Colors.navy },
+  videoChips: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two, marginTop: Spacing.one },
+  videoChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.one,
+    backgroundColor: Colors.navy,
+    borderRadius: Radius.pill,
+    paddingHorizontal: Spacing.three,
+    height: 36,
+  },
   heroPills: { position: 'absolute', left: Spacing.three, bottom: Spacing.three, flexDirection: 'row', gap: Spacing.two },
   pill: {
     flexDirection: 'row',

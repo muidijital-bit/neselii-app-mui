@@ -12,6 +12,10 @@ import type {
   CallLog,
   CallStats,
   CallSummary,
+  CompanyInvite,
+  CompanyMember,
+  CompanyMembership,
+  CompanyRole,
   CorporateInfo,
   CustomerDocument,
   DocumentKind,
@@ -23,6 +27,8 @@ import type {
   Conversation,
   ConversationId,
   FavoriteEntry,
+  Guide,
+  GuideInput,
   FinancePlan,
   FinanceSettings,
   KurusRange,
@@ -44,14 +50,17 @@ import type {
   MessagingEvent,
   NotificationId,
   NotificationPreferences,
+  PendingCompanyLead,
   Page,
   PageInput,
   SavedSearch,
   SavedSearchId,
+  SectorId,
   Session,
   Unsubscribe,
   UserId,
   UserProfile,
+  VideoSection,
 } from '@/domain';
 
 // --- Auth ----------------------------------------------------------------------------------------------------------
@@ -133,6 +142,10 @@ export interface ListingsService {
   saveSpecs(id: ListingId, specs: CommercialSpecs): Promise<void>;
   /** Madde 10 (yönetici): ekspertiz raporu PDF'ini yükler; depolama yolunu döner (`saveInsights` ile ilana bağlanır). */
   uploadListingDocument(id: ListingId, file: LocalFile): Promise<string>;
+  /** Madde 7 (yönetici): ilana bölüm etiketli video ekler. */
+  addListingVideo(id: ListingId, file: LocalFile, section: VideoSection): Promise<void>;
+  /** Yönetici: ilan medyasını (ör. video) siler. */
+  removeListingMedia(mediaId: string): Promise<void>;
 }
 
 // --- Favorites & saved searches ------------------------------------------------------------------------------------
@@ -230,6 +243,8 @@ export type CreateLeadInput = {
   readonly fleetListingIds?: readonly ListingId[];
   /** Madde 21: şirket adına finansman başvurusu. */
   readonly corporate?: CorporateInfo;
+  /** Madde 47/51: kurumsal hesap adına; talep eden rolünde şirket onayına gider. */
+  readonly companyId?: string;
 };
 
 /** `mine`: oturumdaki kullanıcının talepleri. `all`: firma gelen kutusu (yalnız yönetici; müşteride RLS yine kendi taleplerini döner). */
@@ -339,6 +354,38 @@ export interface DocumentsService {
   remove(id: string): Promise<void>;
 }
 
+// --- Companies (madde 47, 51) ---------------------------------------------------------------------------------------
+
+/** Kurumsal hesap: şirket, üyeler, davetler ve onay akışı. Yazmalar sunucu fonksiyonlarıyla, yetki denetimi sunucudadır. */
+export interface CompaniesService {
+  /** Oturumdaki kullanıcının şirketi ve rolü; üye değilse `null`. */
+  getMembership(): Promise<CompanyMembership | null>;
+  /** Kullanıcının e-postasına gelen davetler (şirket adıyla). */
+  listMyInvites(email: string): Promise<readonly CompanyInvite[]>;
+  /** Sahip: şirketin bekleyen davetleri. */
+  listCompanyInvites(companyId: string): Promise<readonly CompanyInvite[]>;
+  listMembers(): Promise<readonly CompanyMember[]>;
+  create(name: string, taxNumber: string | null): Promise<void>;
+  invite(email: string, role: CompanyRole): Promise<void>;
+  acceptInvite(id: string): Promise<void>;
+  deleteInvite(id: string): Promise<void>;
+  setRole(userId: UserId, role: CompanyRole): Promise<void>;
+  removeMember(userId: UserId): Promise<void>;
+  listPendingLeads(): Promise<readonly PendingCompanyLead[]>;
+  decideLead(leadId: LeadId, approve: boolean): Promise<void>;
+}
+
+// --- Guides (madde 46) ----------------------------------------------------------------------------------------------
+
+/** Sektör rehberi yazıları. Herkes yayımlananları okur; yönetici taslakları da görür, ekler, düzenler, siler. */
+export interface GuidesService {
+  /** En yeni önce. `sector` verilirse o sektörün ve genel yazılar. */
+  list(input?: { readonly sector?: SectorId | null; readonly includeDrafts?: boolean }): Promise<readonly Guide[]>;
+  get(id: string): Promise<Guide>;
+  save(id: string | null, input: GuideInput): Promise<Guide>;
+  remove(id: string): Promise<void>;
+}
+
 // --- Birleşik kap --------------------------------------------------------------------------------------------------
 
 export interface Services {
@@ -355,6 +402,8 @@ export interface Services {
   readonly callLogs: CallLogsService;
   readonly tradeIns: TradeInsService;
   readonly documents: DocumentsService;
+  readonly companies: CompaniesService;
+  readonly guides: GuidesService;
 }
 
 export type ServiceName = keyof Services;

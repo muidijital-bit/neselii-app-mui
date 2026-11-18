@@ -51,9 +51,24 @@ export type ListingSummary = {
   readonly odometerKm?: number;
 };
 
+/** Madde 7: video bölümü. */
+export type VideoSection = 'cold_start' | 'cabin' | 'engine' | 'undercarriage' | 'body';
+
+export const VIDEO_SECTIONS: readonly { readonly id: VideoSection; readonly label: string }[] = [
+  { id: 'cold_start', label: 'Soğuk çalıştırma' },
+  { id: 'cabin', label: 'Kabin' },
+  { id: 'engine', label: 'Motor' },
+  { id: 'undercarriage', label: 'Alt takım' },
+  { id: 'body', label: 'Kasa' },
+];
+
+export const isVideoSection = (value: unknown): value is VideoSection => VIDEO_SECTIONS.some((s) => s.id === value);
+
 export type MediaItem = {
   readonly id: MediaId;
   readonly kind: 'photo' | 'video';
+  /** Madde 7: videonun bölümü (yönetici etiketler); etiketsizse yok. */
+  readonly section?: VideoSection;
   /** Adres yoksa `null`: yer tutucu çizilir. */
   readonly uri: string | null;
   readonly thumbnailUri?: string | null;

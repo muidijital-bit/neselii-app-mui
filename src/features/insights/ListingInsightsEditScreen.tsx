@@ -23,6 +23,7 @@ import {
   type TrustChecks,
 } from '@/domain';
 import { useAdvisorsQuery } from '@/features/advisors/useAdvisors';
+import { ListingVideosEditor } from './ListingVideosEditor';
 import { useListingQuery } from '@/features/listings/useListingsQueries';
 import { PageHeader } from '@/features/notifications/PageHeader';
 import { AdminBadge } from '@/features/session/AdminBadge';
@@ -201,6 +202,9 @@ function InsightsForm({ listing }: { listing: ListingDetail }) {
           <TextField label="Üstyapı" value={bodyBuilder} onChangeText={setBodyBuilder} placeholder="Ör. Hidrolik damper, Hardox kasa" maxLength={120} testID="insights-body-builder" />
         </View>
       ) : null}
+
+      {/* Madde 7: bölüm etiketli videolar (hemen yüklenir; Kaydet'ten bağımsız). */}
+      <ListingVideosEditor listing={listing} />
 
       <View style={styles.group}>
         <View style={styles.titleRow}>

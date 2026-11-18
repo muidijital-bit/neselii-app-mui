@@ -504,6 +504,55 @@ Adımlar:
 
 ---
 
+## Adım 10 — Kurumsal hesap, içerik ve video
+
+> Kurumsal akışı test etmek için **iki müşteri hesabı** gerekir (ör. biri sahip, biri talep eden). Demo hesaplardan biri yetmez; ikinci bir müşteri hesabı açın.
+
+### Madde 47 — Kurumsal hesap
+**Müşteri A (sahip olacak)**
+- [ ] Profil → **Kurumsal Hesap** → şirket adı (+ vergi no) → **Kurumsal Hesap Oluştur** → şirket kartı, rol **Sahip**, üyeler listesinde kendisi.
+- [ ] **Üye davet et**: B'nin e-postası, rol **Talep eden** → Davet Gönder → altta "… · Talep eden · bekliyor".
+
+**Müşteri B**
+- [ ] Profil → Kurumsal Hesap → **"*Şirket* sizi davet etti · Rol: Talep eden"** → **Katıl** → şirket kartı, rol "Talep eden"; üye davet formu yok, **Şirketten Ayrıl** var.
+
+**Müşteri A**
+- [ ] Üyeler'de B'nin rol etiketine dokun → **Onaylayan** yap → tekrar **Talep eden** yap. Kendi rolünü "Talep eden" yapmayı dene → "Şirketin en az bir sahibi olmalı".
+
+### Madde 51 — Onay akışı
+**Müşteri B (talep eden)**
+- [ ] Bir ilanda **Beni Arayın** → **"Kimin adına?"**: "Şirketim: …" seçili, "Talebiniz şirket yöneticinizin onayından sonra…" notu → gönder → "Talebiniz şirket yöneticinizin onayına gönderildi". Taleplerim'de **"Onay bekliyor"**.
+
+**Yönetici**
+- [ ] Bu talep Talepler listesinde **görünmez**, bildirim gelmez.
+
+**Müşteri A (sahip)**
+- [ ] Bildirim: **"Onay bekleyen talep: *B*"** → talep detayında "Kurumsal: … · şirket onayı bekleniyor" ve **Onayla / Reddet**. (Aynısı Kurumsal Hesap → Onay bekleyen talepler.) **Onayla**.
+
+**Kontrol**
+- [ ] B: "Talebiniz şirketinizce onaylandı · …Neşeli Otomotiv'e iletildi". Yönetici: "Yeni talep: B" bildirimi, talep listede; detayda "Kurumsal: *şirket* · şirketçe onaylandı".
+- [ ] B ikinci bir talep açar, A **Reddet** → B: "Talebiniz şirketinizce reddedildi"; talep "İptal edildi"; yönetici hiç görmez.
+- [ ] A şirket adına talep açınca onay beklemeden doğrudan yöneticiye gider.
+
+### Madde 46 — Sektör rehberi
+**Yönetici**
+- [ ] Profil → **Sektör Rehberi** → **Yeni Rehber Yazısı**: başlık, sektör **İnşaat / şantiye**, metin, **Yayında kapalı** → Kaydet → listede **"Taslak"**.
+- [ ] İkinci yazı: sektör **Genel**, Yayında açık → Kaydet.
+
+**Müşteri**
+- [ ] Profil → Sektör Rehberi (ya da ana sayfa sektör kartındaki "… rehberi"): taslak yazı görünmez; genel yazı görünür.
+- [ ] Yönetici ilk yazıyı **Yayında** yapınca: "İnşaat / şantiye" çipinde iki yazı, "Lojistik" çipinde yalnız genel yazı. Yazıya dokun → detay.
+
+### Madde 7 — Video bölümleri
+**Yönetici**
+- [ ] İlan → Bilgileri Düzenle → **Videolar** → bölüm **Motor** → **Video Ekle** → galeriden kısa video → listede "Motor". Bölüm **Kabin** ile ikinci video ekleyin.
+
+**Müşteri**
+- [ ] İlan detayında **"Video İnceleme"**: "Motor", "Kabin" düğmeleri; dokununca galeri o videoda açılır, başlıkta **"Video · Motor"**. Üstteki "Video" hapı da çalışır.
+- [ ] Yönetici videoyu silince bölüm kalkar.
+
+---
+
 ## Bilinen sınırlar / dikkat edilecekler
 
 - **iOS'ta telefona bildirim:** Apple Developer hesabında APNs anahtarı (.p8) oluşturulup Expo'ya yüklenmeli, uygulama kimliğinde Push Notifications yeteneği açılmalı ve yeni TestFlight build'i alınmalı. O zamana kadar bildirimler yalnızca uygulama içinde (Bildirimler sekmesi) görünür.

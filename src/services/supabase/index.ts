@@ -2,10 +2,12 @@ import type { Services } from '../contracts';
 import { createSupabaseAdvisors } from './advisors';
 import { createSupabaseAuth } from './auth';
 import { createSupabaseCallLogs } from './callLogs';
+import { createSupabaseCompanies } from './companies';
 import { getSupabase } from './client';
 import { createSupabaseDocuments } from './documents';
 import { createSupabaseFavorites } from './favorites';
 import { createSupabaseFinance } from './finance';
+import { createSupabaseGuides } from './guides';
 import { createSupabaseLeads } from './leads';
 import { createSupabaseListings } from './listings';
 import { createSupabaseMessaging } from './messaging';
@@ -33,6 +35,8 @@ export function createSupabaseServices(): Services {
     callLogs: createSupabaseCallLogs(sb),
     tradeIns: createSupabaseTradeIns(sb),
     documents: createSupabaseDocuments(sb),
+    companies: createSupabaseCompanies(sb),
+    guides: createSupabaseGuides(sb),
   };
 }
 

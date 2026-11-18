@@ -1,4 +1,5 @@
 import type { IsoDateTime, Money } from './common';
+import type { ApprovalStatus } from './companies';
 import type { FinancePlan } from './finance';
 import type { AdvisorId, LeadId, ListingId, UserId } from './ids';
 
@@ -125,6 +126,9 @@ export type Lead = {
   readonly note: string | null;
   /** Hesaplayıcıdan gelen ödeme planı; yoksa `null`. */
   readonly plan: FinancePlan | null;
+  /** Madde 47/51: şirket adına açılan talep (şirket adı) ve onay durumu. */
+  readonly company: { readonly id: string; readonly name: string } | null;
+  readonly approvalStatus: ApprovalStatus;
   /** Madde 21: kurumsal finansman başvurusu bilgileri; bireyselse `null`. */
   readonly corporate: CorporateInfo | null;
   /** Madde 44: toplu teklifteki ilanlar (karşılaştırma listesinden). */

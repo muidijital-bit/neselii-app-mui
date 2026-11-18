@@ -111,6 +111,9 @@ export function ProfileScreen() {
             onPress={go(PROFILE_TARGETS.leads.href)}
             testID="profile-menu-leads"
           />
+          {/* Madde 46: sektör rehberi (yönetici yazıları da buradan yönetir). */}
+          <Divider />
+          <MenuRow icon="book-open" title={PROFILE_TARGETS.guides.title} onPress={go(PROFILE_TARGETS.guides.href)} testID="profile-menu-guides" />
           {/* Adım 7: müşteri takas / satış başvurusu; yönetici takas ve alım talepleri (ayrı liste). */}
           <Divider />
           {isAdmin ? (
@@ -121,6 +124,9 @@ export function ProfileScreen() {
               {/* Madde 52: müşteri belge arşivi. */}
               <Divider />
               <MenuRow icon="file-text" title={PROFILE_TARGETS.myDocuments.title} onPress={go(PROFILE_TARGETS.myDocuments.href)} testID="profile-menu-my-documents" />
+              {/* Madde 47: kurumsal hesap (şirket, üyeler, onay akışı). */}
+              <Divider />
+              <MenuRow icon="briefcase" title={PROFILE_TARGETS.company.title} onPress={go(PROFILE_TARGETS.company.href)} testID="profile-menu-company" />
             </>
           )}
           {isAdmin ? (

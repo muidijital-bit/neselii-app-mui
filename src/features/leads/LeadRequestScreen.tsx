@@ -28,6 +28,7 @@ import {
 } from '@/domain';
 import { listingsKeys, useListingQuery } from '@/features/listings/useListingsQueries';
 import { PageHeader } from '@/features/notifications/PageHeader';
+import { useMembership } from '@/features/company/useCompany';
 import { useSession } from '@/features/session/SessionProvider';
 import { useServices } from '@/services';
 import { Button } from '@/ui/Button';
@@ -115,6 +116,11 @@ function LeadForm({
   const [plannedDown, setPlannedDown] = useState('');
   const [companyError, setCompanyError] = useState<string | undefined>();
   const isCorporate = topic === 'financing' && corporate;
+  // Madde 47/51: kurumsal hesap üyesi şirket adına gönderebilir; talep eden rolünde şirket onayına gider.
+  const membership = useMembership();
+  const [forCompany, setForCompany] = useState(true);
+  const company = membership.data ?? null;
+  const sendForCompany = company !== null && forCompany;
   const fleet = fleetIds.length > 1;
   const { listings: listingsService } = useServices();
   const userId = session?.user.id ?? null;
@@ -152,6 +158,7 @@ function LeadForm({
         note,
         plan: attachedPlan ?? undefined,
         fleetListingIds: fleet ? fleetIds.map(asListingId) : undefined,
+        companyId: sendForCompany ? company!.company.id : undefined,
         corporate: isCorporate
           ? {
               companyName,
@@ -231,6 +238,19 @@ function LeadForm({
         </View>
       </View>
       )}
+
+      {company ? (
+        <View style={styles.group} testID="lead-request-company">
+          <Text variant="subheading">Kimin adına?</Text>
+          <View style={styles.wrap}>
+            <Chip label={`Şirketim: ${company.company.name}`} selected={forCompany} onPress={() => setForCompany(true)} />
+            <Chip label="Kendi adıma" selected={!forCompany} onPress={() => setForCompany(false)} />
+          </View>
+          {forCompany && company.role === 'requester' ? (
+            <Text variant="caption">Talebiniz şirket yöneticinizin onayından sonra Neşeli Otomotiv’e iletilir.</Text>
+          ) : null}
+        </View>
+      ) : null}
 
       {topic === 'financing' ? (
         <View style={styles.group} testID="lead-request-corporate">
@@ -361,7 +381,11 @@ function LeadCreated({ lead }: { lead: Lead }) {
         Talebiniz alındı
       </Text>
       <Text variant="body" color="textSecondary" align="center" testID="lead-request-done-message">
-        {advisor ? `Danışmanınız ${advisor} sizi arayacaktır.` : 'Danışmanınız sizi arayacaktır.'}
+        {lead.approvalStatus === 'pending'
+          ? 'Talebiniz şirket yöneticinizin onayına gönderildi. Onaylanınca danışmanınız sizi arayacak.'
+          : advisor
+            ? `Danışmanınız ${advisor} sizi arayacaktır.`
+            : 'Danışmanınız sizi arayacaktır.'}
       </Text>
       <Card style={styles.summary}>
         <SummaryRow icon="clock" label="Arama zamanı" value={leadWhen(lead)} />

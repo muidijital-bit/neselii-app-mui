@@ -23,18 +23,19 @@ import { call, ensure, offsetOf, pageRange, requireUserId, tlToKurus, toIso, toP
 
 type Row = Pick<
   Tables<'leads'>,
-  'id' | 'user_id' | 'topic' | 'status' | 'preferred_date' | 'preferred_slot' | 'contact_phone' | 'note' | 'data' | 'appointment_at' | 'appointment_location' | 'created_at' | 'updated_at'
+  'id' | 'user_id' | 'topic' | 'status' | 'preferred_date' | 'preferred_slot' | 'contact_phone' | 'note' | 'data' | 'appointment_at' | 'appointment_location' | 'approval_status' | 'created_at' | 'updated_at'
 > & {
   advisor: { id: string; full_name: string; phone: string | null; active: boolean } | null;
   listing: { id: string; title: string; listing_no: number; price: number; cover_url: string | null; reserved_until: string | null; reserved_lead_id: string | null } | null;
   customer: { full_name: string | null } | null;
+  company: { id: string; name: string } | null;
 };
 
 const COLUMNS =
-  'id, user_id, topic, status, preferred_date, preferred_slot, contact_phone, note, data, appointment_at, appointment_location, created_at, updated_at, ' +
+  'id, user_id, topic, status, preferred_date, preferred_slot, contact_phone, note, data, appointment_at, appointment_location, approval_status, created_at, updated_at, ' +
   'advisor:advisors!leads_advisor_id_fkey(id, full_name, phone, active), ' +
   'listing:listings!leads_listing_id_fkey(id, title, listing_no, price, cover_url, reserved_until, reserved_lead_id), ' +
-  'customer:profiles!leads_user_id_fkey(full_name)';
+  'customer:profiles!leads_user_id_fkey(full_name), company:companies!leads_company_id_fkey(id, name)';
 
 const planOf = (data: Json): ReturnType<typeof parseFinancePlan> =>
   data && typeof data === 'object' && !Array.isArray(data) ? parseFinancePlan((data as Record<string, unknown>).plan) : null;
@@ -89,6 +90,8 @@ function toLead(row: Row): Lead {
     plan: planOf(row.data),
     fleetListings: fleetOf(row.data),
     corporate: corporateOf(row.data),
+    company: row.company ? { id: row.company.id, name: row.company.name } : null,
+    approvalStatus: row.approval_status === 'pending' || row.approval_status === 'approved' || row.approval_status === 'rejected' ? row.approval_status : 'not_required',
     reservedUntil: row.listing?.reserved_lead_id === row.id && row.listing.reserved_until ? toIso(row.listing.reserved_until) : null,
     appointmentAt: row.appointment_at ? toIso(row.appointment_at) : null,
     appointmentLocation: row.appointment_location,
@@ -143,6 +146,7 @@ export function createSupabaseLeads(sb: Supabase): LeadsService {
               preferred_slot: input.preferredSlot,
               contact_phone: phone,
               note: note ? note.slice(0, 1000) : null,
+              company_id: input.companyId ?? null,
               data,
             })
             .select(COLUMNS)

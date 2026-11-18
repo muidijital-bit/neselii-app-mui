@@ -4,6 +4,7 @@ import {
   asMediaId,
   isCategoryId,
   isValidCoordinates,
+  isVideoSection,
   CAB_TYPES,
   type CabType,
   type CategoryId,
@@ -55,7 +56,7 @@ export type ListingRow = Pick<
   | 'is_featured'
 >;
 
-export type MediaRow = Pick<Tables<'listing_media'>, 'id' | 'url' | 'type' | 'sort_order'>;
+export type MediaRow = Pick<Tables<'listing_media'>, 'id' | 'url' | 'type' | 'sort_order'> & { section?: string | null };
 
 /** "Yeni" rozeti: son 7 günde yayımlanan ilan. */
 const NEW_BADGE_MS = 7 * 24 * 60 * 60 * 1000;
@@ -188,7 +189,7 @@ export function toMediaItem(row: MediaRow): MediaItem {
   const uri = row.url || null;
   const kind = row.type === 'video' ? 'video' : 'photo';
   // Fotoğrafın küçük resmi aynı görseldir (expo-image önbellekler); videonun ayrı küçük resmi henüz yok.
-  return { id: asMediaId(row.id), kind, uri, thumbnailUri: kind === 'photo' ? uri : null };
+  return { id: asMediaId(row.id), kind, uri, thumbnailUri: kind === 'photo' ? uri : null, ...(isVideoSection(row.section) ? { section: row.section } : {}) };
 }
 
 /** Detay: özet + açıklama + özellikler + medya (galeri sırası; fotoğraflar önce, video sonda — tasarım 12/26). */

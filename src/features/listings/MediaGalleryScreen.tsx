@@ -4,7 +4,7 @@ import { useRef, useState } from 'react';
 import { FlatList, Pressable, ScrollView, Share, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AppError, userMessage, type ListingDetail, type MediaItem } from '@/domain';
+import { AppError, VIDEO_SECTIONS, userMessage, type ListingDetail, type MediaItem } from '@/domain';
 import { Button } from '@/ui/Button';
 import { FocusStatusBar } from '@/ui/FocusStatusBar';
 import { Icon } from '@/ui/Icon';
@@ -125,7 +125,9 @@ function Gallery({ detail, startParam, onBack }: { detail: ListingDetail; startP
           <Icon name="x" size={30} color="white" />
         </Pressable>
         <Text variant="heading" style={styles.white} accessibilityRole="header" testID="media-counter">
-          {active?.kind === 'video' ? 'Video' : `${Math.min(current + 1, photoCount)} / ${photoCount}`}
+          {active?.kind === 'video'
+            ? `Video${active.section ? ` · ${VIDEO_SECTIONS.find((s) => s.id === active.section)?.label ?? ''}` : ''}`
+            : `${Math.min(current + 1, photoCount)} / ${photoCount}`}
         </Text>
         <Pressable hitSlop={12} accessibilityRole="button" accessibilityLabel="Paylaş" onPress={share} testID="media-share">
           <Icon name="share-2" size={26} color="white" />

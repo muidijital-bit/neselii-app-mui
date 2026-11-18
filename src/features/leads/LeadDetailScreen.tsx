@@ -2,14 +2,16 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState, type ReactNode } from 'react';
 import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
-import { AppError, LEAD_STATUSES, LEAD_TOPIC_LABELS, REVENUE_RANGES, asAdvisorId, formatMoney, toLocalDateKey, upcomingDays, userMessage, type Lead } from '@/domain';
+import { AppError, LEAD_STATUSES, LEAD_TOPIC_LABELS, REVENUE_RANGES, canApprove, asAdvisorId, formatMoney, toLocalDateKey, upcomingDays, userMessage, type Lead } from '@/domain';
 import { useAdvisorsQuery } from '@/features/advisors/useAdvisors';
+import { useCompanyActions, useMembership } from '@/features/company/useCompany';
 import { LeadDocumentsCard } from '@/features/documents';
 import { FinancePlanSummary } from '@/features/finance/FinancePlanSummary';
 import { listingHref } from '@/features/listings/routes';
 import { TradeInLeadSection } from '@/features/trade';
 import { PageHeader } from '@/features/notifications/PageHeader';
 import { AdminBadge } from '@/features/session/AdminBadge';
+import { useSession } from '@/features/session/SessionProvider';
 import { useIsAdmin } from '@/features/session/useIsAdmin';
 import { Button } from '@/ui/Button';
 import { FocusStatusBar } from '@/ui/FocusStatusBar';
@@ -60,6 +62,9 @@ function LeadContent({ lead }: { lead: Lead }) {
   const advisors = useAdvisorsQuery();
   const [pickAdvisor, setPickAdvisor] = useState(false);
   const open = lead.status === 'new' || lead.status === 'in_progress';
+  const { session } = useSession();
+  const membership = useMembership();
+  const companyActions = useCompanyActions();
 
   return (
     <ScrollView contentContainerStyle={styles.content} testID="lead-detail-scroll">
@@ -88,7 +93,23 @@ function LeadContent({ lead }: { lead: Lead }) {
             </Text>
           </View>
         ) : null}
-        {!isAdmin && open ? (
+        {/* Madde 47/51: şirket adına talep ve onay durumu. */}
+        {lead.company ? (
+          <View style={styles.companyRow} testID="lead-company">
+            <Icon name="briefcase" size={16} color="textSecondary" />
+            <Text variant="small" style={styles.flex}>
+              Kurumsal: {lead.company.name}
+              {lead.approvalStatus === 'pending' ? ' · şirket onayı bekleniyor' : lead.approvalStatus === 'rejected' ? ' · şirketçe reddedildi' : lead.approvalStatus === 'approved' ? ' · şirketçe onaylandı' : ''}
+            </Text>
+          </View>
+        ) : null}
+        {lead.approvalStatus === 'pending' && membership.data && canApprove(membership.data.role) && lead.customer.id !== session?.user.id ? (
+          <View style={styles.approveRow}>
+            <Button title="Reddet" variant="outline" style={styles.flex} disabled={companyActions.decide.isPending} onPress={() => companyActions.decide.mutate({ leadId: lead.id, approve: false })} />
+            <Button title="Onayla" style={styles.flex} loading={companyActions.decide.isPending} onPress={() => companyActions.decide.mutate({ leadId: lead.id, approve: true })} testID="lead-company-approve" />
+          </View>
+        ) : null}
+        {!isAdmin && open && lead.approvalStatus !== 'pending' ? (
           <View style={styles.info} testID="lead-advisor-notice">
             <Icon name="phone-call" size={18} color={INFO} />
             <Text variant="small" style={styles.infoText}>
@@ -391,6 +412,8 @@ const styles = StyleSheet.create({
   value: { flexShrink: 1, textAlign: 'right' },
   noteBox: { padding: Spacing.three, gap: Spacing.one },
   statusCard: { padding: Spacing.three, gap: Spacing.three },
+  companyRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
+  approveRow: { flexDirection: 'row', gap: Spacing.two, marginTop: Spacing.one },
   chipRow: { gap: Spacing.two, paddingRight: Spacing.three },
   wrapRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
   fleetRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, paddingVertical: Spacing.one },

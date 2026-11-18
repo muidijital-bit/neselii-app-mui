@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
@@ -5,6 +6,8 @@ import { SECTORS, sectorById, shortcutSearch, type ListingSearch } from '@/domai
 import { Icon, type IconName } from '@/ui/Icon';
 import { Text } from '@/ui/Text';
 import { Colors, Radius, Spacing } from '@/ui/theme';
+
+import { GUIDES_HREF } from '@/features/guides/routes';
 
 import { useSector } from './SectorProvider';
 
@@ -14,6 +17,7 @@ import { useSector } from './SectorProvider';
  */
 export function SectorHomeCard({ onSearch, onFinder }: { onSearch: (search: ListingSearch) => void; onFinder: () => void }) {
   const { sector, setSector } = useSector();
+  const router = useRouter();
   const [editing, setEditing] = useState(false);
   const chosen = sector && !editing ? sectorById(sector) : null;
 
@@ -78,6 +82,14 @@ export function SectorHomeCard({ onSearch, onFinder }: { onSearch: (search: List
           </View>
         </>
       )}
+      {/* Madde 46: sektör rehberi. */}
+      <Pressable accessibilityRole="button" onPress={() => router.push(GUIDES_HREF)} style={({ pressed }) => [styles.finder, pressed && styles.pressed]} testID="home-sector-guides">
+        <Icon name="book-open" size={20} color="heading" />
+        <Text variant="smallSemibold" color="heading" style={styles.flex}>
+          {chosen ? `${chosen.label} rehberi` : 'Sektör rehberi'}: ipuçları ve yazılar
+        </Text>
+        <Icon name="chevron-right" size={20} color="textTertiary" />
+      </Pressable>
       <Pressable accessibilityRole="button" onPress={onFinder} style={({ pressed }) => [styles.finder, pressed && styles.pressed]} testID="home-sector-finder">
         <Icon name="mci:magnify-scan" size={20} color="success" />
         <Text variant="smallSemibold" color="success" style={styles.flex}>

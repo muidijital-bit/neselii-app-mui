@@ -116,7 +116,11 @@ function LeadRow({ lead, isAdmin, onPress }: { lead: Lead; isAdmin: boolean; onP
             <Text variant="bodySemibold" numberOfLines={1} style={styles.flex}>
               {title}
             </Text>
-            <Badge label={leadStatusLabel(lead.status)} tone={LEAD_STATUS_TONES[lead.status]} />
+            {lead.approvalStatus === 'pending' ? (
+              <Badge label="Onay bekliyor" tone="warning" />
+            ) : (
+              <Badge label={leadStatusLabel(lead.status)} tone={LEAD_STATUS_TONES[lead.status]} />
+            )}
           </View>
           <Text variant="small" numberOfLines={1}>
             {subtitle}

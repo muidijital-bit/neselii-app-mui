@@ -218,6 +218,95 @@ export type Database = {
           },
         ]
       }
+      companies: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+          tax_number: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name: string
+          tax_number?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string
+          tax_number?: string | null
+        }
+        Relationships: [
+        ]
+      }
+      company_invites: {
+        Row: {
+          company_id: string
+          created_at: string
+          email: string
+          id: string
+          invited_by: string | null
+          role: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          email: string
+          id?: string
+          invited_by?: string | null
+          role: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          email?: string
+          id?: string
+          invited_by?: string | null
+          role?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_invites_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_members: {
+        Row: {
+          company_id: string
+          created_at: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          role: string
+          user_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_members_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer_documents: {
         Row: {
           created_at: string
@@ -334,8 +423,45 @@ export type Database = {
         }
         Relationships: []
       }
+      guides: {
+        Row: {
+          body: string
+          created_at: string
+          created_by: string | null
+          id: string
+          published: boolean
+          sector: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          published?: boolean
+          sector?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          published?: boolean
+          sector?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       leads: {
         Row: {
+          approval_status: string
+          approved_at: string | null
+          approved_by: string | null
+          company_id: string | null
           advisor_id: string | null
           appointment_at: string | null
           appointment_location: string | null
@@ -354,6 +480,10 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          approval_status?: string
+          approved_at?: string | null
+          approved_by?: string | null
+          company_id?: string | null
           advisor_id?: string | null
           appointment_at?: string | null
           appointment_location?: string | null
@@ -372,6 +502,10 @@ export type Database = {
           user_id: string
         }
         Update: {
+          approval_status?: string
+          approved_at?: string | null
+          approved_by?: string | null
+          company_id?: string | null
           advisor_id?: string | null
           appointment_at?: string | null
           appointment_location?: string | null
@@ -390,6 +524,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "leads_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "leads_advisor_id_fkey"
             columns: ["advisor_id"]
@@ -505,6 +646,7 @@ export type Database = {
       }
       listing_media: {
         Row: {
+          section: string | null
           created_at: string
           id: string
           listing_id: string
@@ -514,6 +656,7 @@ export type Database = {
           url: string
         }
         Insert: {
+          section?: string | null
           created_at?: string
           id?: string
           listing_id: string
@@ -523,6 +666,7 @@ export type Database = {
           url: string
         }
         Update: {
+          section?: string | null
           created_at?: string
           id?: string
           listing_id?: string
@@ -1001,6 +1145,21 @@ export type Database = {
         Args: { p_conversation_id: string }
         Returns: undefined
       }
+      accept_company_invite: { Args: { p_invite_id: string }; Returns: undefined }
+      create_company: { Args: { p_name: string; p_tax_number?: string }; Returns: string }
+      decide_company_lead: { Args: { p_approve: boolean; p_lead_id: string }; Returns: undefined }
+      delete_company_invite: { Args: { p_invite_id: string }; Returns: undefined }
+      invite_company_member: { Args: { p_email: string; p_role: string }; Returns: undefined }
+      list_company_members: {
+        Args: never
+        Returns: { created_at: string; email: string; full_name: string; role: string; user_id: string }[]
+      }
+      list_company_pending_leads: {
+        Args: never
+        Returns: { created_at: string; lead_id: string; listing_title: string; requester_name: string; topic: string }[]
+      }
+      remove_company_member: { Args: { p_user_id: string }; Returns: undefined }
+      set_company_member_role: { Args: { p_role: string; p_user_id: string }; Returns: undefined }
       approve_reservation: {
         Args: { p_days: number; p_lead_id: string }
         Returns: string

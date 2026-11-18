@@ -239,7 +239,33 @@ Her maddenin müşteri ve yönetici tarafında nasıl test edileceği: **`docs/M
 - **Müşteri:** Araç Bulucu özetinde **"Danışman önerisi iste"** (telefon): cevaplar ve öneriler not olarak genel bir talebe eklenir, danışman atanır → "Danışmanınız … sizi arayacaktır".
 - **Yönetici:** Talep (konu "Bilgi", ilansız) notunda bulucu cevapları ve öneriler.
 
+## Adım 10 — Kurumsal hesap, içerik ve video (2026-11-18)
+
+### Madde 47 — Kurumsal müşteri hesabı
+- **Müşteri:** Profil → **Kurumsal Hesap**:
+  - Üye değilse: e-postasına gelen **davetler** (Katıl / Reddet) ve **şirket oluşturma** (ad, vergi no) → oluşturan **Sahip** olur.
+  - Üyeyse: şirket kartı ve rolü; **Üyeler** listesi (ad, e-posta, rol). **Sahip**: üye davet eder (e-posta + rol: Sahip / Onaylayan / Talep eden), bekleyen davetleri iptal eder, rol değiştirir, üye çıkarır. Diğer üyeler **Şirketten Ayrıl**. Şirketin son sahibi ayrılamaz / rolünü bırakamaz.
+- Kişi tek şirkete üye olabilir; davet, davetli o e-postayla giriş yapınca görünür.
+- **Veritabanı:** `companies`, `company_members`, `company_invites` + yetki denetimli sunucu fonksiyonları (`create_company`, `invite_company_member`, `accept_company_invite`, `set_company_member_role`, `remove_company_member`, …).
+
+### Madde 51 — Satın alma onay akışı
+- **Müşteri (şirket üyesi):** Talep formunda **"Kimin adına?"**: Şirketim / Kendi adıma. **Talep eden** rolündeki üyenin şirket adına talebi **onay bekler**: "Talebiniz şirket yöneticinizin onayına gönderildi"; Taleplerim'de **"Onay bekliyor"**.
+- **Sahip / Onaylayan:** "Onay bekleyen talep: *üye*" bildirimi; Kurumsal Hesap'ta **Onay bekleyen talepler** (Onayla / Reddet) ve talep detayında aynı düğmeler.
+- **Onaylanınca** talep Neşeli Otomotiv'e iletilir (yöneticilere "Yeni talep" bildirimi), üyeye "Talebiniz şirketinizce onaylandı"; **reddedilince** talep iptal olur, üyeye "…reddedildi". **Onaylanmayan talebi yöneticiler hiç görmez.**
+- Sahip/onaylayanın şirket adına talebi doğrudan onaylı gider. Yönetici talep detayında "Kurumsal: *şirket*" görür.
+- **Veritabanı:** `leads.company_id`, `approval_status`, `approved_by/at`; talep görünürlük kuralı ve bildirim tetikleyicileri güncellendi; `decide_company_lead`, `list_company_pending_leads`.
+
+### Madde 46 — Sektörel içerik merkezi
+- **Müşteri:** Profil → **Sektör Rehberi** ve ana sayfadaki sektör kartında **"… rehberi: ipuçları ve yazılar"**: sektör çipleri (varsayılan kullanıcının sektörü; "Tümü"), seçilen sektörün ve **genel** yazılar; yazı detayı.
+- **Yönetici:** Aynı ekranda **Yeni Rehber Yazısı** ve yazıda **Düzenle**: başlık, sektör (ya da Genel), metin, **Yayında** anahtarı (kapalıysa taslak, müşteri görmez), **Sil**.
+- **Veritabanı:** `guides` tablosu.
+
+### Madde 7 — Video araç inceleme (bölüm etiketleri)
+- **Yönetici:** İlan → Bilgileri Düzenle → **Videolar**: bölüm seç (Soğuk çalıştırma, Kabin, Motor, Alt takım, Kasa) → **Video Ekle** (galeriden, ≤ 3 dk, ≤ 50 MB; hemen yüklenir); mevcut videoları silme.
+- **Müşteri:** İlan detayında **"Video İnceleme"**: bölüm adlı düğmeler → galeri o videoda açılır; galeride başlık **"Video · Motor"**.
+- **Veritabanı:** `listing_media.section`; videolar herkese açık `listing-media` alanında.
+
 ## Sıradaki adımlar
 - iOS push için APNs kurulumu (Apple hesabında anahtar gerekir) ve yeni TestFlight build'i.
-- **Adım 10 önerisi — Kurumsal hesap ve içerik:** Madde 47 (kurumsal müşteri hesabı), 51 (satın alma onay akışı), 46 (sektörel içerik merkezi), 7 (video bölüm etiketleri).
+- Formdaki **"İlk aşama" ve "Sonraki"** maddelerinin tamamı uygulandı (kapora/online ödeme ve banka API'si gibi tartışılabilir alt parçalar hariç).
 - **Sonra:** "Gerekli değil" işaretli maddeler (15, 22, 34, 42, 45, 48–50) firma isterse.

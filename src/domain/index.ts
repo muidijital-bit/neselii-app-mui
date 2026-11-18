@@ -20,3 +20,4 @@ export * from './savedSearchRules';
 export * from './user';
 export * from './searchChips';
 export * from './sectors';
+export * from './tradeIns';

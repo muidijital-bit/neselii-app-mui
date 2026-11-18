@@ -8,7 +8,18 @@ import type { AdvisorId, LeadId, ListingId, UserId } from './ids';
  * değil, aynı formun konu seçenekleridir.
  */
 /** `inspection` / `expertise`: yerinde inceleme ve ekspertiz randevusu (madde 31, 15). */
-export type LeadTopic = 'info' | 'financing' | 'video_call' | 'inspection' | 'expertise' | 'insurance' | 'fleet_quote' | 'reservation';
+export type LeadTopic =
+  | 'info'
+  | 'financing'
+  | 'video_call'
+  | 'inspection'
+  | 'expertise'
+  | 'insurance'
+  | 'fleet_quote'
+  | 'reservation'
+  /** Adım 7: takas (madde 35) ve araç satın alma talebi (madde 40); takas formundan açılır. */
+  | 'trade_in'
+  | 'sell_vehicle';
 
 export type LeadStatus = 'new' | 'in_progress' | 'completed' | 'cancelled';
 
@@ -17,7 +28,9 @@ export type LeadTimeSlot = 'morning' | 'noon' | 'afternoon' | 'any';
 
 /** Talep formunda seçilebilen konular. `fleet_quote` (toplu teklif) karşılaştırma ekranından, `reservation` ilan detayından açılır. */
 export const LEAD_TOPICS: readonly LeadTopic[] = ['info', 'financing', 'video_call', 'inspection', 'expertise', 'insurance', 'reservation'];
-const ALL_LEAD_TOPICS: readonly LeadTopic[] = [...LEAD_TOPICS, 'fleet_quote'];
+const ALL_LEAD_TOPICS: readonly LeadTopic[] = [...LEAD_TOPICS, 'fleet_quote', 'trade_in', 'sell_vehicle'];
+/** Takas / araç alım talepleri (yönetici ayrı listede görür). */
+export const TRADE_LEAD_TOPICS: readonly LeadTopic[] = ['trade_in', 'sell_vehicle'];
 export const LEAD_STATUSES: readonly LeadStatus[] = ['new', 'in_progress', 'completed', 'cancelled'];
 export const LEAD_TIME_SLOTS: readonly LeadTimeSlot[] = ['any', 'morning', 'noon', 'afternoon'];
 
@@ -30,6 +43,8 @@ export const LEAD_TOPIC_LABELS: Record<LeadTopic, string> = {
   insurance: 'Sigorta / kasko teklifi',
   fleet_quote: 'Toplu (filo) teklif',
   reservation: 'Aracı rezerve etmek istiyorum',
+  trade_in: 'Takas başvurusu',
+  sell_vehicle: 'Aracımı satmak istiyorum',
 };
 
 /** Liste ve bildirimlerde kısa konu adı. */
@@ -42,6 +57,8 @@ export const LEAD_TOPIC_SHORT: Record<LeadTopic, string> = {
   insurance: 'Sigorta / kasko',
   fleet_quote: 'Toplu teklif',
   reservation: 'Rezervasyon',
+  trade_in: 'Takas',
+  sell_vehicle: 'Araç satış',
 };
 
 export const LEAD_STATUS_LABELS: Record<LeadStatus, string> = {
@@ -93,6 +110,8 @@ export type Lead = {
   readonly advisor: Advisor | null;
   /** Yöneticinin atadığı randevu (madde 31); yoksa `null`. */
   readonly appointmentAt: IsoDateTime | null;
+  /** Randevu yeri (madde 39; ör. "Firmamızda"). */
+  readonly appointmentLocation: string | null;
   readonly listing: LeadListing | null;
   /** Talebi bırakan müşteri (yönetici görünümü için; müşteri kendi talebinde de kendini görür). */
   readonly customer: { readonly id: UserId; readonly fullName: string };

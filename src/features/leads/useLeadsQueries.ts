@@ -1,6 +1,6 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { appError, asLeadId, type Lead, type LeadStatus } from '@/domain';
+import { appError, asLeadId, type Lead, type LeadStatus, type LeadTopic } from '@/domain';
 import { useSession } from '@/features/session/SessionProvider';
 import { useServices } from '@/services';
 import type { CreateLeadInput, UpdateLeadInput } from '@/services/contracts';
@@ -17,19 +17,19 @@ function useQueryScope() {
 /** Anahtara kullanıcı kimliği girer: başka hesabın girişinde talep önbelleği paylaşılmaz. */
 export const leadsKeys = {
   all: (userId: string | null) => ['leads', userId] as const,
-  list: (userId: string | null, status: LeadStatus | null) => [...leadsKeys.all(userId), 'list', status] as const,
+  list: (userId: string | null, status: LeadStatus | null, group: string = 'all') => [...leadsKeys.all(userId), 'list', status, group] as const,
   detail: (userId: string | null, id: string) => [...leadsKeys.all(userId), 'detail', id] as const,
   newCount: (userId: string | null) => [...leadsKeys.all(userId), 'new-count'] as const,
   appointments: (userId: string | null) => [...leadsKeys.all(userId), 'appointments'] as const,
 };
 
 /** Talep listesi (en yeni önce). Yönetici tüm talepleri (isteğe bağlı durum süzgeciyle), müşteri yalnız kendi taleplerini görür. */
-export function useLeadsQuery(status: LeadStatus | null) {
+export function useLeadsQuery(status: LeadStatus | null, topics?: readonly LeadTopic[]) {
   const { leads } = useServices();
   const { enabled, userId, isAdmin } = useQueryScope();
   return useInfiniteQuery({
-    queryKey: leadsKeys.list(userId, status),
-    queryFn: ({ pageParam }) => leads.list({ scope: isAdmin ? 'all' : 'mine', status: status ?? undefined, cursor: pageParam }),
+    queryKey: leadsKeys.list(userId, status, topics?.join(',') ?? 'all'),
+    queryFn: ({ pageParam }) => leads.list({ scope: isAdmin ? 'all' : 'mine', status: status ?? undefined, topics, cursor: pageParam }),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (last) => last.nextCursor ?? undefined,
     enabled,

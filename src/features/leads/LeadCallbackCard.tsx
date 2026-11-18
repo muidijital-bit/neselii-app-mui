@@ -7,6 +7,8 @@ import { Text } from '@/ui/Text';
 import { IconTile } from '@/ui/Ui';
 import { Colors, Spacing } from '@/ui/theme';
 
+import { tradeInHref } from '@/features/trade/routes';
+
 import { DOCUMENTS_HREF, leadRequestHref, reservationRequestHref } from './routes';
 
 /**
@@ -32,6 +34,14 @@ export function LeadCallbackCard({ listingId, canReserve }: { listingId: string;
           <Button title="Rezerve Et" icon="lock" variant="outline" style={styles.flex} onPress={() => router.push(reservationRequestHref(listingId))} testID="listing-reserve" />
         ) : null}
       </View>
+      {/* Madde 35: bu araç için takas başvurusu. */}
+      <Pressable accessibilityRole="link" onPress={() => router.push(tradeInHref({ listingId, kind: 'trade_in' }))} style={styles.docs} testID="listing-trade-in">
+        <Icon name="repeat" size={18} color="heading" />
+        <Text variant="smallSemibold" color="heading" style={styles.flex}>
+          Aracımı takasa vermek istiyorum
+        </Text>
+        <Icon name="chevron-right" size={18} color="textTertiary" />
+      </Pressable>
       {/* Madde 16: satın alma için gerekli belgeler. */}
       <Pressable accessibilityRole="link" onPress={() => router.push(DOCUMENTS_HREF)} style={styles.docs} testID="listing-documents">
         <Icon name="file-text" size={18} color="heading" />

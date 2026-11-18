@@ -270,6 +270,7 @@ export type Database = {
         Row: {
           advisor_id: string | null
           appointment_at: string | null
+          appointment_location: string | null
           contact_phone: string
           created_at: string
           data: Json
@@ -287,6 +288,7 @@ export type Database = {
         Insert: {
           advisor_id?: string | null
           appointment_at?: string | null
+          appointment_location?: string | null
           contact_phone: string
           created_at?: string
           data?: Json
@@ -304,6 +306,7 @@ export type Database = {
         Update: {
           advisor_id?: string | null
           appointment_at?: string | null
+          appointment_location?: string | null
           contact_phone?: string
           created_at?: string
           data?: Json
@@ -784,6 +787,94 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      trade_in_media: {
+        Row: {
+          created_at: string
+          id: string
+          kind: string
+          lead_id: string
+          section: string
+          storage_path: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kind: string
+          lead_id: string
+          section: string
+          storage_path: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kind?: string
+          lead_id?: string
+          section?: string
+          storage_path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trade_in_media_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "trade_ins"
+            referencedColumns: ["lead_id"]
+          },
+        ]
+      }
+      trade_ins: {
+        Row: {
+          brand: string
+          category_slug: string
+          created_at: string
+          damage_status: string | null
+          expected_price: number | null
+          km: number | null
+          lead_id: string
+          model: string | null
+          valuated_at: string | null
+          valuation_max: number | null
+          valuation_min: number | null
+          year: number | null
+        }
+        Insert: {
+          brand: string
+          category_slug: string
+          created_at?: string
+          damage_status?: string | null
+          expected_price?: number | null
+          km?: number | null
+          lead_id: string
+          model?: string | null
+          valuated_at?: string | null
+          valuation_max?: number | null
+          valuation_min?: number | null
+          year?: number | null
+        }
+        Update: {
+          brand?: string
+          category_slug?: string
+          created_at?: string
+          damage_status?: string | null
+          expected_price?: number | null
+          km?: number | null
+          lead_id?: string
+          model?: string | null
+          valuated_at?: string | null
+          valuation_max?: number | null
+          valuation_min?: number | null
+          year?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trade_ins_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: true
+            referencedRelation: "leads"
             referencedColumns: ["id"]
           },
         ]

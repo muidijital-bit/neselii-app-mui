@@ -111,6 +111,13 @@ export function ProfileScreen() {
             onPress={go(PROFILE_TARGETS.leads.href)}
             testID="profile-menu-leads"
           />
+          {/* Adım 7: müşteri takas / satış başvurusu; yönetici takas ve alım talepleri (ayrı liste). */}
+          <Divider />
+          {isAdmin ? (
+            <MenuRow icon="repeat" title={PROFILE_TARGETS.tradeLeads.title} onPress={go(PROFILE_TARGETS.tradeLeads.href)} testID="profile-menu-trade-leads" />
+          ) : (
+            <MenuRow icon="repeat" title={PROFILE_TARGETS.tradeIn.title} onPress={go(PROFILE_TARGETS.tradeIn.href)} testID="profile-menu-trade-in" />
+          )}
           {isAdmin ? (
             <>
               <Divider />

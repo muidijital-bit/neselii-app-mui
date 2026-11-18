@@ -16,6 +16,8 @@ export const PROFILE_TARGETS = {
   financeSettings: { href: '/finance-settings', title: 'Finansman Ayarları' },
   callLogs: { href: '/call-logs', title: 'Arama Kayıtları' },
   appointments: { href: '/appointments', title: 'Randevular' },
+  tradeIn: { href: '/trade-in', title: 'Aracımı Sat / Takasla' },
+  tradeLeads: { href: { pathname: '/leads', params: { group: 'trade' } }, title: 'Takas ve Alım Talepleri' },
   notificationPreferences: { href: '/notification-preferences', title: 'Bildirim Tercihleri' },
   privacy: { href: '/privacy', title: 'Gizlilik ve Güvenlik' },
   deleteAccount: { href: '/delete-account', title: 'Hesabımı Sil' },

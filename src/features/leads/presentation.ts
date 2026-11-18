@@ -19,6 +19,8 @@ export const LEAD_TOPIC_ICONS: Record<LeadTopic, IconName> = {
   insurance: 'shield',
   fleet_quote: 'layers',
   reservation: 'lock',
+  trade_in: 'repeat',
+  sell_vehicle: 'dollar-sign',
 };
 
 export const leadStatusLabel = (status: LeadStatus) => LEAD_STATUS_LABELS[status];

@@ -166,7 +166,35 @@ Her maddenin müşteri ve yönetici tarafında nasıl test edileceği: **`docs/M
 - **Müşteri:** İlan detayındaki "Sizi arayalım" bölümünde **"Satın alma için gerekli belgeler"** → **Gerekli Belgeler** ekranı: **Bireysel alım / Kurumsal alım** sekmeleri, adım adım belge listesi (kimlik, finansman, noter satışı, teslimat öncesi; kurumsalda vergi levhası, sicil gazetesi, imza sirküleri, faaliyet belgesi, bilanço…).
 - **Not:** İçerik şimdilik uygulamada sabittir (firma içeriği); firma kendi listesini iletirse güncellenir.
 
+## Adım 7 — Takas ve araç alım süreci (2026-11-18)
+
+### Madde 35 — Takas ön başvurusu
+- **Müşteri:** İlan detayında "Sizi arayalım" bölümünde **"Aracımı takasa vermek istiyorum"** ve Profil → **"Aracımı Sat / Takasla"** → **Takas / Aracımı Sat** formu: işlem türü (Takas / Sadece satış), takasta alınmak istenen ilan kartı, araç kategorisi (Kamyon, Çekici, Dorse, Ticari araç), marka, model, model yılı, kilometre, hasar durumu (Hasarsız / Boyalı-değişen / Hasarlı), beklenen fiyat, uygun saat, telefon, not.
+- Gönderince talep açılır (konu "Takas"), danışman atanır, yöneticilere bildirim gider; "Başvurunuz alındı · Danışmanınız … ön değerlendirmeyi iletecek".
+
+### Madde 36 — Fotoğraf ve video yükleme
+- **Müşteri:** Formda **Dış görünüm, Kabin içi, Motor, Kasa / üstyapı** bölümleri; her bölüme galeriden en fazla 6 fotoğraf/video (video ≤ 60 sn, dosya ≤ 100 MB); küçük resimler ve kaldırma. En az bir fotoğraf zorunlu. Gönderimde "Dosyalar yükleniyor (3/8)" ilerlemesi; yüklenemeyen dosya varsa sayısı gösterilir.
+- **Yönetici:** Talep detayında bölümlere göre fotoğraf/video şeridi; dokununca dosya açılır.
+- **Veritabanı / depolama:** Özel `trade-in` depolama alanı (yalnız dosya sahibi ve yönetici erişir, süreli imzalı adres), `trade_in_media` tablosu. Galeri izni metni eklendi (`expo-image-picker`; kamera/mikrofon izni istenmez).
+
+### Madde 37 — Ön değerlendirme aralığı
+- **Yönetici:** Talep detayında **Ön değerlendirme** kartı: en az / en çok TL → **Değerlendirmeyi Gönder / Güncelle**.
+- **Müşteri:** **"Aracınızın ön değerlendirmesi hazır · Marka Model · 2.100.000 TL – 2.300.000 TL"** bildirimi; talep detayında yeşil değer aralığı (değerlendirme gelene kadar "Danışmanınız aracınızı inceliyor").
+
+### Madde 38 — Takas farkı hesabı
+- **Müşteri ve yönetici:** Takas talebinde ilan seçiliyse ve değerlendirme varsa **"Ödenecek fark: X – Y TL"** ve **farkın aylık taksiti** (peşinatsız, finansman ayarlarındaki en uzun vade ve faizle). Araç ilandan değerliyse "Size ödenecek" gösterilir. "Kesin tutar ekspertiz sonrası netleşir" notu.
+
+### Madde 39 — Ekspertiz randevusu (takas aracı)
+- **Yönetici:** Talep detayındaki **Randevu** kartına **randevu yeri** seçimi: Firmamızda / Müşterinin adresinde / Ekspertiz merkezinde (tüm randevularda kullanılabilir).
+- **Müşteri:** "Randevunuz oluşturuldu · Takas · 20.11.2026 18:41 · Firmamızda"; yer değişince "Randevunuz güncellendi". Talep detayında "Randevu: … · Firmamızda".
+
+### Madde 40 — Araç satın alma talebi
+- **Müşteri:** Aynı formda **"Sadece aracımı satmak"** seçeneği (konu "Araç satış"; ilan bağlantısı yok).
+- **Yönetici:** Profil → **"Takas ve Alım Talepleri"**: yalnız takas ve araç satış talepleri (ayrı liste, durum süzgeçli). Genel Talepler listesinde de konu adıyla görünür.
+
+**Not:** `expo-image-picker` yerel modül eklendi → bu özellik TestFlight'ta **yeni build (4)** ile çalışır; Expo Go'da hemen çalışır.
+
 ## Sıradaki adımlar
 - iOS push için APNs kurulumu (Apple hesabında anahtar gerekir) ve yeni TestFlight build'i.
-- **Adım 7 önerisi — Takas ve araç alım süreci:** Madde 35 (takas ön başvurusu), 36 (fotoğraf/video yükleme), 37 (ön değerlendirme aralığı), 38 (takas farkı hesabı), 39 (takas aracı ekspertiz randevusu), 40 (araç satın alma talebi).
-- **Sonra:** Madde 9/10/52 (sağlık kartı, ekspertiz PDF, belge arşivi), 32 (PDF teklif), 20/21 (çoklu banka, kurumsal finansman), 41/43 (bulucuya sektör soruları), 46 (içerik merkezi), 47/51 (kurumsal hesap ve onay akışı), 7 (video bölümleri).
+- **Adım 8 önerisi — Belgeler:** Madde 9 (araç sağlık kartı), 10 (ekspertiz raporu PDF), 52 (belge arşivi), 32 (PDF teklif).
+- **Sonra:** 20/21 (çoklu banka, kurumsal finansman), 41/43 (bulucuya sektör soruları), 46 (içerik merkezi), 47/51 (kurumsal hesap ve onay akışı), 7 (video bölümleri).

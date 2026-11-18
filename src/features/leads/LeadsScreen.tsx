@@ -1,8 +1,8 @@
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 
-import { LEAD_STATUSES, LEAD_TOPIC_SHORT, userMessage, type Lead, type LeadStatus } from '@/domain';
+import { LEAD_STATUSES, LEAD_TOPIC_SHORT, TRADE_LEAD_TOPICS, userMessage, type Lead, type LeadStatus } from '@/domain';
 import { StateMessage } from '@/features/listings/ListStates';
 import { PageHeader } from '@/features/notifications/PageHeader';
 import { AdminBadge } from '@/features/session/AdminBadge';
@@ -25,8 +25,11 @@ import { useLeadsQuery } from './useLeadsQueries';
 export function LeadsScreen() {
   const isAdmin = useIsAdmin();
   const router = useRouter();
+  // Madde 40: `group=trade` → yalnız takas ve araç alım talepleri (ayrı liste).
+  const { group } = useLocalSearchParams<{ group?: string }>();
+  const trade = group === 'trade';
   const [status, setStatus] = useState<LeadStatus | null>(isAdmin ? 'new' : null);
-  const query = useLeadsQuery(isAdmin ? status : null);
+  const query = useLeadsQuery(isAdmin ? status : null, trade ? TRADE_LEAD_TOPICS : undefined);
   const { refetch } = query;
   const { pulling, onRefresh } = usePullRefresh(refetch);
 
@@ -67,7 +70,7 @@ export function LeadsScreen() {
   return (
     <View style={styles.container} testID="leads-screen">
       <FocusStatusBar style="dark" />
-      <PageHeader title={isAdmin ? 'Talepler' : 'Taleplerim'} testID="leads-back" right={<AdminBadge />}>
+      <PageHeader title={trade ? 'Takas ve Alım' : isAdmin ? 'Talepler' : 'Taleplerim'} testID="leads-back" right={<AdminBadge />}>
         {isAdmin ? (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters} testID="leads-filters">
             <Chip label="Tümü" selected={status === null} onPress={() => setStatus(null)} />

@@ -20,6 +20,10 @@ import type {
   FavoriteEntry,
   FinancePlan,
   FinanceSettings,
+  KurusRange,
+  TradeInDetail,
+  TradeInUpload,
+  TradeInVehicleInput,
   Lead,
   LeadId,
   LeadStatus,
@@ -219,10 +223,16 @@ export type CreateLeadInput = {
 };
 
 /** `mine`: oturumdaki kullanıcının talepleri. `all`: firma gelen kutusu (yalnız yönetici; müşteride RLS yine kendi taleplerini döner). */
-export type ListLeadsInput = PageInput & { readonly scope: 'mine' | 'all'; readonly status?: LeadStatus };
+export type ListLeadsInput = PageInput & { readonly scope: 'mine' | 'all'; readonly status?: LeadStatus; /** Yalnız bu konular (ör. takas ve alım). */ readonly topics?: readonly LeadTopic[] };
 
 /** `appointmentAt`: ISO zaman; `null` randevuyu kaldırır (madde 31). */
-export type UpdateLeadInput = { readonly status?: LeadStatus; readonly advisorId?: AdvisorId | null; readonly appointmentAt?: string | null };
+export type UpdateLeadInput = {
+  readonly status?: LeadStatus;
+  readonly advisorId?: AdvisorId | null;
+  readonly appointmentAt?: string | null;
+  /** Madde 39: randevu yeri; `null` kaldırır. */
+  readonly appointmentLocation?: string | null;
+};
 
 /**
  * Talepler: müşteri bırakır, sunucu durumu "Yeni" yapar ve rastgele aktif danışman atar; yöneticilere bildirim gider. Yönetici durum ve danışmanı
@@ -285,6 +295,22 @@ export interface CallLogsService {
   summary(): Promise<CallSummary>;
 }
 
+// --- Trade-ins (Adım 7) --------------------------------------------------------------------------------------------
+
+/**
+ * Takas / araç satış talebinin aracı ve medyası. Talep `LeadsService.create` ile (konu `trade_in` / `sell_vehicle`) açılır, ardından araç bilgisi
+ * ve dosyalar bu servisle eklenir. Medya özel depolamadadır; okuma süreli imzalı adresle yapılır. Değerlendirme yalnız yöneticidedir.
+ */
+export interface TradeInsService {
+  saveVehicle(leadId: LeadId, vehicle: TradeInVehicleInput): Promise<void>;
+  /** Dosyayı yükler ve kaydeder. */
+  uploadMedia(leadId: LeadId, file: TradeInUpload): Promise<void>;
+  /** Talebin aracı ve medyası; araç yoksa `null`. */
+  get(leadId: LeadId): Promise<TradeInDetail | null>;
+  /** Madde 37 (yönetici): ön değerlendirme aralığı; `null` kaldırır. Müşteriye bildirim gider. */
+  setValuation(leadId: LeadId, valuation: KurusRange | null): Promise<void>;
+}
+
 // --- Birleşik kap --------------------------------------------------------------------------------------------------
 
 export interface Services {
@@ -299,6 +325,7 @@ export interface Services {
   readonly advisors: AdvisorsService;
   readonly finance: FinanceService;
   readonly callLogs: CallLogsService;
+  readonly tradeIns: TradeInsService;
 }
 
 export type ServiceName = keyof Services;

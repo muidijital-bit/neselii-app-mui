@@ -391,6 +391,46 @@ Adımlar:
 
 ---
 
+## Adım 7 — Takas ve araç alım süreci
+
+> Galeriden fotoğraf seçimi yeni bir yerel modül kullanır: **Expo Go önizlemesinde** hemen, **TestFlight'ta build 4 ve sonrasında** çalışır.
+
+### Madde 35, 36 — Takas başvurusu ve fotoğraf/video
+**Müşteri**
+- [ ] Bir ilan aç → "Sizi arayalım" bölümünde **"Aracımı takasa vermek istiyorum"** → **Takas / Aracımı Sat** formu; "Takas" seçili, üstte "Almak istediğiniz araç" kartında ilan görünür.
+- [ ] Hiçbir şey doldurmadan **Başvuruyu Gönder** → "Aracın markasını girin", "Değerlendirme için en az bir fotoğraf ekleyin" uyarıları.
+- [ ] Kategori **Çekici**, marka, model, yıl (`1900` deneyin → "Geçerli bir model yılı girin"), kilometre (binlik ayraçla biçimlenir), hasar durumu, beklenen fiyat girin.
+- [ ] **Dış görünüm → Ekle**: galeri açılır (ilk seferde galeri izni istenir); 2 fotoğraf seçin → küçük resimler görünür; birini **×** ile kaldırın. **Motor → Ekle**: kısa bir video seçin → oynat simgeli küçük resim.
+- [ ] Gönderin → "Dosyalar yükleniyor (n/N)…" → **"Başvurunuz alındı · Danışmanınız … ön değerlendirmeyi iletecek"** → **Başvurumu Gör**: talep detayında "Müşterinin aracı" bilgileri ve fotoğraf/videolar.
+
+**Yönetici**
+- [ ] Bildirim: "Yeni talep: … · Takas · *ilan*". Profil → **Takas ve Alım Talepleri** → talep listede (genel Talepler'de de var).
+- [ ] Talep detayı: **Müşterinin aracı** kartı, **Fotoğraf ve videolar** bölümlere göre; bir fotoğrafa dokunun → tarayıcıda açılır; videoya dokunun → oynatılır.
+
+### Madde 37, 38 — Ön değerlendirme ve takas farkı
+**Yönetici**
+- [ ] **Ön değerlendirme** kartında en az `2.100.000`, en çok `2.300.000` → **Değerlendirmeyi Gönder**. En azı en çoktan büyük girerseniz hata uyarısı.
+
+**Müşteri**
+- [ ] Bildirim: **"Aracınızın ön değerlendirmesi hazır · Marka Model · 2.100.000 TL – 2.300.000 TL"**; dokununca talep açılır.
+- [ ] Talep detayında yeşil değer aralığı ve **"Ödenecek fark: (ilan fiyatı − 2.300.000) – (ilan fiyatı − 2.100.000) TL"**, altında **"Farkın aylık taksiti (N ay, peşinatsız)"**. Örnek: 6.450.000 TL'lik ilanda fark 4.150.000 – 4.350.000 TL.
+
+### Madde 39 — Takas aracı ekspertiz randevusu
+**Yönetici**
+- [ ] Talep detayındaki **Randevu** kartında gün/saat + **Firmamızda** yerini seçip **Randevu Oluştur**. Sonra yeri **Ekspertiz merkezinde** yapıp **Randevuyu Güncelle**.
+
+**Müşteri**
+- [ ] Bildirimler: "Randevunuz oluşturuldu · Takas · GG.AA.YYYY SS:DD · Firmamızda", ardından "Randevunuz güncellendi · … · Ekspertiz merkezinde". Talep detayında "Randevu: … · Ekspertiz merkezinde".
+
+### Madde 40 — Araç satın alma talebi
+**Müşteri**
+- [ ] Profil → **Aracımı Sat / Takasla** → "Sadece aracımı satmak" seçili gelir (ilan kartı yok) → bilgileri ve en az bir fotoğrafı ekleyip gönderin.
+
+**Yönetici**
+- [ ] Profil → **Takas ve Alım Talepleri**: talep "Araç satış" konusuyla görünür; ön değerlendirme girilebilir (takas farkı bölümü gösterilmez).
+
+---
+
 ## Bilinen sınırlar / dikkat edilecekler
 
 - **iOS'ta telefona bildirim:** Apple Developer hesabında APNs anahtarı (.p8) oluşturulup Expo'ya yüklenmeli, uygulama kimliğinde Push Notifications yeteneği açılmalı ve yeni TestFlight build'i alınmalı. O zamana kadar bildirimler yalnızca uygulama içinde (Bildirimler sekmesi) görünür.

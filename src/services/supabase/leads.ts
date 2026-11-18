@@ -21,7 +21,7 @@ import { call, ensure, offsetOf, pageRange, requireUserId, tlToKurus, toIso, toP
 
 type Row = Pick<
   Tables<'leads'>,
-  'id' | 'user_id' | 'topic' | 'status' | 'preferred_date' | 'preferred_slot' | 'contact_phone' | 'note' | 'data' | 'appointment_at' | 'created_at' | 'updated_at'
+  'id' | 'user_id' | 'topic' | 'status' | 'preferred_date' | 'preferred_slot' | 'contact_phone' | 'note' | 'data' | 'appointment_at' | 'appointment_location' | 'created_at' | 'updated_at'
 > & {
   advisor: { id: string; full_name: string; phone: string | null; active: boolean } | null;
   listing: { id: string; title: string; listing_no: number; price: number; cover_url: string | null; reserved_until: string | null; reserved_lead_id: string | null } | null;
@@ -29,7 +29,7 @@ type Row = Pick<
 };
 
 const COLUMNS =
-  'id, user_id, topic, status, preferred_date, preferred_slot, contact_phone, note, data, appointment_at, created_at, updated_at, ' +
+  'id, user_id, topic, status, preferred_date, preferred_slot, contact_phone, note, data, appointment_at, appointment_location, created_at, updated_at, ' +
   'advisor:advisors!leads_advisor_id_fkey(id, full_name, phone, active), ' +
   'listing:listings!leads_listing_id_fkey(id, title, listing_no, price, cover_url, reserved_until, reserved_lead_id), ' +
   'customer:profiles!leads_user_id_fkey(full_name)';
@@ -71,6 +71,7 @@ function toLead(row: Row): Lead {
     fleetListings: fleetOf(row.data),
     reservedUntil: row.listing?.reserved_lead_id === row.id && row.listing.reserved_until ? toIso(row.listing.reserved_until) : null,
     appointmentAt: row.appointment_at ? toIso(row.appointment_at) : null,
+    appointmentLocation: row.appointment_location,
     advisor: row.advisor ? { id: asAdvisorId(row.advisor.id), fullName: row.advisor.full_name, phone: row.advisor.phone, active: row.advisor.active } : null,
     listing: row.listing
       ? {
@@ -129,7 +130,7 @@ export function createSupabaseLeads(sb: Supabase): LeadsService {
         return toLead(row);
       }),
 
-    list: ({ scope, status, cursor }: ListLeadsInput) =>
+    list: ({ scope, status, topics, cursor }: ListLeadsInput) =>
       call(async () => {
         const userId = await requireUserId(sb);
         const offset = offsetOf(cursor);
@@ -137,6 +138,7 @@ export function createSupabaseLeads(sb: Supabase): LeadsService {
         let query = sb.from('leads').select(COLUMNS);
         if (scope === 'mine') query = query.eq('user_id', userId);
         if (status) query = query.eq('status', status);
+        if (topics?.length) query = query.in('topic', [...topics]);
         const rows = unwrap(await query.order('created_at', { ascending: false }).order('id').range(from, to)) as unknown as Row[];
         return toPage(rows, offset, toLead);
       }),
@@ -145,10 +147,11 @@ export function createSupabaseLeads(sb: Supabase): LeadsService {
 
     update: (id: LeadId, patch: UpdateLeadInput) =>
       call(async () => {
-        const update: { status?: string; advisor_id?: string | null; appointment_at?: string | null } = {};
+        const update: { status?: string; advisor_id?: string | null; appointment_at?: string | null; appointment_location?: string | null } = {};
         if (patch.status !== undefined) update.status = patch.status;
         if (patch.advisorId !== undefined) update.advisor_id = patch.advisorId;
         if (patch.appointmentAt !== undefined) update.appointment_at = patch.appointmentAt;
+        if (patch.appointmentLocation !== undefined) update.appointment_location = patch.appointmentLocation?.trim().slice(0, 120) || null;
         if (Object.keys(update).length === 0) return fetchOne(id);
         const row = unwrapMaybe(await sb.from('leads').update(update).eq('id', id).select(COLUMNS).maybeSingle()) as unknown as Row | null;
         if (!row) throw appError.notFound(`lead ${id}`);

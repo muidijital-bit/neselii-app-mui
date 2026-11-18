@@ -11,6 +11,7 @@ import { createSupabaseMessaging } from './messaging';
 import { createSupabaseNotifications } from './notifications';
 import { createSupabaseProfile } from './profile';
 import { createSupabaseSavedSearches } from './savedSearches';
+import { createSupabaseTradeIns } from './tradeIns';
 
 export { isAuthLink } from './authLinks';
 
@@ -29,6 +30,7 @@ export function createSupabaseServices(): Services {
     advisors: createSupabaseAdvisors(sb),
     finance: createSupabaseFinance(sb),
     callLogs: createSupabaseCallLogs(sb),
+    tradeIns: createSupabaseTradeIns(sb),
   };
 }
 

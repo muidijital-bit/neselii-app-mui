@@ -6,6 +6,7 @@ import { AppError, LEAD_STATUSES, LEAD_TOPIC_LABELS, asAdvisorId, formatMoney, t
 import { useAdvisorsQuery } from '@/features/advisors/useAdvisors';
 import { FinancePlanSummary } from '@/features/finance/FinancePlanSummary';
 import { listingHref } from '@/features/listings/routes';
+import { TradeInLeadSection } from '@/features/trade';
 import { PageHeader } from '@/features/notifications/PageHeader';
 import { AdminBadge } from '@/features/session/AdminBadge';
 import { useIsAdmin } from '@/features/session/useIsAdmin';
@@ -82,6 +83,7 @@ function LeadContent({ lead }: { lead: Lead }) {
             <Icon name="calendar" size={18} color="success" />
             <Text variant="smallSemibold" color="success" style={styles.flex}>
               Randevu: {formatAppointment(lead.appointmentAt)}
+              {lead.appointmentLocation ? ` · ${lead.appointmentLocation}` : ''}
             </Text>
           </View>
         ) : null}
@@ -116,6 +118,9 @@ function LeadContent({ lead }: { lead: Lead }) {
           </Pressable>
         </Card>
       ) : null}
+
+      {/* Adım 7: takas / satış aracı, medya, ön değerlendirme ve takas farkı. */}
+      {lead.topic === 'trade_in' || lead.topic === 'sell_vehicle' ? <TradeInLeadSection lead={lead} isAdmin={isAdmin} /> : null}
 
       {lead.fleetListings.length ? (
         <Card style={styles.planCard}>
@@ -223,6 +228,7 @@ function LeadContent({ lead }: { lead: Lead }) {
 }
 
 const RESERVATION_DAYS = [1, 2, 3, 7];
+const APPOINTMENT_LOCATIONS = ['Firmamızda', 'Müşterinin adresinde', 'Ekspertiz merkezinde'];
 
 /** Madde 33: yönetici rezervasyonu onaylar (ilan seçilen gün kadar "Rezerve", süre dolunca otomatik yayına döner) ya da kaldırır. */
 function ReservationEditor({ lead }: { lead: Lead }) {
@@ -269,7 +275,8 @@ function AppointmentEditor({ lead }: { lead: Lead }) {
   );
   const days = upcomingDays(14);
   const iso = appointmentIso(day, time);
-  const unchanged = iso !== null && current !== null && new Date(iso).getTime() === current.getTime();
+  const [location, setLocation] = useState<string | null>(lead.appointmentLocation);
+  const unchanged = iso !== null && current !== null && new Date(iso).getTime() === current.getTime() && location === lead.appointmentLocation;
 
   return (
     <Card style={styles.statusCard}>
@@ -287,12 +294,18 @@ function AppointmentEditor({ lead }: { lead: Lead }) {
           <Chip key={value} label={value} selected={time === value} onPress={() => setTime(value)} />
         ))}
       </ScrollView>
+      {/* Madde 39: randevu yeri (ekspertiz / inceleme). */}
+      <View style={styles.wrapRow}>
+        {APPOINTMENT_LOCATIONS.map((value) => (
+          <Chip key={value} label={value} selected={location === value} onPress={() => setLocation(location === value ? null : value)} />
+        ))}
+      </View>
       <Button
         title={lead.appointmentAt ? 'Randevuyu Güncelle' : 'Randevu Oluştur'}
         icon="calendar"
         disabled={iso === null || unchanged}
         loading={update.isPending}
-        onPress={() => iso && update.mutate({ appointmentAt: iso })}
+        onPress={() => iso && update.mutate({ appointmentAt: iso, appointmentLocation: location })}
         testID="lead-appointment-save"
       />
       {lead.appointmentAt ? (

@@ -15,7 +15,7 @@
         "usesNonExemptEncryption": false
       },
       "appleTeamId": "7DKZH9VMX9",
-      "buildNumber": "3"
+      "buildNumber": "4"
     },
     "android": {
       "adaptiveIcon": {
@@ -51,6 +51,14 @@
           "isIosBackgroundLocationEnabled": false,
           "isAndroidBackgroundLocationEnabled": false,
           "isAndroidForegroundServiceEnabled": false
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Takas veya satış için aracınızın fotoğraf ve videolarını seçebilmeniz için galerinize erişiriz.",
+          "cameraPermission": false,
+          "microphonePermission": false
         }
       ],
       "./plugins/withoutPushEntitlement",

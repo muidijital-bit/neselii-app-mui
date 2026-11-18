@@ -9,4 +9,8 @@ export const STORAGE_KEYS = {
   devicePreferences: 'neseli.device.preferences',
   /** Yönetici Mesajlar tanıtımı görüldü mü; sonuna kullanıcı kimliği eklenir (aynı cihazdaki her yönetici bir kez görür). */
   adminInboxIntroPrefix: 'neseli.device.admin-inbox-intro.',
+  /** Karşılaştırma listesindeki ilan kimlikleri (madde 4; en çok 3, üyelik gerekmez). */
+  compare: 'neseli.device.compare',
+  /** Kullanıcının seçtiği sektör (madde 1). */
+  sector: 'neseli.device.sector',
 } as const;

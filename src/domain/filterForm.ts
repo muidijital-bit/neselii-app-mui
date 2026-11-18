@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { CATEGORY_IDS, type CategoryId } from './categories';
 import type { Range } from './common';
 import { specificKindFor, type ListingFilters, type ListingSearch, type ListingSort, type SpecificFilters } from './filters';
-import type { DriveConfig, RoomCount, SearchableStatus, TrailerAxles } from './listing';
+import { CAB_TYPES, type CabType, type DriveConfig, type RoomCount, type SearchableStatus, type TrailerAxles } from './listing';
 
 /**
  * Filtre formu (ekran 05): kullanıcının yazdığı METİN taslağı ile servise giden normalize `ListingSearch` arasındaki saf kurallar.
@@ -18,6 +18,11 @@ export type SpecificDraft = {
   readonly odometerMin: string;
   readonly odometerMax: string;
   readonly driveConfigs: readonly DriveConfig[];
+  readonly tonnageMin: string;
+  readonly tonnageMax: string;
+  readonly powerMin: string;
+  readonly powerMax: string;
+  readonly cabTypes: readonly CabType[];
   readonly axles: readonly TrailerAxles[];
   readonly areaMin: string;
   readonly areaMax: string;
@@ -45,6 +50,11 @@ export const EMPTY_SPECIFIC_DRAFT: SpecificDraft = {
   odometerMin: '',
   odometerMax: '',
   driveConfigs: [],
+  tonnageMin: '',
+  tonnageMax: '',
+  powerMin: '',
+  powerMax: '',
+  cabTypes: [],
   axles: [],
   areaMin: '',
   areaMax: '',
@@ -121,7 +131,7 @@ export const kurusToTlText = (kurus: number): string => String(Math.floor(kurus 
 
 // --- Doğrulama + normalize arama -------------------------------------------------------------------------------------
 
-export type FilterField = 'price' | 'modelYear' | 'odometerKm' | 'areaM2';
+export type FilterField = 'price' | 'modelYear' | 'odometerKm' | 'areaM2' | 'tonnage' | 'enginePowerHp';
 export type FilterErrors = Partial<Record<FilterField, string>>;
 export type BuildSearchResult = { readonly ok: true; readonly search: ListingSearch } | { readonly ok: false; readonly errors: FilterErrors };
 
@@ -176,12 +186,20 @@ function buildSpecific(draft: FilterDraft, errors: FilterErrors): SpecificFilter
   const odometer = buildRange(s.odometerMin, s.odometerMax, parseWholeNumber);
   if (odometer.error) errors.odometerKm = odometer.error;
   const driveConfigs = showsDriveConfigs(draft.categories) ? pick(DRIVE_ORDER, s.driveConfigs) : undefined;
+  const tonnage = buildRange(s.tonnageMin, s.tonnageMax, parseWholeNumber);
+  if (tonnage.error) errors.tonnage = tonnage.error;
+  const power = buildRange(s.powerMin, s.powerMax, parseWholeNumber);
+  if (power.error) errors.enginePowerHp = power.error;
+  const cabTypes = showsDriveConfigs(draft.categories) ? pick(CAB_TYPES, s.cabTypes) : undefined;
   return {
     kind,
     ...(brand ? { brand } : {}),
     ...(year.range ? { modelYear: year.range } : {}),
     ...(odometer.range ? { odometerKm: odometer.range } : {}),
     ...(driveConfigs ? { driveConfigs } : {}),
+    ...(tonnage.range ? { tonnage: tonnage.range } : {}),
+    ...(power.range ? { enginePowerHp: power.range } : {}),
+    ...(cabTypes ? { cabTypes } : {}),
   };
 }
 
@@ -232,7 +250,17 @@ export function searchToDraft(search: ListingSearch): FilterDraft {
   if (specific.kind === 'trailer') return { ...base, specific: { ...common, axles: specific.axles ?? [] } };
   return {
     ...base,
-    specific: { ...common, odometerMin: text(specific.odometerKm?.min), odometerMax: text(specific.odometerKm?.max), driveConfigs: specific.driveConfigs ?? [] },
+    specific: {
+      ...common,
+      odometerMin: text(specific.odometerKm?.min),
+      odometerMax: text(specific.odometerKm?.max),
+      driveConfigs: specific.driveConfigs ?? [],
+      tonnageMin: text(specific.tonnage?.min),
+      tonnageMax: text(specific.tonnage?.max),
+      powerMin: text(specific.enginePowerHp?.min),
+      powerMax: text(specific.enginePowerHp?.max),
+      cabTypes: specific.cabTypes ?? [],
+    },
   };
 }
 
@@ -259,6 +287,9 @@ const searchSchema = z
               modelYear: rangeSchema.optional(),
               odometerKm: rangeSchema.optional(),
               driveConfigs: z.array(z.enum(['4x2', '6x2', '6x4'])).optional(),
+              tonnage: rangeSchema.optional(),
+              enginePowerHp: rangeSchema.optional(),
+              cabTypes: z.array(z.enum(['standard', 'high', 'sleeper'])).optional(),
             })
             .strict(),
           z

@@ -9,6 +9,7 @@ import type {
   AdvisorId,
   AppNotification,
   Category,
+  CommercialSpecs,
   CategoryId,
   ClientMessageId,
   Conversation,
@@ -115,6 +116,8 @@ export interface ListingsService {
   getListing(id: ListingId): Promise<ListingDetail>;
   /** Yalnız yönetici: ilanın geçmiş / güven / uzman bilgilerini kaydeder (yoksa oluşturur). Var olmayan ilan → `notFound`. */
   saveInsights(id: ListingId, input: ListingInsightsInput): Promise<ListingInsights>;
+  /** Yalnız yönetici: ticari araç teknik bilgileri (madde 3: tonaj, motor gücü, kabin, şasi, üstyapı). Boş alan kaldırılır. */
+  saveSpecs(id: ListingId, specs: CommercialSpecs): Promise<void>;
 }
 
 // --- Favorites & saved searches ------------------------------------------------------------------------------------

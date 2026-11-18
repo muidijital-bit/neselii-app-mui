@@ -4,7 +4,9 @@ import { BackHandler, Pressable, StyleSheet, useWindowDimensions, View } from 'r
 import Animated, { Easing, FadeInDown, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { SECTORS } from '@/domain';
 import { usePhotoWallQuery } from '@/features/listings/useListingsQueries';
+import { useSector } from '@/features/sector/SectorProvider';
 import { usePermissions } from '@/permissions';
 import { Button } from '@/ui/Button';
 import { FocusStatusBar } from '@/ui/FocusStatusBar';
@@ -27,6 +29,8 @@ type Page = {
   title: string;
   body: string;
   bullets?: { icon: IconName; text: string }[];
+  /** Madde 1: sektör seçimi (seçilebilir çipler). */
+  sectors?: boolean;
   primary: { title: string; icon?: IconName; permission?: PermissionKind; testID: string };
   secondary?: { title: string; testID: string };
 };
@@ -39,6 +43,16 @@ const pages: Page[] = [
     title: 'Filomuzdaki araçlar artık cebinde',
     body: 'Kamyon, çekici, dorse ve ticari araç ilanlarını incele, fiyatları karşılaştır, firmamızla anında mesajlaş.',
     primary: { title: 'Başlayalım', icon: 'arrow-right', testID: 'onboarding-continue' },
+  },
+  {
+    key: 'sector',
+    testID: 'onboarding-sector',
+    eyebrow: 'SİZE ÖZEL',
+    title: 'Aracı hangi iş için kullanacaksınız?',
+    body: 'Seçiminize göre ana sayfada size uygun araçları öne çıkaralım.',
+    sectors: true,
+    primary: { title: 'Devam', icon: 'arrow-right', testID: 'onboarding-sector-continue' },
+    secondary: { title: 'Şimdi Değil', testID: 'onboarding-sector-later' },
   },
   {
     key: 'notifications',
@@ -80,7 +94,7 @@ const WALL_SOLID_FADE = 0.15;
 const WALL_TIMING = { duration: 450, easing: Easing.out(Easing.cubic) };
 
 /**
- * Tanıtım (main `onboarding.tsx` ile birebir): üç adım TEK ekranda. Fotoğraf duvarı adımlar boyunca kesintisiz akar; adım değişince
+ * Tanıtım (main `onboarding.tsx` ile birebir): dört adım TEK ekranda (2. adım madde 1: sektör seçimi). Fotoğraf duvarı adımlar boyunca kesintisiz akar; adım değişince
  * yalnız metin bloğu aşağıdan solarak girer. Sistem izinleri YALNIZCA birincil düğmeyle istenir; ret/hata ilerlemeyi engellemez.
  * Son adımdan sonra (izin ya da "Şimdi Değil") tanıtım tamamlanır.
  */
@@ -90,6 +104,7 @@ export function OnboardingScreen() {
   const photos = usePhotoWallQuery();
   const permissions = usePermissions();
   const { complete } = useOnboarding();
+  const { sector, setSector } = useSector();
   const [index, setIndex] = useState(0);
   const [busy, setBusy] = useState(false);
   const inFlight = useRef(false);
@@ -180,6 +195,27 @@ export function OnboardingScreen() {
           <Text variant="body" style={[styles.body, compact && styles.bodyCompact]}>
             {page.body}
           </Text>
+          {page.sectors ? (
+            <View style={styles.sectors} testID="onboarding-sector-options">
+              {SECTORS.map((option) => {
+                const selected = sector === option.id;
+                return (
+                  <Pressable
+                    key={option.id}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected }}
+                    onPress={() => setSector(selected ? null : option.id)}
+                    style={[styles.sectorChip, selected && styles.sectorChipSelected]}
+                    testID={`onboarding-sector-${option.id}`}>
+                    <Icon name={option.icon as IconName} size={18} color={selected ? Colors.navy : 'white'} />
+                    <Text variant="smallSemibold" style={{ color: selected ? Colors.navy : Colors.white }}>
+                      {option.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          ) : null}
           {page.bullets?.map((b) => (
             <View key={b.text} style={styles.bullet}>
               <View style={[styles.bulletIcon, compact && styles.bulletIconCompact]}>
@@ -242,6 +278,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   bulletIconCompact: { width: 32, height: 32 },
+  sectors: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
+  sectorChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
+    borderRadius: Radius.pill,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  sectorChipSelected: { backgroundColor: Colors.white, borderColor: Colors.white },
   footer: { paddingHorizontal: Spacing.four, gap: Spacing.three },
   footerCompact: { gap: Spacing.two },
   dots: { flexDirection: 'row', gap: 6, marginBottom: Spacing.one },

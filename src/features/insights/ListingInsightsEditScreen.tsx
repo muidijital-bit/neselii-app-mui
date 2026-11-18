@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import {
+  CAB_TYPES,
+  CAB_TYPE_LABELS,
   EMPTY_TRUST_CHECKS,
   TRUST_CHECKS,
   USAGE_TYPES,
@@ -14,6 +16,7 @@ import {
   parseTrDate,
   trustScore,
   userMessage,
+  type CabType,
   type ListingDetail,
   type ListingInsightsInput,
   type TrustChecks,
@@ -34,7 +37,7 @@ import { Card, Chip, Divider, ToggleRow } from '@/ui/Ui';
 import { Colors, Spacing } from '@/ui/theme';
 
 /**
- * Yönetici: ilanın güven kontrolleri (madde 12), araç geçmişi (madde 11) ve uzman görüşü (madde 13). Kaydedince ilan detayı yenilenir ve
+ * Yönetici: ilanın teknik bilgileri (madde 3, yalnız araçlarda), güven kontrolleri (madde 12), araç geçmişi (madde 11) ve uzman görüşü (madde 13). Kaydedince ilan detayı yenilenir ve
  * müşteriler yeni bilgileri görür. Güçlü yönler / dikkat edilecekler her satıra bir madde yazılır.
  */
 export function ListingInsightsEditScreen() {
@@ -68,6 +71,12 @@ function InsightsForm({ listing }: { listing: ListingDetail }) {
   const queryClient = useQueryClient();
   const advisors = useAdvisorsQuery();
   const initial = listing.insights;
+  const vehicle = listing.specs.group === 'vehicle' ? listing.specs : null;
+  const [tonnage, setTonnage] = useState(vehicle?.tonnage !== undefined ? String(vehicle.tonnage) : '');
+  const [power, setPower] = useState(vehicle?.enginePowerHp !== undefined ? String(vehicle.enginePowerHp) : '');
+  const [cabType, setCabType] = useState<CabType | null>(vehicle?.cabType ?? null);
+  const [chassis, setChassis] = useState(vehicle?.chassis ?? '');
+  const [bodyBuilder, setBodyBuilder] = useState(vehicle?.bodyBuilder ?? '');
 
   const [checks, setChecks] = useState<TrustChecks>(initial?.checks ?? EMPTY_TRUST_CHECKS);
   const [usageType, setUsageType] = useState(initial?.usageType ?? '');
@@ -107,6 +116,15 @@ function InsightsForm({ listing }: { listing: ListingDetail }) {
       cautions: linesToItems(cautions),
     };
     try {
+      if (vehicle) {
+        await listings.saveSpecs(asListingId(listing.id), {
+          tonnage: toNumber(tonnage) ?? undefined,
+          enginePowerHp: toNumber(power) ?? undefined,
+          cabType: cabType ?? undefined,
+          chassis,
+          bodyBuilder,
+        });
+      }
       await listings.saveInsights(asListingId(listing.id), input);
       // Yalnız bu ilanın detay önbelleği yenilenir (anahtar: ['listings', userId, 'detail', listingId]).
       await queryClient.invalidateQueries({ queryKey: ['listings'], predicate: (q) => q.queryKey[2] === 'detail' && q.queryKey[3] === listing.id });
@@ -120,6 +138,31 @@ function InsightsForm({ listing }: { listing: ListingDetail }) {
 
   return (
     <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      {vehicle ? (
+        <View style={styles.group}>
+          <Text variant="subheading">Teknik bilgiler</Text>
+          <Text variant="small">Ticari araç filtrelerinde (tonaj, motor gücü, kabin) ve ilanın özellikler tablosunda kullanılır.</Text>
+          <View style={styles.pair}>
+            <View style={styles.flex}>
+              <TextField label="Tonaj (ton)" value={tonnage} onChangeText={setTonnage} keyboardType="number-pad" placeholder="Ör. 26" testID="insights-tonnage" />
+            </View>
+            <View style={styles.flex}>
+              <TextField label="Motor gücü (HP)" value={power} onChangeText={setPower} keyboardType="number-pad" placeholder="Ör. 480" testID="insights-power" />
+            </View>
+          </View>
+          <Text variant="smallMedium" color="textSecondary">
+            Kabin tipi
+          </Text>
+          <View style={styles.wrap}>
+            {CAB_TYPES.map((type) => (
+              <Chip key={type} label={CAB_TYPE_LABELS[type]} selected={cabType === type} onPress={() => setCabType(cabType === type ? null : type)} />
+            ))}
+          </View>
+          <TextField label="Şasi" value={chassis} onChangeText={setChassis} placeholder="Ör. Uzun şasi, 7,2 m" maxLength={120} testID="insights-chassis" />
+          <TextField label="Üstyapı" value={bodyBuilder} onChangeText={setBodyBuilder} placeholder="Ör. Hidrolik damper, Hardox kasa" maxLength={120} testID="insights-body-builder" />
+        </View>
+      ) : null}
+
       <View style={styles.group}>
         <View style={styles.titleRow}>
           <Text variant="subheading" style={styles.flex}>

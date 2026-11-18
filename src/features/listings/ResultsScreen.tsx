@@ -4,6 +4,8 @@ import { ActivityIndicator, FlatList, Modal, Pressable, RefreshControl, ScrollVi
 import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { CompareBar } from '@/features/compare/CompareBar';
+
 import {
   EMPTY_FILTERS,
   EMPTY_SEARCH,
@@ -298,6 +300,9 @@ function ResultsBody({ search, nearby, onChange }: { search: ListingSearch; near
         refreshControl={<RefreshControl refreshing={pulling} onRefresh={onRefresh} tintColor={Colors.navy} />}
         testID="results-list"
       />
+
+      {/* Madde 4: karşılaştırma listesi doluysa "Karşılaştır (n/3)". */}
+      <CompareBar bottom={Spacing.three} safeArea />
 
       <SortSheet
         visible={sortOpen}

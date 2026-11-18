@@ -3,6 +3,7 @@ import type { Range } from './common';
 import { buildSearch, searchToDraft, withCategories } from './filterForm';
 import type { ListingSearch } from './filters';
 import { formatInteger } from './format';
+import { CAB_TYPE_LABELS } from './listing';
 
 /**
  * Sonuç ekranı (06) çipleri: aramanın her koşul grubu tek çip. Çip silmek yalnızca temsil ettiği koşulu kaldırır; istisna kategori
@@ -12,7 +13,7 @@ import { formatInteger } from './format';
 export type SearchChipId =
   | { readonly kind: 'query' }
   | { readonly kind: 'category'; readonly categoryId: CategoryId }
-  | { readonly kind: 'price' | 'city' | 'statuses' | 'financing' | 'subtypes' | 'brand' | 'modelYear' | 'odometerKm' | 'driveConfigs' | 'axles' | 'areaM2' | 'rooms' };
+  | { readonly kind: 'price' | 'city' | 'statuses' | 'financing' | 'subtypes' | 'brand' | 'modelYear' | 'odometerKm' | 'driveConfigs' | 'axles' | 'areaM2' | 'rooms' | 'tonnage' | 'enginePowerHp' | 'cabTypes' };
 
 export type SearchChip = {
   readonly key: string;
@@ -63,6 +64,9 @@ export function searchChips(search: ListingSearch): readonly SearchChip[] {
     } else {
       if (specific.odometerKm) add('odometerKm', { kind: 'odometerKm' }, rangeLabel(specific.odometerKm, formatInteger, { suffix: 'km', ...AT_LEAST_MOST }));
       if (specific.driveConfigs?.length) add('driveConfigs', { kind: 'driveConfigs' }, specific.driveConfigs.join(', '));
+      if (specific.tonnage) add('tonnage', { kind: 'tonnage' }, rangeLabel(specific.tonnage, formatInteger, { suffix: 'ton', ...AT_LEAST_MOST }));
+      if (specific.enginePowerHp) add('enginePowerHp', { kind: 'enginePowerHp' }, rangeLabel(specific.enginePowerHp, formatInteger, { suffix: 'HP', ...AT_LEAST_MOST }));
+      if (specific.cabTypes?.length) add('cabTypes', { kind: 'cabTypes' }, specific.cabTypes.map((cab) => `${CAB_TYPE_LABELS[cab]} kabin`).join(', '));
     }
   }
   return chips;

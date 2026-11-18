@@ -67,6 +67,22 @@ export type RoomCount = '1+1' | '2+1' | '3+1' | '4+1';
 export type FuelType = 'diesel' | 'petrol' | 'lpg' | 'electric' | 'hybrid';
 export type Gearbox = 'manual' | 'automatic' | 'semi-automatic';
 export type DamageStatus = 'none' | 'repaired' | 'damaged';
+/** Kabin tipi (madde 3): normal, yüksek tavan, yataklı. */
+export type CabType = 'standard' | 'high' | 'sleeper';
+export const CAB_TYPES: readonly CabType[] = ['standard', 'high', 'sleeper'];
+export const CAB_TYPE_LABELS: Record<CabType, string> = { standard: 'Normal', high: 'Yüksek tavan', sleeper: 'Yataklı' };
+
+/** Ticari araca özel teknik bilgiler (madde 3). Yönetici girer; filtrelerde tonaj, motor gücü ve kabin kullanılır. */
+export type CommercialSpecs = {
+  /** Azami yüklü ağırlık (ton). */
+  readonly tonnage?: number;
+  readonly enginePowerHp?: number;
+  readonly cabType?: CabType;
+  /** Şasi bilgisi (ör. "Uzun şasi, 7,2 m"). */
+  readonly chassis?: string;
+  /** Üstyapı (ör. "Hidrolik damper, Hardox kasa"). */
+  readonly bodyBuilder?: string;
+};
 
 /** Özellik tablosu (`Özellikler`): kategori grubuna göre ayrışır. Tasarımdaki satırlar: Marka, Model, Model Yılı, Kilometre, Yakıt, Vites, Kasa Tipi, Hasar Durumu. */
 export type ListingSpecs =
@@ -82,7 +98,7 @@ export type ListingSpecs =
       readonly bodyType?: string;
       readonly damageStatus?: DamageStatus;
       readonly driveConfig?: DriveConfig;
-    }
+    } & CommercialSpecs
   | {
       readonly group: 'trailer';
       readonly brand: string;

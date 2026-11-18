@@ -5,7 +5,7 @@ import { searchChips, searchTitle } from './searchChips';
 /** Kayıtlı arama adı üst sınırı (karakter). Otomatik ad bunu aşarsa `…` ile kısaltılır. */
 export const SAVED_SEARCH_TITLE_MAX = 80;
 
-const SET_KEYS = new Set(['categories', 'statuses', 'driveConfigs', 'axles', 'rooms']);
+const SET_KEYS = new Set(['categories', 'statuses', 'driveConfigs', 'axles', 'rooms', 'cabTypes']);
 
 /** Anahtarları sıralı, küme alanları (kategori, durum, çekiş, aks, oda) sıra bağımsız kanonik biçim; `undefined` alanlar atlanır. */
 function canonical(value: unknown, key?: string): unknown {

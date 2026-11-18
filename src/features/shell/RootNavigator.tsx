@@ -59,6 +59,7 @@ export function RootNavigator() {
           <Stack.Screen name="listings/[listingId]/contact" />
           <Stack.Screen name="listings/[listingId]/request" />
           <Stack.Screen name="listings/[listingId]/insights" />
+          <Stack.Screen name="listings/[listingId]/cost" />
           {/* Talepler: müşteride "Taleplerim", yöneticide firma gelen kutusu. */}
           <Stack.Screen name="leads/index" />
           <Stack.Screen name="leads/[leadId]" />
@@ -68,6 +69,10 @@ export function RootNavigator() {
           {/* Finansman: yönetici ayarları ve müşterinin "Bütçeme göre bul" hesaplayıcısı. */}
           <Stack.Screen name="finance-settings" />
           <Stack.Screen name="budget" />
+          {/* Madde 4: araç karşılaştırma. */}
+          <Stack.Screen name="compare" />
+          {/* Madde 2: akıllı araç bulucu. */}
+          <Stack.Screen name="finder" />
           <Stack.Screen name="conversations/[conversationId]" />
           <Stack.Screen name="announcements/[announcementId]" />
           <Stack.Screen name="notification-unavailable" />

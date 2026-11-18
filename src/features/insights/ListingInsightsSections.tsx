@@ -161,7 +161,9 @@ function AdminEditSection({ listingId, hasData }: { listingId: string; hasData: 
         </Text>
       </View>
       <Text variant="small">
-        {hasData ? 'Güven kontrolleri, araç geçmişi ve uzman görüşü müşteriye bu ilanda gösteriliyor.' : 'Bu ilan için güven kontrolleri, araç geçmişi ve uzman görüşü henüz girilmedi.'}
+        {hasData
+          ? 'Teknik bilgiler, güven kontrolleri, araç geçmişi ve uzman görüşü müşteriye bu ilanda gösteriliyor.'
+          : 'Teknik bilgiler (tonaj, motor gücü, kabin), güven kontrolleri, araç geçmişi ve uzman görüşünü buradan girin.'}
       </Text>
       <Button title={hasData ? 'Bilgileri Düzenle' : 'Bilgileri Gir'} icon="edit-2" variant="outline" onPress={() => router.push(listingInsightsHref(listingId))} testID="listing-insights-edit" />
     </View>

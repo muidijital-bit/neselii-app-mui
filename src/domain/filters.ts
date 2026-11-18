@@ -1,6 +1,6 @@
 import { CATEGORY_CATALOG, type CategoryId } from './categories';
 import type { Range } from './common';
-import type { DriveConfig, RoomCount, SearchableStatus, TrailerAxles } from './listing';
+import type { CabType, DriveConfig, RoomCount, SearchableStatus, TrailerAxles } from './listing';
 
 /** Tüm kategorilerde geçerli alanlar: kategori değişince korunur (PRODUCT.md). Fiyat aralığı kuruştur. */
 export type CommonFilters = {
@@ -26,6 +26,10 @@ export type SpecificFilters =
       readonly odometerKm?: Range;
       /** Yalnızca kamyon/çekici seçiliyken anlamlıdır. */
       readonly driveConfigs?: readonly DriveConfig[];
+      /** Madde 3: tonaj (ton) ve motor gücü (HP) aralığı, kabin tipi (kamyon/çekici). */
+      readonly tonnage?: Range;
+      readonly enginePowerHp?: Range;
+      readonly cabTypes?: readonly CabType[];
     }
   | {
       readonly kind: 'trailer';

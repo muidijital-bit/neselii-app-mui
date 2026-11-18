@@ -8,6 +8,7 @@ import {
   type ListingDetail,
   type ListingFilters,
   type ListingId,
+  type CommercialSpecs,
   type ListingInsightsInput,
   type ListingSearch,
   type Range,
@@ -17,7 +18,7 @@ import type { ListingsService, SearchListingsInput } from '../contracts';
 import type { Supabase } from './client';
 import { INSIGHTS_COLUMNS, toInsights, toInsightsRow, type InsightsRow } from './insights';
 import { SUMMARY_COLUMNS, subtypeVariants, toListingDetail, toListingSummary, type ListingRow, type MediaRow } from './mappers';
-import { call, kurusToTl, offsetOf, pageRange, toPage, unwrap , unwrapMaybe } from './shared';
+import { call, ensure, kurusToTl, offsetOf, pageRange, toPage, unwrap , unwrapMaybe } from './shared';
 
 /** Aramada görünen sunucu durumları (yayından kalkmış/taslak ilan aranmaz; RLS de gizler). */
 const SEARCHABLE = ['published', 'reserved', 'sold'] as const;
@@ -33,6 +34,8 @@ function validateFilters(filters: ListingFilters): void {
   if (specific.kind === 'vehicle') {
     validateRange('modelYear', 'Model yılı', specific.modelYear, errors);
     validateRange('odometerKm', 'Kilometre', specific.odometerKm, errors);
+    validateRange('tonnage', 'Tonaj', specific.tonnage, errors);
+    validateRange('enginePowerHp', 'Motor gücü', specific.enginePowerHp, errors);
   } else if (specific.kind === 'trailer') {
     validateRange('modelYear', 'Model yılı', specific.modelYear, errors);
   } else {
@@ -72,6 +75,12 @@ function applySearch<T>(base: T, search: ListingSearch): T {
     if (specific.odometerKm?.min !== undefined) query = query.gte('km', specific.odometerKm.min);
     if (specific.odometerKm?.max !== undefined) query = query.lte('km', specific.odometerKm.max);
     if (specific.driveConfigs?.length) query = query.in('subtype', driveSubtypes(specific.driveConfigs));
+    // Madde 3: yöneticinin girdiği teknik bilgiler (`attributes`); bilgisi girilmemiş ilan bu filtrelerde eşleşmez.
+    if (specific.tonnage?.min !== undefined) query = query.gte('attributes->tonnage_t', specific.tonnage.min);
+    if (specific.tonnage?.max !== undefined) query = query.lte('attributes->tonnage_t', specific.tonnage.max);
+    if (specific.enginePowerHp?.min !== undefined) query = query.gte('attributes->engine_hp', specific.enginePowerHp.min);
+    if (specific.enginePowerHp?.max !== undefined) query = query.lte('attributes->engine_hp', specific.enginePowerHp.max);
+    if (specific.cabTypes?.length) query = query.in('attributes->>cab_type', [...specific.cabTypes]);
   } else if (specific.kind === 'trailer') {
     if (specific.axles?.length) query = query.in('attributes->>axle_count', specific.axles.map(String));
   } else {
@@ -179,6 +188,23 @@ export function createSupabaseListings(sb: Supabase): ListingsService {
           await sb.from('listing_insights').upsert(toInsightsRow(id, input), { onConflict: 'listing_id' }).select(INSIGHTS_COLUMNS).single(),
         ) as unknown as InsightsRow;
         return toInsights(row);
+      }),
+
+    saveSpecs: (id: ListingId, specs: CommercialSpecs) =>
+      call(async () => {
+        const positive = (value: number | undefined) => (value !== undefined && Number.isFinite(value) && value > 0 ? Math.round(value) : null);
+        ensure(
+          await sb.rpc('set_listing_specs', {
+            p_listing_id: id,
+            p_specs: {
+              tonnage_t: positive(specs.tonnage),
+              engine_hp: positive(specs.enginePowerHp),
+              cab_type: specs.cabType ?? null,
+              chassis: specs.chassis?.trim().slice(0, 120) || null,
+              body_builder: specs.bodyBuilder?.trim().slice(0, 120) || null,
+            },
+          }),
+        );
       }),
   };
 }

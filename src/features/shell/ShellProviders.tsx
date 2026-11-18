@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react';
 
 import { useBootstrapResult } from '@/bootstrap';
+import { CompareProvider } from '@/features/compare/CompareProvider';
+import { SectorProvider } from '@/features/sector/SectorProvider';
 import { OnboardingProvider, type OnboardingStorage } from '@/features/onboarding';
 import { PermissionsProvider, type PermissionsAdapter } from '@/permissions';
 
@@ -19,7 +21,13 @@ export function ShellProviders({ children, permissions, onboardingStorage }: Pro
   return (
     <SessionProvider initialSession={session}>
       <PermissionsProvider adapter={permissions}>
-        <OnboardingProvider storage={onboardingStorage}>{children}</OnboardingProvider>
+        <OnboardingProvider storage={onboardingStorage}>
+          {/* Madde 4: karşılaştırma listesi cihazda tutulur (oturumdan bağımsız). */}
+          <CompareProvider>
+            {/* Madde 1: sektör seçimi (tanıtım + ana sayfa), cihazda tutulur. */}
+            <SectorProvider>{children}</SectorProvider>
+          </CompareProvider>
+        </OnboardingProvider>
       </PermissionsProvider>
     </SessionProvider>
   );

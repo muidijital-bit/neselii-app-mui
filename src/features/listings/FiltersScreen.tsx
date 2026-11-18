@@ -5,6 +5,8 @@ import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
+  CAB_TYPES,
+  CAB_TYPE_LABELS,
   CATEGORY_CATALOG,
   CATEGORY_IDS,
   buildSearch,
@@ -19,6 +21,7 @@ import {
   showsRooms,
   specificKindFor,
   toggleCategory,
+  type CabType,
   type CategoryId,
   type DriveConfig,
   type FilterDraft,
@@ -54,6 +57,8 @@ const DRIVE_OPTIONS: readonly { value: DriveConfig; label: string }[] = [
   { value: '6x2', label: '6x2' },
   { value: '6x4', label: '6x4' },
 ];
+/** Madde 3: kabin tipi seçenekleri (kamyon/çekici). */
+const CAB_OPTIONS: readonly { value: CabType; label: string }[] = CAB_TYPES.map((value) => ({ value, label: CAB_TYPE_LABELS[value] }));
 const AXLE_OPTIONS: readonly { value: TrailerAxles; label: string }[] = [
   { value: 2, label: '2 Aks' },
   { value: 3, label: '3 Aks' },
@@ -360,6 +365,33 @@ export function FiltersScreen() {
             {showDrive ? (
               <Section title="Çekiş tipi">
                 <Segmented options={DRIVE_OPTIONS} selected={draft.specific.driveConfigs} onChange={(driveConfigs) => setSpecific({ driveConfigs })} testIDPrefix="filter-drive" />
+              </Section>
+            ) : null}
+
+            {/* Madde 3: ticari araca özel filtreler. Bilgisi girilmemiş ilanlar bu filtrelerde eşleşmez. */}
+            {kind === 'vehicle' ? (
+              <Section title="Tonaj" value={rangeLabel(draft.specific.tonnageMin, draft.specific.tonnageMax, (v) => `${formatInteger(v)} ton`)}>
+                <View style={styles.pair}>
+                  <NumberBox label="En az" a11yLabel="Tonaj, en az" suffix="ton" value={draft.specific.tonnageMin} onChange={(tonnageMin) => setSpecific({ tonnageMin }, 'tonnage')} invalid={!!errors.tonnage} testID="filter-tonnage-min" />
+                  <NumberBox label="En fazla" a11yLabel="Tonaj, en fazla" suffix="ton" value={draft.specific.tonnageMax} onChange={(tonnageMax) => setSpecific({ tonnageMax }, 'tonnage')} invalid={!!errors.tonnage} testID="filter-tonnage-max" />
+                </View>
+                <FieldError message={errors.tonnage} testID="filter-tonnage-error" />
+              </Section>
+            ) : null}
+
+            {kind === 'vehicle' ? (
+              <Section title="Motor gücü" value={rangeLabel(draft.specific.powerMin, draft.specific.powerMax, (v) => `${formatInteger(v)} HP`)}>
+                <View style={styles.pair}>
+                  <NumberBox label="En az" a11yLabel="Motor gücü, en az" suffix="HP" value={draft.specific.powerMin} onChange={(powerMin) => setSpecific({ powerMin }, 'enginePowerHp')} invalid={!!errors.enginePowerHp} testID="filter-power-min" />
+                  <NumberBox label="En fazla" a11yLabel="Motor gücü, en fazla" suffix="HP" value={draft.specific.powerMax} onChange={(powerMax) => setSpecific({ powerMax }, 'enginePowerHp')} invalid={!!errors.enginePowerHp} testID="filter-power-max" />
+                </View>
+                <FieldError message={errors.enginePowerHp} testID="filter-power-error" />
+              </Section>
+            ) : null}
+
+            {kind === 'vehicle' && showsDriveConfigs(draft.categories) ? (
+              <Section title="Kabin tipi">
+                <Segmented options={CAB_OPTIONS} selected={draft.specific.cabTypes} onChange={(cabTypes) => setSpecific({ cabTypes })} testIDPrefix="filter-cab" />
               </Section>
             ) : null}
 

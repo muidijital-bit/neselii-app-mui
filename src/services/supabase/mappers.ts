@@ -4,6 +4,8 @@ import {
   asMediaId,
   isCategoryId,
   isValidCoordinates,
+  CAB_TYPES,
+  type CabType,
   type CategoryId,
   type DamageStatus,
   type DriveConfig,
@@ -144,6 +146,11 @@ export function toSpecs(row: ListingRow): ListingSpecs {
         bodyType,
         damageStatus,
         driveConfig,
+        tonnage: num(attrs.tonnage_t),
+        enginePowerHp: num(attrs.engine_hp),
+        cabType: pick<CabType>(text(attrs.cab_type), CAB_TYPES),
+        chassis: text(attrs.chassis),
+        bodyBuilder: text(attrs.body_builder),
       };
     }
   }

@@ -190,6 +190,12 @@ export type Database = {
       }
       finance_settings: {
         Row: {
+          fuel_consumption: Json
+          fuel_price_tl: number
+          insurance_tl_per_year: number
+          maintenance_tl_per_km: number
+          tax_tl_per_year: number
+          tire_tl_per_km: number
           id: boolean
           min_down_payment_percent: number
           monthly_rate_percent: number
@@ -197,6 +203,12 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          fuel_consumption?: Json
+          fuel_price_tl?: number
+          insurance_tl_per_year?: number
+          maintenance_tl_per_km?: number
+          tax_tl_per_year?: number
+          tire_tl_per_km?: number
           id?: boolean
           min_down_payment_percent?: number
           monthly_rate_percent?: number
@@ -204,6 +216,12 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          fuel_consumption?: Json
+          fuel_price_tl?: number
+          insurance_tl_per_year?: number
+          maintenance_tl_per_km?: number
+          tax_tl_per_year?: number
+          tire_tl_per_km?: number
           id?: boolean
           min_down_payment_percent?: number
           monthly_rate_percent?: number
@@ -756,6 +774,10 @@ export type Database = {
       delete_my_account: { Args: never; Returns: undefined }
       hide_conversation: {
         Args: { p_conversation_id: string }
+        Returns: undefined
+      }
+      set_listing_specs: {
+        Args: { p_listing_id: string; p_specs: Json }
         Returns: undefined
       }
       mark_conversation_read: {

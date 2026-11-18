@@ -82,6 +82,41 @@ Supabase migration dosyaları: `supabase/migrations/` (canlı projeye uygulanmı
 
 ---
 
+## Adım 4 — Arama ve karar destek (2026-11-18)
+
+### Madde 3 — Ticari araca özel filtreler
+- **Müşteri:** Filtre ekranında yeni bölümler: **Tonaj** (en az / en fazla, ton), **Motor gücü** (en az / en fazla, HP), **Kabin tipi** (Normal / Yüksek tavan / Yataklı; kamyon ve çekicide). Sonuç ekranında çip olarak görünür, çipten kaldırılabilir, kayıtlı aramaya dahildir.
+- **Müşteri:** İlan detayı **Özellikler** tablosunda yeni satırlar: Tonaj, Motor Gücü, Kabin, **Şasi**, **Üstyapı** (girilmişse).
+- **Yönetici:** İlan detayı → "Yönetici: araç bilgileri" → **Teknik bilgiler** bölümü: tonaj, motor gücü, kabin tipi, şasi, üstyapı.
+- **Veritabanı:** Bilgiler `listings.attributes` içinde (`tonnage_t`, `engine_hp`, `cab_type`, `chassis`, `body_builder`); yalnız yöneticinin çağırabildiği `set_listing_specs` fonksiyonu bu anahtarları yazar, diğerlerini (finansman, kaynak) korur.
+- **Not:** sahibinden'den aktarılan ilanlarda bu bilgiler yok; yönetici girdikçe filtrelerde eşleşir.
+
+### Madde 4 — Araç karşılaştırma
+- **Müşteri:** İlan detayında üstte (paylaş ve favorinin yanında) **karşılaştır** düğmesi; en fazla 3 ilan. Eklenince/çıkarılınca altta kısa bilgi notu ("Karşılaştırmaya eklendi (2/3)").
+- **Müşteri:** Liste doluyken ilan detayında ve sonuç ekranında lacivert **"Karşılaştır (n/3)"** düğmesi.
+- **Müşteri:** **Karşılaştır** ekranı: ilanların fotoğrafı ve başlığı yan yana, altında satır satır fiyat, **aynı peşinat ve vadeyle tahmini aylık ödeme** (firmanın finansman ayarları), model yılı, kilometre, kategori/tip, marka/model, tonaj, motor gücü, kabin, çekiş, güven puanı, finansman, konum. **Farklı olan satırlar vurgulanır.** İlan çıkarma ve "Temizle".
+- Seçimler cihazda tutulur; üyelik veya veritabanı değişikliği gerekmez.
+
+### Madde 1 — Sektöre göre başlangıç
+- **Müşteri:** Tanıtıma yeni 2. adım **"Aracı hangi iş için kullanacaksınız?"**: İnşaat / şantiye, Lojistik / uzun yol, Şehir içi dağıtım, Soğuk zincir, Akaryakıt / tanker, Tarım / hayvancılık ("Şimdi Değil" ile geçilebilir).
+- **Müşteri:** Ana sayfada kısayolların altında **"Size uygun araçlar"** kartı: sektör seçilmediyse soru ve sektör çipleri; seçildiyse o sektöre uygun araç türleri (ör. İnşaat → Damperli kamyon, Damper dorse, Çekici), dokununca arama açılır; **Değiştir** ile sektör değiştirilir.
+- Seçim cihazda tutulur (tanıtımı daha önce görmüş kullanıcılar ana sayfadan seçer).
+
+### Madde 2 — Akıllı araç bulucu
+- **Müşteri:** Ana sayfa kısayollarında **"Araç bulucu"** ve sektör kartındaki **"Araç Bulucu: 4 soruda size uygun aracı bulalım"** bağlantısı.
+- **Müşteri:** 4 adımlı sihirbaz (ilerleme çubuğu, Geri / Devam):
+  1. Kullanım amacı (sektörler + "Diğer / emin değilim"),
+  2. Yük (Hafif ≤3,5 ton kamyonet / Orta 3,5–18 ton kamyon / Ağır 18 ton+ çekici veya ağır kamyon),
+  3. Bütçe (Fark etmez / Peşin toplam bütçe / Kredili: aylık ödeme + peşinat → firmanın oranıyla en yüksek fiyat),
+  4. Özet ve **"N ilanı göster"**; bütçede ilan yoksa **"Bütçesiz göster"**.
+- Cevaplar normal aramaya çevrilir (kategori, alt tür, en yüksek fiyat); sonuç ekranında filtreler değiştirilebilir ve kaydedilebilir.
+
+### Madde 24 — Toplam sahip olma maliyeti
+- **Müşteri:** İlan detayındaki "Aylık ödeme hesapla" bölümünde **"Toplam sahip olma maliyetini hesapla"** bağlantısı → yeni ekran:
+  - Yıllık km (50.000 / 100.000 / 150.000 / 200.000 veya serbest), ortalama tüketim (kategoriye göre dolu gelir, değiştirilebilir), alım şekli (Peşin / Kredili),
+  - Sonuç: **tahmini aylık maliyet**, yıllık toplam, km başına işletme maliyeti; kalem kalem yakıt, bakım, lastik, sigorta/kasko, vergi (MTV) ve kredili alımda ilk yılın taksitleri.
+- **Yönetici:** Profil → Finansman Ayarları'na **"Maliyet varsayılanları"** bölümü: motorin fiyatı (TL/L), kategoriye göre tüketim (Kamyon, Çekici, Ticari araç; L/100 km), bakım ve lastik (TL/km), sigorta ve vergi (TL/yıl).
+- **Veritabanı:** `finance_settings` tablosuna maliyet sütunları eklendi (varsayılan: motorin 55 TL, tüketim kamyon 28 / çekici 32 / ticari 11, bakım 2,5 TL/km, lastik 1,2 TL/km, sigorta 75.000 TL, vergi 25.000 TL — firma kendi değerleriyle günceller).
+
 ## Sıradaki adımlar
-- **Adım 4:** Madde 3 (ticari filtreler), 4 (karşılaştırma), 1 (sektöre göre başlangıç), 2 (akıllı araç bulucu), 24 (toplam sahip olma maliyeti).
 - **Adım 5:** Madde 6 (push + benzer araç bildirimi), 27 (arama kaydı), 31 (randevu yönetimi).

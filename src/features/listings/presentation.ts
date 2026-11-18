@@ -1,4 +1,4 @@
-import { CATEGORY_CATALOG, formatInteger, type DamageStatus, type FuelType, type Gearbox, type ListingSpecs, type ListingSummary } from '@/domain';
+import { CAB_TYPE_LABELS, CATEGORY_CATALOG, formatInteger, type DamageStatus, type FuelType, type Gearbox, type ListingSpecs, type ListingSummary } from '@/domain';
 import type { IconName } from '@/ui/Icon';
 import type { ListingView } from '@/ui/listingView';
 
@@ -59,6 +59,12 @@ export function specRows(specs: ListingSpecs): readonly SpecRow[] {
       add('drive', 'Çekiş', specs.driveConfig);
       add('body', 'Kasa Tipi', specs.bodyType);
       add('damage', 'Hasar Durumu', specs.damageStatus && DAMAGE_LABEL[specs.damageStatus]);
+      // Madde 3: ticari araç teknik bilgileri (yönetici girer).
+      add('tonnage', 'Tonaj', specs.tonnage === undefined ? undefined : `${formatInteger(specs.tonnage)} ton`);
+      add('enginePower', 'Motor Gücü', specs.enginePowerHp === undefined ? undefined : `${formatInteger(specs.enginePowerHp)} HP`);
+      add('cab', 'Kabin', specs.cabType && CAB_TYPE_LABELS[specs.cabType]);
+      add('chassis', 'Şasi', specs.chassis);
+      add('bodyBuilder', 'Üstyapı', specs.bodyBuilder);
       break;
     case 'trailer':
       add('brand', 'Marka', specs.brand);

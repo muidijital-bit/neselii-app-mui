@@ -5,6 +5,7 @@ import Animated, { type AnimatedStyle } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppError, userMessage, type ListingDetail } from '@/domain';
+import { CompareBar, MAX_COMPARE, useCompare } from '@/features/compare';
 import { FinanceCalculatorCard } from '@/features/finance';
 import { ListingInsightsSections } from '@/features/insights';
 import { LeadCallbackCard } from '@/features/leads';
@@ -144,6 +145,8 @@ function DetailContent({ detail, onBack }: { detail: ListingDetail; onBack: () =
   const favorites = useFavoriteToggle();
   const isFavorite = favorites.isFavorite(detail.id);
   const heart = usePop();
+  const compare = useCompare();
+  const inCompare = compare.has(detail.id);
   // Favori hatası (geri alma sonrası) eylem uyarısının yerine görünür; yeni eylem ikisini de temizler.
   const shownNotice = favorites.failure ?? notice;
 
@@ -166,6 +169,7 @@ function DetailContent({ detail, onBack }: { detail: ListingDetail; onBack: () =
 
   return (
     <View style={styles.container} testID="listing-screen">
+      <View style={styles.flex}>
       <ScrollView contentContainerStyle={styles.scroll} testID="listing-scroll">
         <View style={{ height: HERO_HEIGHT }} testID="listing-hero">
           {photos.length ? (
@@ -189,6 +193,26 @@ function DetailContent({ detail, onBack }: { detail: ListingDetail; onBack: () =
           <View style={[styles.heroActions, { top: insets.top + Spacing.two }]}>
             <RoundButton icon="chevron-left" label="Geri" onPress={onBack} testID="listing-back" />
             <View style={styles.heroRight}>
+              {/* Madde 4: karşılaştırma listesine ekle / çıkar (en çok 3 ilan). */}
+              <RoundButton
+                icon="mci:compare-horizontal"
+                iconColor={inCompare ? Colors.white : undefined}
+                label={inCompare ? 'Karşılaştırmadan çıkar' : 'Karşılaştırmaya ekle'}
+                selected={inCompare}
+                filled={inCompare}
+                onPress={() => {
+                  const result = compare.toggle(detail.id);
+                  const count = compare.ids.length + (result === 'added' ? 1 : result === 'removed' ? -1 : 0);
+                  setNotice(
+                    result === 'full'
+                      ? `En fazla ${MAX_COMPARE} ilan karşılaştırabilirsiniz. Listeden bir ilan çıkarın.`
+                      : result === 'added'
+                        ? `Karşılaştırmaya eklendi (${count}/${MAX_COMPARE}).`
+                        : 'Karşılaştırmadan çıkarıldı.',
+                  );
+                }}
+                testID="listing-compare"
+              />
               <RoundButton icon="share-2" label="Paylaş" onPress={share} testID="listing-share" />
               <RoundButton
                 icon={isFavorite ? 'mci:heart' : 'heart'}
@@ -306,6 +330,8 @@ function DetailContent({ detail, onBack }: { detail: ListingDetail; onBack: () =
           </View>
         ) : null}
       </ScrollView>
+      <CompareBar bottom={Spacing.three} />
+      </View>
 
       {shownNotice ? (
         <View
@@ -351,6 +377,7 @@ function RoundButton({
   label,
   onPress,
   selected,
+  filled = false,
   busy = false,
   iconStyle,
   testID,
@@ -360,6 +387,8 @@ function RoundButton({
   label: string;
   onPress: () => void;
   selected?: boolean;
+  /** Seçiliyken lacivert dolgulu (karşılaştırma). */
+  filled?: boolean;
   busy?: boolean;
   /** Simgenin animasyonlu stili (favori kalbinin "pop"u). */
   iconStyle?: StyleProp<AnimatedStyle<StyleProp<ViewStyle>>>;
@@ -372,7 +401,7 @@ function RoundButton({
       accessibilityState={{ selected, busy }}
       disabled={busy}
       onPress={onPress}
-      style={styles.round}
+      style={[styles.round, filled && styles.roundFilled]}
       testID={testID}>
       <Animated.View style={iconStyle}>
         <Icon name={icon} size={24} color={iconColor} />
@@ -406,6 +435,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     boxShadow: '0 2px 8px rgba(10,33,63,0.15)',
   },
+  roundFilled: { backgroundColor: Colors.navy },
   heroPills: { position: 'absolute', left: Spacing.three, bottom: Spacing.three, flexDirection: 'row', gap: Spacing.two },
   pill: {
     flexDirection: 'row',

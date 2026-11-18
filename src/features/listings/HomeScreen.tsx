@@ -25,6 +25,8 @@ import { usePullRefresh } from '@/ui/usePullRefresh';
 
 import { callCompany } from './companyPhone';
 import { BUDGET_HREF } from '@/features/finance/routes';
+import { SectorHomeCard } from '@/features/sector';
+import { FINDER_HREF } from '@/features/sector/routes';
 
 import { quickActionSearch } from './home/quickActionSearch';
 import { toListingView } from './presentation';
@@ -125,7 +127,11 @@ export function HomeScreen() {
 
         {/* Üst alanın altındaki bölümler ilk açılışta kademeli, hafifçe yükselerek gelir (hareketi azalt açıkken anında). */}
         <Animated.View entering={enterFadeUp(0)} style={styles.quickActions} testID="home-quick-filters">
-          <QuickActions onSelect={(action) => (action.key === 'butce' ? router.push(BUDGET_HREF) : openResults(quickActionSearch(action.key)))} />
+          <QuickActions
+            onSelect={(action) =>
+              action.key === 'butce' ? router.push(BUDGET_HREF) : action.key === 'bulucu' ? router.push(FINDER_HREF) : openResults(quickActionSearch(action.key))
+            }
+          />
         </Animated.View>
 
         {favorites.failure ? (
@@ -133,6 +139,11 @@ export function HomeScreen() {
             <FavoriteFailureNotice message={favorites.failure} testID="home-favorite-failure" />
           </View>
         ) : null}
+
+        {/* Madde 1: sektöre göre başlangıç (+ madde 2 Araç Bulucu bağlantısı). */}
+        <Animated.View entering={enterFadeUp(1)}>
+          <SectorHomeCard onSearch={openResults} onFinder={() => router.push(FINDER_HREF)} />
+        </Animated.View>
 
         <Animated.View entering={enterFadeUp(1)} testID="home-financing-promo">
           <PromoBanner count={financingCount.data} onPress={() => openResults(FINANCING_SEARCH)} />

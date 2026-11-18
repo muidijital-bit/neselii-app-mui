@@ -1,9 +1,28 @@
 import type { IsoDateTime } from './common';
-import { asAnnouncementId, asConversationId, asListingId, type AnnouncementId, type ConversationId, type ListingId, type NotificationId } from './ids';
+import {
+  asAnnouncementId,
+  asConversationId,
+  asLeadId,
+  asListingId,
+  type AnnouncementId,
+  type ConversationId,
+  type LeadId,
+  type ListingId,
+  type NotificationId,
+} from './ids';
 
 /** Bildirim türleri (tasarım ekran 11 + akış diyagramı): yeni ilan, kayıtlı arama eşleşmesi, fiyat/durum değişikliği, mesaj cevabı, duyuru. */
-/** `new-message`: yöneticiye müşteriden yeni mesaj. */
-export type NotificationKind = 'new-listing' | 'saved-search-match' | 'price-change' | 'status-change' | 'message-reply' | 'new-message' | 'announcement';
+/** `new-message`: yöneticiye müşteriden yeni mesaj. `lead-new`: yöneticiye yeni talep; `lead-update`: müşteriye talep durumu/danışman değişikliği. */
+export type NotificationKind =
+  | 'new-listing'
+  | 'saved-search-match'
+  | 'price-change'
+  | 'status-change'
+  | 'message-reply'
+  | 'new-message'
+  | 'announcement'
+  | 'lead-new'
+  | 'lead-update';
 
 /**
  * Dokunulunca nereye gidileceği. Tip güvenli: ilan bildirimi `ListingId`, mesaj bildirimi `ConversationId` taşır;
@@ -12,6 +31,7 @@ export type NotificationKind = 'new-listing' | 'saved-search-match' | 'price-cha
 export type NotificationTarget =
   | { readonly type: 'listing'; readonly listingId: ListingId }
   | { readonly type: 'conversation'; readonly conversationId: ConversationId }
+  | { readonly type: 'lead'; readonly leadId: LeadId }
   | { readonly type: 'announcement'; readonly announcementId: AnnouncementId; readonly title: string; readonly body: string };
 
 export type NotificationTargetType = NotificationTarget['type'];
@@ -35,6 +55,8 @@ export function parseNotificationTarget(input: unknown): NotificationTarget | nu
       return isSafeEntityId(input.listingId) ? { type: 'listing', listingId: asListingId(input.listingId) } : null;
     case 'conversation':
       return isSafeEntityId(input.conversationId) ? { type: 'conversation', conversationId: asConversationId(input.conversationId) } : null;
+    case 'lead':
+      return isSafeEntityId(input.leadId) ? { type: 'lead', leadId: asLeadId(input.leadId) } : null;
     case 'announcement': {
       if (!isSafeEntityId(input.announcementId)) return null;
       const title = input.title === undefined ? '' : input.title;

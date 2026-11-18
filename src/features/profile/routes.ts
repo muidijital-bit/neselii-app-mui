@@ -11,6 +11,9 @@ type MenuTarget = { readonly href: Href; readonly title: string };
 export const PROFILE_TARGETS = {
   favorites: { href: '/favorites', title: 'Favori İlanlarım' },
   savedSearches: { href: '/saved-searches', title: 'Kayıtlı Aramalarım' },
+  leads: { href: '/leads', title: 'Taleplerim' },
+  advisors: { href: '/advisors', title: 'Danışmanlar' },
+  financeSettings: { href: '/finance-settings', title: 'Finansman Ayarları' },
   notificationPreferences: { href: '/notification-preferences', title: 'Bildirim Tercihleri' },
   privacy: { href: '/privacy', title: 'Gizlilik ve Güvenlik' },
   deleteAccount: { href: '/delete-account', title: 'Hesabımı Sil' },

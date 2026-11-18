@@ -1,6 +1,7 @@
 import type { CategoryId } from './categories';
 import type { IsoDateTime, Money } from './common';
 import type { ListingId, MediaId } from './ids';
+import type { ListingInsights } from './insights';
 
 /**
  * İlan yaşam döngüsü (PRODUCT.md): satılmış ilan görüntülenebilir; yayından kalkmış ilan açıklamalı durumla gösterilir;
@@ -99,4 +100,6 @@ export type ListingDetail = ListingSummary & {
   readonly specs: ListingSpecs;
   /** Galeri sırası: kapak ilk. `photoCount`/`hasVideo` ile tutarlıdır. */
   readonly media: readonly MediaItem[];
+  /** Yöneticinin girdiği geçmiş, güven kontrolleri ve uzman görüşü (madde 11–13); girilmemişse `null`. */
+  readonly insights: ListingInsights | null;
 };

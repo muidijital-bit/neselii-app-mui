@@ -24,6 +24,8 @@ import { Colors, Radius, Spacing } from '@/ui/theme';
 import { usePullRefresh } from '@/ui/usePullRefresh';
 
 import { callCompany } from './companyPhone';
+import { BUDGET_HREF } from '@/features/finance/routes';
+
 import { quickActionSearch } from './home/quickActionSearch';
 import { toListingView } from './presentation';
 import { filtersHref, listingHref, resultsHref } from './routes';
@@ -123,7 +125,7 @@ export function HomeScreen() {
 
         {/* Üst alanın altındaki bölümler ilk açılışta kademeli, hafifçe yükselerek gelir (hareketi azalt açıkken anında). */}
         <Animated.View entering={enterFadeUp(0)} style={styles.quickActions} testID="home-quick-filters">
-          <QuickActions onSelect={(action) => openResults(quickActionSearch(action.key))} />
+          <QuickActions onSelect={(action) => (action.key === 'butce' ? router.push(BUDGET_HREF) : openResults(quickActionSearch(action.key)))} />
         </Animated.View>
 
         {favorites.failure ? (

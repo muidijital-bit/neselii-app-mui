@@ -28,6 +28,8 @@ const KIND_STYLE: Record<NotificationKind, { icon: IconName; background: string;
   'price-change': { icon: 'trending-down', background: Colors.warningSoft, color: Colors.warning },
   'status-change': { icon: 'refresh-cw', background: Colors.chip, color: Colors.textSecondary },
   announcement: { icon: 'mci:bullhorn-outline', background: Colors.surfaceMuted, color: Colors.heading },
+  'lead-new': { icon: 'phone-incoming', background: Colors.orangeSoft, color: Colors.orangeDeep },
+  'lead-update': { icon: 'phone-call', background: '#DCE6F2', color: Colors.heading },
 };
 
 /** Main'deki göreli zaman: `az önce`, `5 dakika önce`, `3 saat önce`, `dün`, `2 gün önce`… Geçersiz tarih boş metin verir. */

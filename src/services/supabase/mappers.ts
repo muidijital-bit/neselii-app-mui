@@ -19,6 +19,7 @@ import {
 } from '@/domain';
 
 import type { Json, Tables } from './database.types';
+import { toInsights, type InsightsRow } from './insights';
 import { tlToKurus, toIso } from './shared';
 
 /** Özet/kart için seçilen sütunlar (detay `*` + medya ile genişler). */
@@ -184,7 +185,9 @@ export function toMediaItem(row: MediaRow): MediaItem {
 }
 
 /** Detay: özet + açıklama + özellikler + medya (galeri sırası; fotoğraflar önce, video sonda — tasarım 12/26). */
-export function toListingDetail(row: ListingRow & { description: string | null; listing_media: readonly MediaRow[] }): ListingDetail {
+export function toListingDetail(
+  row: ListingRow & { description: string | null; listing_media: readonly MediaRow[]; listing_insights?: InsightsRow | null },
+): ListingDetail {
   const summary = toListingSummary(row);
   const sorted = [...row.listing_media].sort((a, b) => a.sort_order - b.sort_order);
   let media = [...sorted.filter((m) => m.type !== 'video'), ...sorted.filter((m) => m.type === 'video')].map(toMediaItem);
@@ -198,5 +201,6 @@ export function toListingDetail(row: ListingRow & { description: string | null; 
     description: row.description?.trim() ?? '',
     specs: toSpecs(row),
     media,
+    insights: row.listing_insights ? toInsights(row.listing_insights) : null,
   };
 }

@@ -5,6 +5,9 @@ import Animated, { type AnimatedStyle } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppError, userMessage, type ListingDetail } from '@/domain';
+import { FinanceCalculatorCard } from '@/features/finance';
+import { ListingInsightsSections } from '@/features/insights';
+import { LeadCallbackCard } from '@/features/leads';
 import { useFavoriteToggle } from '@/features/saved/useFavorites';
 import { useIsAdmin } from '@/features/session/useIsAdmin';
 import { Button } from '@/ui/Button';
@@ -266,6 +269,11 @@ function DetailContent({ detail, onBack }: { detail: ListingDetail; onBack: () =
           ) : null}
         </View>
 
+        {/* Beni Arayın (talep): müşteride, satılmamış ilanda. Yönetici firmanın kendisidir. */}
+        {/* Aylık ödeme hesaplayıcı: firmanın oranıyla; müşteride plan finansman talebine eklenebilir. */}
+        {!sold ? <FinanceCalculatorCard listingId={detail.id} price={detail.price} showLeadAction={!isAdmin} /> : null}
+        {!isAdmin && !sold ? <LeadCallbackCard listingId={detail.id} /> : null}
+
         {specs.length ? (
           <View style={styles.section}>
             <Text variant="heading" accessibilityRole="header">
@@ -283,6 +291,9 @@ function DetailContent({ detail, onBack }: { detail: ListingDetail; onBack: () =
             ))}
           </View>
         ) : null}
+
+        {/* Madde 11–13: güven puanı, araç geçmişi, uzman görüşü (yöneticide düzenleme bölümüyle). */}
+        <ListingInsightsSections listingId={detail.id} insights={detail.insights} isAdmin={isAdmin} />
 
         {detail.description ? (
           <View style={styles.section}>

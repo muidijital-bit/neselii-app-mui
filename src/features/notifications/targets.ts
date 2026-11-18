@@ -2,6 +2,7 @@ import type { Href } from 'expo-router';
 
 import { parseNotificationTarget, type NotificationTarget } from '@/domain';
 import { listingHref } from '@/features/listings/routes';
+import { leadHref } from '@/features/leads/routes';
 import { conversationHref } from '@/features/messaging/routes';
 
 import { announcementHref } from './routes';
@@ -21,6 +22,8 @@ function hrefFor(target: NotificationTarget): Href {
       return listingHref(target.listingId);
     case 'conversation':
       return conversationHref(target.conversationId);
+    case 'lead':
+      return leadHref(target.leadId);
     case 'announcement':
       return announcementHref(target.announcementId);
     default:
@@ -41,7 +44,7 @@ export function resolveNotificationTarget(input: unknown): TargetResolution {
 
 type LinkParams = Readonly<Record<string, string | readonly string[] | undefined>>;
 
-const LINK_ID_KEYS = { listing: 'listingId', conversation: 'conversationId', announcement: 'announcementId' } as const;
+const LINK_ID_KEYS = { listing: 'listingId', conversation: 'conversationId', announcement: 'announcementId', lead: 'leadId' } as const;
 
 /**
  * Dış bağlantı parametrelerini (`type`, `id`) tipli hedefe çevirir; eksik/dizi/bilinmeyen tür/güvenli olmayan kimlik → `null`.

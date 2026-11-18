@@ -12,6 +12,8 @@ export type QuickAction = {
 
 /** Kısayolların arama karşılığı ekranda kurulur (`features/listings/home`): anahtarlar sabittir. */
 export const quickActions: QuickAction[] = [
+  // Arama değil: "Bütçeme göre bul" hesaplayıcısını açar (bkz. HomeScreen).
+  { key: 'butce', label: 'Bütçeme göre', icon: 'mci:calculator-variant-outline' },
   { key: 'cekici', label: 'Çekici', icon: 'mci:truck-trailer' },
   { key: 'damperli', label: 'Damperli', icon: 'mci:dump-truck' },
   { key: 'taksit', label: 'Taksitli', icon: 'mci:credit-card-outline' },

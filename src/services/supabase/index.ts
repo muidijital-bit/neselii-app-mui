@@ -1,7 +1,10 @@
 import type { Services } from '../contracts';
+import { createSupabaseAdvisors } from './advisors';
 import { createSupabaseAuth } from './auth';
 import { getSupabase } from './client';
 import { createSupabaseFavorites } from './favorites';
+import { createSupabaseFinance } from './finance';
+import { createSupabaseLeads } from './leads';
 import { createSupabaseListings } from './listings';
 import { createSupabaseMessaging } from './messaging';
 import { createSupabaseNotifications } from './notifications';
@@ -21,6 +24,9 @@ export function createSupabaseServices(): Services {
     savedSearches: createSupabaseSavedSearches(sb),
     messaging: createSupabaseMessaging(sb),
     notifications: createSupabaseNotifications(sb),
+    leads: createSupabaseLeads(sb),
+    advisors: createSupabaseAdvisors(sb),
+    finance: createSupabaseFinance(sb),
   };
 }
 

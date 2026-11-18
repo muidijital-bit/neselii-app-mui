@@ -14,6 +14,8 @@ export type ClientMessageId = Brand<'ClientMessage'>;
 export type NotificationId = Brand<'Notification'>;
 export type AnnouncementId = Brand<'Announcement'>;
 export type SavedSearchId = Brand<'SavedSearch'>;
+export type LeadId = Brand<'Lead'>;
+export type AdvisorId = Brand<'Advisor'>;
 
 export const asUserId = (value: string) => value as UserId;
 export const asListingId = (value: string) => value as ListingId;
@@ -24,3 +26,5 @@ export const asClientMessageId = (value: string) => value as ClientMessageId;
 export const asNotificationId = (value: string) => value as NotificationId;
 export const asAnnouncementId = (value: string) => value as AnnouncementId;
 export const asSavedSearchId = (value: string) => value as SavedSearchId;
+export const asLeadId = (value: string) => value as LeadId;
+export const asAdvisorId = (value: string) => value as AdvisorId;

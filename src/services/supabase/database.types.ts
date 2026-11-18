@@ -18,6 +18,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      advisors: {
+        Row: {
+          active: boolean
+          created_at: string
+          full_name: string
+          id: string
+          phone: string | null
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          full_name: string
+          id?: string
+          phone?: string | null
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          full_name?: string
+          id?: string
+          phone?: string | null
+        }
+        Relationships: []
+      }
       announcements: {
         Row: {
           body: string
@@ -160,6 +184,172 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      finance_settings: {
+        Row: {
+          id: boolean
+          min_down_payment_percent: number
+          monthly_rate_percent: number
+          terms: number[]
+          updated_at: string
+        }
+        Insert: {
+          id?: boolean
+          min_down_payment_percent?: number
+          monthly_rate_percent?: number
+          terms?: number[]
+          updated_at?: string
+        }
+        Update: {
+          id?: boolean
+          min_down_payment_percent?: number
+          monthly_rate_percent?: number
+          terms?: number[]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      leads: {
+        Row: {
+          advisor_id: string | null
+          contact_phone: string
+          created_at: string
+          data: Json
+          id: string
+          listing_id: string | null
+          note: string | null
+          preferred_date: string | null
+          preferred_slot: string
+          status: string
+          topic: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          advisor_id?: string | null
+          contact_phone: string
+          created_at?: string
+          data?: Json
+          id?: string
+          listing_id?: string | null
+          note?: string | null
+          preferred_date?: string | null
+          preferred_slot?: string
+          status?: string
+          topic: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          advisor_id?: string | null
+          contact_phone?: string
+          created_at?: string
+          data?: Json
+          id?: string
+          listing_id?: string | null
+          note?: string | null
+          preferred_date?: string | null
+          preferred_slot?: string
+          status?: string
+          topic?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leads_advisor_id_fkey"
+            columns: ["advisor_id"]
+            isOneToOne: false
+            referencedRelation: "advisors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      listing_insights: {
+        Row: {
+          cautions: string[]
+          check_documents: boolean
+          check_expertise: boolean
+          check_inspection: boolean
+          check_maintenance: boolean
+          check_no_heavy_damage: boolean
+          check_service_records: boolean
+          expert_advisor_id: string | null
+          history_note: string | null
+          last_service_date: string | null
+          last_service_km: number | null
+          listing_id: string
+          owner_count: number | null
+          strengths: string[]
+          updated_at: string
+          usage_type: string | null
+        }
+        Insert: {
+          cautions?: string[]
+          check_documents?: boolean
+          check_expertise?: boolean
+          check_inspection?: boolean
+          check_maintenance?: boolean
+          check_no_heavy_damage?: boolean
+          check_service_records?: boolean
+          expert_advisor_id?: string | null
+          history_note?: string | null
+          last_service_date?: string | null
+          last_service_km?: number | null
+          listing_id: string
+          owner_count?: number | null
+          strengths?: string[]
+          updated_at?: string
+          usage_type?: string | null
+        }
+        Update: {
+          cautions?: string[]
+          check_documents?: boolean
+          check_expertise?: boolean
+          check_inspection?: boolean
+          check_maintenance?: boolean
+          check_no_heavy_damage?: boolean
+          check_service_records?: boolean
+          expert_advisor_id?: string | null
+          history_note?: string | null
+          last_service_date?: string | null
+          last_service_km?: number | null
+          listing_id?: string
+          owner_count?: number | null
+          strengths?: string[]
+          updated_at?: string
+          usage_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "listing_insights_expert_advisor_id_fkey"
+            columns: ["expert_advisor_id"]
+            isOneToOne: false
+            referencedRelation: "advisors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "listing_insights_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: true
+            referencedRelation: "listings"
             referencedColumns: ["id"]
           },
         ]
@@ -367,6 +557,7 @@ export type Database = {
           created_at: string
           data: Json
           id: string
+          lead_id: string | null
           listing_id: string | null
           read_at: string | null
           title: string
@@ -380,6 +571,7 @@ export type Database = {
           created_at?: string
           data?: Json
           id?: string
+          lead_id?: string | null
           listing_id?: string | null
           read_at?: string | null
           title: string
@@ -393,6 +585,7 @@ export type Database = {
           created_at?: string
           data?: Json
           id?: string
+          lead_id?: string | null
           listing_id?: string | null
           read_at?: string | null
           title?: string
@@ -412,6 +605,13 @@ export type Database = {
             columns: ["conversation_id"]
             isOneToOne: false
             referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
             referencedColumns: ["id"]
           },
           {
@@ -709,6 +909,10 @@ export type MessageRow = Tables<'messages'>;
 export type NotificationRow = Tables<'notifications'>;
 export type AnnouncementRow = Tables<'announcements'>;
 export type SavedSearchRow = Tables<'saved_searches'>;
+export type LeadRow = Tables<'leads'>;
+export type AdvisorRow = Tables<'advisors'>;
+export type FinanceSettingsRow = Tables<'finance_settings'>;
+export type ListingInsightsRow = Tables<'listing_insights'>;
 
 /** listings.status için kullanılan değerler (RLS: published/reserved/sold herkese açık). */
 export type ListingStatus = 'draft' | 'published' | 'reserved' | 'sold';

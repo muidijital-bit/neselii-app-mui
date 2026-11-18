@@ -6,6 +6,7 @@ import Animated from 'react-native-reanimated';
 
 import { useSignOut } from '@/features/auth/useSignOut';
 import { PageHeader } from '@/features/notifications/PageHeader';
+import { useNewLeadsCount } from '@/features/leads/useLeadsQueries';
 import { useOnboarding } from '@/features/onboarding';
 import { AdminBadge } from '@/features/session/AdminBadge';
 import { useFavoritesQuery } from '@/features/saved/useFavorites';
@@ -44,6 +45,9 @@ export function ProfileScreen() {
   const onboarding = useOnboarding();
   const favoriteCount = useFavoritesQuery().data?.length ?? null;
   const savedSearchCount = useSavedSearchesQuery().data?.length ?? null;
+  // Yöneticide "Talepler" satırında yeni talep sayısı; müşteride sayı gösterilmez.
+  const newLeadCount = useNewLeadsCount().data ?? null;
+  const isAdmin = user?.role === 'admin';
 
   const go = (href: Href) => () => router.push(href);
   const name = user ? user.fullName || user.email.split('@')[0] || '' : '';
@@ -99,6 +103,27 @@ export function ProfileScreen() {
             onPress={go(PROFILE_TARGETS.savedSearches.href)}
             testID="profile-menu-saved-searches"
           />
+          <Divider />
+          <MenuRow
+            icon="phone-call"
+            title={isAdmin ? 'Talepler' : PROFILE_TARGETS.leads.title}
+            value={isAdmin ? newLeadCount : null}
+            onPress={go(PROFILE_TARGETS.leads.href)}
+            testID="profile-menu-leads"
+          />
+          {isAdmin ? (
+            <>
+              <Divider />
+              <MenuRow icon="users" title={PROFILE_TARGETS.advisors.title} onPress={go(PROFILE_TARGETS.advisors.href)} testID="profile-menu-advisors" />
+              <Divider />
+              <MenuRow
+                icon="percent"
+                title={PROFILE_TARGETS.financeSettings.title}
+                onPress={go(PROFILE_TARGETS.financeSettings.href)}
+                testID="profile-menu-finance-settings"
+              />
+            </>
+          ) : null}
           <Divider />
           <MenuRow
             icon="bell"

@@ -8,12 +8,14 @@ import {
   type ListingDetail,
   type ListingFilters,
   type ListingId,
+  type ListingInsightsInput,
   type ListingSearch,
   type Range,
 } from '@/domain';
 
 import type { ListingsService, SearchListingsInput } from '../contracts';
 import type { Supabase } from './client';
+import { INSIGHTS_COLUMNS, toInsights, toInsightsRow, type InsightsRow } from './insights';
 import { SUMMARY_COLUMNS, subtypeVariants, toListingDetail, toListingSummary, type ListingRow, type MediaRow } from './mappers';
 import { call, kurusToTl, offsetOf, pageRange, toPage, unwrap , unwrapMaybe } from './shared';
 
@@ -163,12 +165,20 @@ export function createSupabaseListings(sb: Supabase): ListingsService {
         const row = unwrapMaybe(
           await sb
             .from('listings')
-            .select(`${SUMMARY_COLUMNS}, description, listing_media(id, url, type, sort_order)`)
+            .select(`${SUMMARY_COLUMNS}, description, listing_media(id, url, type, sort_order), listing_insights(${INSIGHTS_COLUMNS})`)
             .eq('id', id)
             .maybeSingle(),
-        ) as unknown as (ListingRow & { description: string | null; listing_media: MediaRow[] }) | null;
+        ) as unknown as (ListingRow & { description: string | null; listing_media: MediaRow[]; listing_insights: InsightsRow | null }) | null;
         if (!row) throw appError.notFound(`listing ${asListingId(id)}`);
         return toListingDetail(row);
+      }),
+
+    saveInsights: (id: ListingId, input: ListingInsightsInput) =>
+      call(async () => {
+        const row = unwrap(
+          await sb.from('listing_insights').upsert(toInsightsRow(id, input), { onConflict: 'listing_id' }).select(INSIGHTS_COLUMNS).single(),
+        ) as unknown as InsightsRow;
+        return toInsights(row);
       }),
   };
 }

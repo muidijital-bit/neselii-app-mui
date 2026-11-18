@@ -5,6 +5,8 @@
  * Hiçbir sözleşme bir veritabanı şeması veya sağlayıcı taahhüdü değildir.
  */
 import type {
+  Advisor,
+  AdvisorId,
   AppNotification,
   Category,
   CategoryId,
@@ -12,8 +14,17 @@ import type {
   Conversation,
   ConversationId,
   FavoriteEntry,
+  FinancePlan,
+  FinanceSettings,
+  Lead,
+  LeadId,
+  LeadStatus,
+  LeadTimeSlot,
+  LeadTopic,
   ListingDetail,
   ListingId,
+  ListingInsights,
+  ListingInsightsInput,
   ListingSearch,
   ListingSummary,
   Message,
@@ -102,6 +113,8 @@ export interface ListingsService {
   listFeatured(): Promise<readonly ListingSummary[]>;
   /** Satılmış/rezerve/yayından kalkmış ilan döner (durum alanıyla); hiç var olmayan ilan için `notFound`. */
   getListing(id: ListingId): Promise<ListingDetail>;
+  /** Yalnız yönetici: ilanın geçmiş / güven / uzman bilgilerini kaydeder (yoksa oluşturur). Var olmayan ilan → `notFound`. */
+  saveInsights(id: ListingId, input: ListingInsightsInput): Promise<ListingInsights>;
 }
 
 // --- Favorites & saved searches ------------------------------------------------------------------------------------
@@ -178,6 +191,67 @@ export interface NotificationsService {
   updatePreferences(patch: Partial<NotificationPreferences>): Promise<NotificationPreferences>;
 }
 
+// --- Leads (talepler) ---------------------------------------------------------------------------------------------
+
+export type CreateLeadInput = {
+  /** Talebin bırakıldığı ilan; genel talepte `null`. */
+  readonly listingId: ListingId | null;
+  readonly topic: LeadTopic;
+  /** `YYYY-MM-DD`; seçilmediyse `null`. */
+  readonly preferredDate: string | null;
+  readonly preferredSlot: LeadTimeSlot;
+  readonly contactPhone: string;
+  readonly note?: string;
+  /** Hesaplayıcıdan gelen ödeme planı (finansman talebi). */
+  readonly plan?: FinancePlan;
+};
+
+/** `mine`: oturumdaki kullanıcının talepleri. `all`: firma gelen kutusu (yalnız yönetici; müşteride RLS yine kendi taleplerini döner). */
+export type ListLeadsInput = PageInput & { readonly scope: 'mine' | 'all'; readonly status?: LeadStatus };
+
+export type UpdateLeadInput = { readonly status?: LeadStatus; readonly advisorId?: AdvisorId | null };
+
+/**
+ * Talepler: müşteri bırakır, sunucu durumu "Yeni" yapar ve rastgele aktif danışman atar; yöneticilere bildirim gider. Yönetici durum ve danışmanı
+ * değiştirir; müşteriye "Talebiniz güncellendi" bildirimi gider. Oturum gerekir (`unauthenticated`). Erişilemeyen talep → `notFound`.
+ */
+export interface LeadsService {
+  /** Telefon geçersizse `validation` (`contactPhone`). Atanan danışmanla birlikte kaydı döner. */
+  create(input: CreateLeadInput): Promise<Lead>;
+  /** En yeni önce. */
+  list(input: ListLeadsInput): Promise<Page<Lead>>;
+  get(id: LeadId): Promise<Lead>;
+  /** Yalnız yönetici; müşteride `unknown`/`unavailable` (RLS). */
+  update(id: LeadId, patch: UpdateLeadInput): Promise<Lead>;
+  /** "Yeni" durumundaki talep sayısı (yönetici menü sayacı). */
+  countNew(): Promise<number>;
+}
+
+// --- Advisors (danışmanlar) ---------------------------------------------------------------------------------------
+
+export type SaveAdvisorInput = { readonly fullName: string; readonly phone: string | null; readonly active: boolean };
+
+/**
+ * Danışmanlar. Okuma tüm oturumlu kullanıcılara açıktır (talepte ad gösterilir); yazma yalnız yöneticidedir. Silinen danışmanın açık talepleri
+ * sunucuda başka bir aktif danışmana aktarılır. Ad boşsa `validation` (`fullName`).
+ */
+export interface AdvisorsService {
+  /** Ada göre; `includeInactive` verilmezse yalnız aktifler. */
+  list(input?: { readonly includeInactive?: boolean }): Promise<readonly Advisor[]>;
+  get(id: AdvisorId): Promise<Advisor>;
+  create(input: SaveAdvisorInput): Promise<Advisor>;
+  update(id: AdvisorId, input: SaveAdvisorInput): Promise<Advisor>;
+  remove(id: AdvisorId): Promise<void>;
+}
+
+// --- Finance ------------------------------------------------------------------------------------------------------
+
+/** Finansman ayarları: herkes okur (hesaplayıcı), yalnız yönetici günceller. Geçersiz değer → `validation`. */
+export interface FinanceService {
+  getSettings(): Promise<FinanceSettings>;
+  updateSettings(settings: FinanceSettings): Promise<FinanceSettings>;
+}
+
 // --- Birleşik kap --------------------------------------------------------------------------------------------------
 
 export interface Services {
@@ -188,6 +262,9 @@ export interface Services {
   readonly savedSearches: SavedSearchesService;
   readonly messaging: MessagingService;
   readonly notifications: NotificationsService;
+  readonly leads: LeadsService;
+  readonly advisors: AdvisorsService;
+  readonly finance: FinanceService;
 }
 
 export type ServiceName = keyof Services;

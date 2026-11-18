@@ -57,6 +57,17 @@ export function RootNavigator() {
           <Stack.Screen name="listings/[listingId]" />
           <Stack.Screen name="listings/[listingId]/media" options={{ presentation: 'fullScreenModal', animation: 'fade' }} />
           <Stack.Screen name="listings/[listingId]/contact" />
+          <Stack.Screen name="listings/[listingId]/request" />
+          <Stack.Screen name="listings/[listingId]/insights" />
+          {/* Talepler: müşteride "Taleplerim", yöneticide firma gelen kutusu. */}
+          <Stack.Screen name="leads/index" />
+          <Stack.Screen name="leads/[leadId]" />
+          {/* Yönetici: danışman yönetimi. */}
+          <Stack.Screen name="advisors/index" />
+          <Stack.Screen name="advisors/[advisorId]" />
+          {/* Finansman: yönetici ayarları ve müşterinin "Bütçeme göre bul" hesaplayıcısı. */}
+          <Stack.Screen name="finance-settings" />
+          <Stack.Screen name="budget" />
           <Stack.Screen name="conversations/[conversationId]" />
           <Stack.Screen name="announcements/[announcementId]" />
           <Stack.Screen name="notification-unavailable" />

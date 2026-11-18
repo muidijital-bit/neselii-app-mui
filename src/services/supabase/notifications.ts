@@ -3,6 +3,7 @@ import {
   appError,
   asAnnouncementId,
   asConversationId,
+  asLeadId,
   asListingId,
   asNotificationId,
   formatMoney,
@@ -21,7 +22,7 @@ import { call, offsetOf, pageRange, requireUserId, tlToKurus, toIso, toPage, unw
 
 type Row = Pick<
   Tables<'notifications'>,
-  'id' | 'type' | 'title' | 'body' | 'data' | 'created_at' | 'read_at' | 'listing_id' | 'conversation_id' | 'announcement_id'
+  'id' | 'type' | 'title' | 'body' | 'data' | 'created_at' | 'read_at' | 'listing_id' | 'conversation_id' | 'announcement_id' | 'lead_id'
 > & {
   /** Bildirimin ilanı (kapak fotoğrafı için); RLS ilanı göstermiyorsa ya da ilan yoksa `null`. */
   listing: { cover_url: string | null } | null;
@@ -29,7 +30,7 @@ type Row = Pick<
 type AnnouncementRow = Pick<Tables<'announcements'>, 'id' | 'title' | 'body'>;
 
 const COLUMNS =
-  'id, type, title, body, data, created_at, read_at, listing_id, conversation_id, announcement_id, listing:listings!notifications_listing_id_fkey(cover_url)';
+  'id, type, title, body, data, created_at, read_at, listing_id, conversation_id, announcement_id, lead_id, listing:listings!notifications_listing_id_fkey(cover_url)';
 
 /** Sunucu türleri (tetikleyiciler `snake_case` yazar) → domain türü. */
 const KIND: Record<string, NotificationKind> = {
@@ -40,6 +41,8 @@ const KIND: Record<string, NotificationKind> = {
   message_reply: 'message-reply',
   new_message: 'new-message',
   announcement: 'announcement',
+  lead_new: 'lead-new',
+  lead_update: 'lead-update',
 };
 
 const STATUS_LABEL: Record<string, string> = {
@@ -73,6 +76,7 @@ function targetOf(row: Row, kind: NotificationKind, announcements: Map<string, A
     const announcement = announcements.get(row.announcement_id);
     return { type: 'announcement', announcementId: asAnnouncementId(row.announcement_id), title: announcement?.title ?? row.title, body: announcement?.body ?? row.body ?? '' };
   }
+  if (row.lead_id) return { type: 'lead', leadId: asLeadId(row.lead_id) };
   if ((kind === 'message-reply' || kind === 'new-message') && row.conversation_id) return { type: 'conversation', conversationId: asConversationId(row.conversation_id) };
   if (row.listing_id) return { type: 'listing', listingId: asListingId(row.listing_id) };
   if (row.conversation_id) return { type: 'conversation', conversationId: asConversationId(row.conversation_id) };

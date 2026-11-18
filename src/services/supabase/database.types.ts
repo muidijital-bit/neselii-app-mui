@@ -475,6 +475,8 @@ export type Database = {
           photo_count: number
           price: number
           published_at: string | null
+          reserved_lead_id: string | null
+          reserved_until: string | null
           search_text: string | null
           status: string
           subtype: string | null
@@ -504,6 +506,8 @@ export type Database = {
           photo_count?: number
           price: number
           published_at?: string | null
+          reserved_lead_id?: string | null
+          reserved_until?: string | null
           search_text?: string | null
           status?: string
           subtype?: string | null
@@ -533,6 +537,8 @@ export type Database = {
           photo_count?: number
           price?: number
           published_at?: string | null
+          reserved_lead_id?: string | null
+          reserved_until?: string | null
           search_text?: string | null
           status?: string
           subtype?: string | null
@@ -816,6 +822,14 @@ export type Database = {
       delete_my_account: { Args: never; Returns: undefined }
       hide_conversation: {
         Args: { p_conversation_id: string }
+        Returns: undefined
+      }
+      approve_reservation: {
+        Args: { p_days: number; p_lead_id: string }
+        Returns: string
+      }
+      release_reservation: {
+        Args: { p_lead_id: string }
         Returns: undefined
       }
       register_push_token: {

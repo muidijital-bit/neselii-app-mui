@@ -77,6 +77,8 @@ export function RootNavigator() {
           <Stack.Screen name="call-logs" />
           {/* Madde 31: yönetici randevu takvimi. */}
           <Stack.Screen name="appointments" />
+          {/* Madde 16: satın alma için gerekli belgeler. */}
+          <Stack.Screen name="documents" />
           <Stack.Screen name="conversations/[conversationId]" />
           <Stack.Screen name="announcements/[announcementId]" />
           <Stack.Screen name="notification-unavailable" />

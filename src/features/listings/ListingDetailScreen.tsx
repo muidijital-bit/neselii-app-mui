@@ -131,6 +131,12 @@ function detailSpecRows(detail: ListingDetail): SpecRow[] {
   return rows;
 }
 
+const formatReservedUntil = (iso: string) => {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
+
 /** Bu yazı ölçeğinden büyükte alt eylem düğmeleri alt alta dizilir. */
 const STACK_ACTIONS_MIN_FONT_SCALE = 1.3;
 
@@ -275,6 +281,12 @@ function DetailContent({ detail, onBack }: { detail: ListingDetail; onBack: () =
               <Badge label={statusLabels[detail.status]} tone={statusTones[detail.status]} />
             </View>
           </View>
+          {/* Madde 33: onaylı rezervasyonun bitişi. */}
+          {detail.reservedUntil ? (
+            <Text variant="small" testID="listing-reserved-until">
+              {formatReservedUntil(detail.reservedUntil)} tarihine kadar rezerve
+            </Text>
+          ) : null}
           {detail.financing ? (
             <View style={styles.financing} testID="listing-financing">
               <Icon name="credit-card" size={18} color="success" />
@@ -297,7 +309,7 @@ function DetailContent({ detail, onBack }: { detail: ListingDetail; onBack: () =
         {/* Beni Arayın (talep): müşteride, satılmamış ilanda. Yönetici firmanın kendisidir. */}
         {/* Aylık ödeme hesaplayıcı: firmanın oranıyla; müşteride plan finansman talebine eklenebilir. */}
         {!sold ? <FinanceCalculatorCard listingId={detail.id} price={detail.price} showLeadAction={!isAdmin} /> : null}
-        {!isAdmin && !sold ? <LeadCallbackCard listingId={detail.id} /> : null}
+        {!isAdmin && !sold ? <LeadCallbackCard listingId={detail.id} canReserve={detail.status === 'published'} /> : null}
 
         {specs.length ? (
           <View style={styles.section}>

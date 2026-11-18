@@ -143,5 +143,30 @@ Her maddenin müşteri ve yönetici tarafında nasıl test edileceği: **`docs/M
 - **Veritabanı:** Bildirim yazıldığında sunucu Expo Push servisine gönderir (`pg_net`, `notifications_send_push` tetikleyicisi); `register_push_token` / `unregister_push_token` fonksiyonları; yeni bildirim türü `similar_listing` ve `listings_notify_similar` tetikleyicisi.
 - **Dış kurulum gerekli (iOS TestFlight / App Store):** Telefona bildirimin iOS sürümünde çalışması için Apple Developer hesabında bir **APNs anahtarı (.p8)** oluşturulup Expo'ya (EAS credentials) yüklenmeli, uygulama kimliğinde **Push Notifications** yeteneği açılıp imza profili yenilenmeli ve yeni build alınmalı (şu an iOS build'den push yetkisini kaldıran `withoutPushEntitlement` eklentisi bu kurulumla birlikte kaldırılacak). Android'de Expo Go push'u desteklemez; Android için de FCM anahtarı gerekir.
 
+## Adım 6 — "Sonraki" maddeleri: talep altyapısı üzerine (2026-11-18) · TestFlight 1.0.0 (3) Adım 5'e kadar olanları içerir
+
+### Madde 26 — Sigorta ve kasko talebi
+- **Müşteri:** "Beni Arayın" formuna yeni konu **"Sigorta / kasko teklifi"**. Danışman teklifi müşteriye iletir (talep akışı aynı).
+- **Yönetici:** Talepler'de "Sigorta / kasko" konulu talep olarak görünür; durum/danışman/randevu yönetimi aynı.
+
+### Madde 44 — Çoklu araç ve filo teklifi
+- **Müşteri:** **Karşılaştır** ekranında (2–3 ilan seçiliyken) **"N araç için toplu teklif iste"** → "Toplu Teklif" formu: seçilen araçlar listelenir, gün/saat, telefon, not ile tek talep gönderilir.
+- **Yönetici:** Talep detayında **"Toplu teklif istenen araçlar (N)"** kartı: araçlar ve talep anındaki fiyatları; dokununca ilan açılır.
+- **Veritabanı:** Konu `fleet_quote`; araçların özeti talebin `data.fleet` alanında saklanır.
+
+### Madde 33 — Araç rezervasyonu
+- **Müşteri:** İlan detayındaki "Sizi arayalım" bölümünde (yayındaki ilanlarda) **"Rezerve Et"** → konu "Aracı rezerve etmek istiyorum" ile talep formu.
+- **Yönetici:** Rezervasyon talebinin detayında **Rezervasyon** kartı: **1 / 2 / 3 / 7 gün** seçip **Rezervasyonu Onayla** → ilan **"Rezerve"** olur, talep "Görüşülüyor"a geçer; **Rezervasyonu Kaldır** ile ilan yeniden yayına girer. Başka bir talep için zaten rezerve olan ilan ikinci kez rezerve edilemez.
+- **Müşteri:** Onayda **"Rezervasyonunuz onaylandı · *İlan* · GG.AA.YYYY SS:DD tarihine kadar sizin için ayrıldı"** bildirimi; talep detayında "Araç … tarihine kadar sizin için rezerve"; ilan detayında fiyatın altında **"… tarihine kadar rezerve"**.
+- **Otomatik bitiş:** Süre dolunca ilan otomatik yeniden yayına girer (her 15 dakikada kontrol); müşteriye "Rezervasyon sona erdi", yöneticilere "Rezervasyon süresi doldu" bildirimi.
+- **Kapsam dışı:** Kapora / online ödeme (tartışılabilir madde; banka/ödeme entegrasyonu gerektirir).
+- **Veritabanı:** `listings.reserved_until`, `reserved_lead_id`; `approve_reservation`, `release_reservation` (yalnız yönetici), `reservation-expiry` zamanlanmış görevi.
+
+### Madde 16 — Belge kontrol listesi
+- **Müşteri:** İlan detayındaki "Sizi arayalım" bölümünde **"Satın alma için gerekli belgeler"** → **Gerekli Belgeler** ekranı: **Bireysel alım / Kurumsal alım** sekmeleri, adım adım belge listesi (kimlik, finansman, noter satışı, teslimat öncesi; kurumsalda vergi levhası, sicil gazetesi, imza sirküleri, faaliyet belgesi, bilanço…).
+- **Not:** İçerik şimdilik uygulamada sabittir (firma içeriği); firma kendi listesini iletirse güncellenir.
+
 ## Sıradaki adımlar
-- "İlk aşama" maddelerinin tamamı uygulandı. Sonraki: iOS push için APNs kurulumu ve yeni TestFlight build'i; ardından "Sonraki" işaretli maddeler.
+- iOS push için APNs kurulumu (Apple hesabında anahtar gerekir) ve yeni TestFlight build'i.
+- **Adım 7 önerisi — Takas ve araç alım süreci:** Madde 35 (takas ön başvurusu), 36 (fotoğraf/video yükleme), 37 (ön değerlendirme aralığı), 38 (takas farkı hesabı), 39 (takas aracı ekspertiz randevusu), 40 (araç satın alma talebi).
+- **Sonra:** Madde 9/10/52 (sağlık kartı, ekspertiz PDF, belge arşivi), 32 (PDF teklif), 20/21 (çoklu banka, kurumsal finansman), 41/43 (bulucuya sektör soruları), 46 (içerik merkezi), 47/51 (kurumsal hesap ve onay akışı), 7 (video bölümleri).

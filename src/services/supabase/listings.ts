@@ -174,10 +174,10 @@ export function createSupabaseListings(sb: Supabase): ListingsService {
         const row = unwrapMaybe(
           await sb
             .from('listings')
-            .select(`${SUMMARY_COLUMNS}, description, listing_media(id, url, type, sort_order), listing_insights(${INSIGHTS_COLUMNS})`)
+            .select(`${SUMMARY_COLUMNS}, description, reserved_until, listing_media(id, url, type, sort_order), listing_insights(${INSIGHTS_COLUMNS})`)
             .eq('id', id)
             .maybeSingle(),
-        ) as unknown as (ListingRow & { description: string | null; listing_media: MediaRow[]; listing_insights: InsightsRow | null }) | null;
+        ) as unknown as (ListingRow & { description: string | null; listing_media: MediaRow[]; listing_insights: InsightsRow | null; reserved_until: string | null }) | null;
         if (!row) throw appError.notFound(`listing ${asListingId(id)}`);
         return toListingDetail(row);
       }),

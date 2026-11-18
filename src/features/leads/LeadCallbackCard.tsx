@@ -1,18 +1,19 @@
 import { useRouter } from 'expo-router';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Button } from '@/ui/Button';
+import { Icon } from '@/ui/Icon';
 import { Text } from '@/ui/Text';
 import { IconTile } from '@/ui/Ui';
 import { Colors, Spacing } from '@/ui/theme';
 
-import { leadRequestHref } from './routes';
+import { DOCUMENTS_HREF, leadRequestHref, reservationRequestHref } from './routes';
 
 /**
  * İlan detayındaki "Sizi arayalım" bölümü: detayın diğer beyaz bölümleriyle aynı görünüm. Dokununca talep formu açılır (konu: bilgi, finansman,
  * görüntülü inceleme). Yöneticide ve satılmış ilanda çağıran tarafından gösterilmez.
  */
-export function LeadCallbackCard({ listingId }: { listingId: string }) {
+export function LeadCallbackCard({ listingId, canReserve }: { listingId: string; /** Madde 33: yayındaki ilanda "Rezerve Et" talebi. */ canReserve: boolean }) {
   const router = useRouter();
   return (
     <View style={styles.section} testID="listing-callback-card">
@@ -22,10 +23,23 @@ export function LeadCallbackCard({ listingId }: { listingId: string }) {
           <Text variant="subheading" accessibilityRole="header">
             Sizi arayalım
           </Text>
-          <Text variant="small">Bilgi, finansman, görüntülü veya yerinde inceleme ve ekspertiz randevusu için danışmanımız size uygun saatte dönsün.</Text>
+          <Text variant="small">Bilgi, finansman, inceleme ve ekspertiz randevusu ya da sigorta teklifi için danışmanımız size uygun saatte dönsün.</Text>
         </View>
       </View>
-      <Button title="Beni Arayın" icon="phone-incoming" variant="outline" onPress={() => router.push(leadRequestHref(listingId))} testID="listing-callback" />
+      <View style={styles.buttons}>
+        <Button title="Beni Arayın" icon="phone-incoming" variant="outline" style={styles.flex} onPress={() => router.push(leadRequestHref(listingId))} testID="listing-callback" />
+        {canReserve ? (
+          <Button title="Rezerve Et" icon="lock" variant="outline" style={styles.flex} onPress={() => router.push(reservationRequestHref(listingId))} testID="listing-reserve" />
+        ) : null}
+      </View>
+      {/* Madde 16: satın alma için gerekli belgeler. */}
+      <Pressable accessibilityRole="link" onPress={() => router.push(DOCUMENTS_HREF)} style={styles.docs} testID="listing-documents">
+        <Icon name="file-text" size={18} color="heading" />
+        <Text variant="smallSemibold" color="heading" style={styles.flex}>
+          Satın alma için gerekli belgeler
+        </Text>
+        <Icon name="chevron-right" size={18} color="textTertiary" />
+      </Pressable>
     </View>
   );
 }
@@ -34,4 +48,7 @@ const styles = StyleSheet.create({
   section: { backgroundColor: Colors.surface, padding: Spacing.three, gap: Spacing.three, marginBottom: Spacing.two },
   row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
   text: { flex: 1, gap: 2 },
+  flex: { flex: 1 },
+  buttons: { flexDirection: 'row', gap: Spacing.two },
+  docs: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
 });

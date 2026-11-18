@@ -86,6 +86,20 @@ export function useCreateLead() {
   });
 }
 
+/** Madde 33 (yönetici): rezervasyonu onayla (`days` gün) / kaldır. Başarıda talep, listeler ve ilan önbelleği yenilenir. */
+export function useReservation(id: string) {
+  const { leads } = useServices();
+  const { userId } = useQueryScope();
+  const queryClient = useQueryClient();
+  const refresh = () => {
+    void queryClient.invalidateQueries({ queryKey: leadsKeys.all(userId) });
+    void queryClient.invalidateQueries({ queryKey: ['listings', userId] });
+  };
+  const approve = useMutation<string, unknown, number>({ mutationFn: (days) => leads.approveReservation(asLeadId(id), days), onSuccess: refresh });
+  const release = useMutation<void, unknown, void>({ mutationFn: () => leads.releaseReservation(asLeadId(id)), onSuccess: refresh });
+  return { approve, release };
+}
+
 /** Yönetici: durum / danışman değişikliği. Başarıda detay önbelleği güncellenir, listeler ve sayaç yenilenir. */
 export function useUpdateLead(id: string) {
   const { leads } = useServices();

@@ -4,6 +4,9 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'reac
 
 import { asListingId, type ListingDetail } from '@/domain';
 import { useFinanceSettings } from '@/features/finance/useFinance';
+import { fleetQuoteHref } from '@/features/leads/routes';
+import { useIsAdmin } from '@/features/session/useIsAdmin';
+import { Button } from '@/ui/Button';
 import { StateMessage } from '@/features/listings/ListStates';
 import { listingHref } from '@/features/listings/routes';
 import { listingsKeys } from '@/features/listings/useListingsQueries';
@@ -37,6 +40,7 @@ export function CompareScreen() {
   const loading = queries.some((q) => q.isPending);
   const details = queries.flatMap((q) => (q.data && q.data.status !== 'withdrawn' ? [q.data] : []));
   const rows = compareRows(details, finance.data);
+  const isAdmin = useIsAdmin();
 
   return (
     <View style={styles.container} testID="compare-screen">
@@ -97,6 +101,16 @@ export function CompareScreen() {
               </View>
             ))}
           </View>
+          {/* Madde 44: seçilen araçlar için tek toplu teklif talebi. */}
+          {!isAdmin && details.length > 1 ? (
+            <Button
+              title={`${details.length} araç için toplu teklif iste`}
+              icon="layers"
+              variant="navy"
+              onPress={() => router.push(fleetQuoteHref(details.map((d) => d.id)))}
+              testID="compare-fleet-quote"
+            />
+          ) : null}
           <Text variant="caption" align="center">
             Vurgulu satırlar ilanlar arasında farklı olan özelliklerdir. Aylık ödeme tahminidir.
           </Text>

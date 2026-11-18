@@ -1,3 +1,4 @@
+import { useQueries } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { KeyboardAvoidingView, ScrollView, StyleSheet, View } from 'react-native';
@@ -12,6 +13,7 @@ import {
   formatMoney,
   isLeadTopic,
   isPlausiblePhone,
+  isSafeEntityId,
   parseFinancePlan,
   upcomingDays,
   userMessage,
@@ -20,9 +22,10 @@ import {
   type LeadTimeSlot,
   type LeadTopic,
 } from '@/domain';
-import { useListingQuery } from '@/features/listings/useListingsQueries';
+import { listingsKeys, useListingQuery } from '@/features/listings/useListingsQueries';
 import { PageHeader } from '@/features/notifications/PageHeader';
 import { useSession } from '@/features/session/SessionProvider';
+import { useServices } from '@/services';
 import { Button } from '@/ui/Button';
 import { FocusStatusBar } from '@/ui/FocusStatusBar';
 import { Icon } from '@/ui/Icon';
@@ -41,11 +44,11 @@ import { useCreateLead } from './useLeadsQueries';
 const DAY_COUNT = 7;
 
 /**
- * "Beni Arayın" talep formu (ilan detayından). Konu (bilgi / finansman / görüntülü inceleme), uygun gün ve saat aralığı, telefon (profildeki
+ * "Beni Arayın" talep formu (ilan detayından; toplu teklifte karşılaştırma ekranından). Konu (bilgi / finansman / inceleme / ekspertiz / sigorta / rezervasyon), uygun gün ve saat aralığı, telefon (profildeki
  * telefonla dolu gelir) ve isteğe bağlı not. Gönderimden sonra sunucunun atadığı danışmanın adıyla "Danışmanınız sizi arayacaktır" görünür.
  */
 export function LeadRequestScreen() {
-  const params = useLocalSearchParams<{ listingId?: string | string[]; topic?: string | string[]; plan?: string | string[] }>();
+  const params = useLocalSearchParams<{ listingId?: string | string[]; topic?: string | string[]; plan?: string | string[]; fleet?: string | string[] }>();
   const id = typeof params.listingId === 'string' ? params.listingId.trim() : '';
   const initialTopic = isLeadTopic(params.topic) ? params.topic : 'info';
   const plan = useMemo(() => {
@@ -56,13 +59,23 @@ export function LeadRequestScreen() {
       return null;
     }
   }, [params.plan]);
+  // Madde 44: karşılaştırma ekranından toplu teklif (virgülle ayrılmış ilan kimlikleri, en çok 3).
+  const fleetIds = useMemo(
+    () => (typeof params.fleet === 'string' ? params.fleet.split(',').map((v) => v.trim()).filter(isSafeEntityId).slice(0, 3) : []),
+    [params.fleet],
+  );
   const [created, setCreated] = useState<Lead | null>(null);
+  const title = fleetIds.length > 1 ? 'Toplu Teklif' : initialTopic === 'reservation' ? 'Rezervasyon' : 'Beni Arayın';
 
   return (
     <KeyboardAvoidingView style={styles.container} behavior="padding" testID="lead-request-screen">
       <FocusStatusBar style="dark" />
-      <PageHeader title="Beni Arayın" testID="lead-request-back" />
-      {created ? <LeadCreated lead={created} /> : <LeadForm listingId={id} initialTopic={initialTopic} plan={plan} onCreated={setCreated} />}
+      <PageHeader title={title} testID="lead-request-back" />
+      {created ? (
+        <LeadCreated lead={created} />
+      ) : (
+        <LeadForm listingId={id} initialTopic={fleetIds.length > 1 ? 'fleet_quote' : initialTopic} plan={plan} fleetIds={fleetIds} onCreated={setCreated} />
+      )}
     </KeyboardAvoidingView>
   );
 }
@@ -71,9 +84,12 @@ function LeadForm({
   listingId,
   initialTopic,
   plan,
+  fleetIds,
   onCreated,
 }: {
   listingId: string;
+  /** Toplu teklifte ilanlar (2–3); doluysa konu sabit "Toplu teklif". */
+  fleetIds: readonly string[];
   initialTopic: LeadTopic;
   /** Hesaplayıcıdan gelen plan: yalnız konu "Finansman" iken talebe eklenir. */
   plan: FinancePlan | null;
@@ -85,6 +101,12 @@ function LeadForm({
   const days = useMemo(() => upcomingDays(DAY_COUNT), []);
   const [topic, setTopic] = useState<LeadTopic>(initialTopic);
   const attachedPlan = topic === 'financing' ? plan : null;
+  const fleet = fleetIds.length > 1;
+  const { listings: listingsService } = useServices();
+  const userId = session?.user.id ?? null;
+  const fleetQueries = useQueries({
+    queries: (fleet ? fleetIds : []).map((fid) => ({ queryKey: listingsKeys.detail(userId, fid), queryFn: () => listingsService.getListing(asListingId(fid)) })),
+  });
   const [day, setDay] = useState<string | null>(null);
   const [slot, setSlot] = useState<LeadTimeSlot>('any');
   const [phone, setPhone] = useState(session?.user.phone ?? '');
@@ -106,6 +128,7 @@ function LeadForm({
         contactPhone: phone,
         note,
         plan: attachedPlan ?? undefined,
+        fleetListingIds: fleet ? fleetIds.map(asListingId) : undefined,
       },
       {
         onSuccess: onCreated,
@@ -122,7 +145,25 @@ function LeadForm({
 
   return (
     <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" testID="lead-request-form">
-      {detail ? (
+      {fleet ? (
+        <View style={styles.group} testID="lead-request-fleet">
+          <Text variant="subheading">{fleetIds.length} araç için toplu teklif</Text>
+          {fleetQueries.map((q, i) =>
+            q.data ? (
+              <Card key={fleetIds[i]} style={styles.listing}>
+                <ListingImage uri={q.data.coverImageUri} style={styles.thumb} iconSize={24} />
+                <View style={styles.flex}>
+                  <Text variant="bodySemibold" numberOfLines={2}>
+                    {q.data.title}
+                  </Text>
+                  <Text variant="small">{formatMoney(q.data.price)}</Text>
+                </View>
+              </Card>
+            ) : null,
+          )}
+          <Text variant="small">Danışmanımız araçlar için toplu fiyat ve ödeme seçenekleriyle size dönecek.</Text>
+        </View>
+      ) : detail ? (
         <Card style={styles.listing}>
           <ListingImage uri={detail.coverImageUri} style={styles.thumb} iconSize={24} />
           <View style={styles.flex}>
@@ -136,6 +177,7 @@ function LeadForm({
         </Card>
       ) : null}
 
+      {fleet ? null : (
       <View style={styles.group}>
         <Text variant="subheading">Konu</Text>
         <View style={styles.topics}>
@@ -155,6 +197,7 @@ function LeadForm({
           })}
         </View>
       </View>
+      )}
 
       {attachedPlan ? (
         <View style={styles.group}>

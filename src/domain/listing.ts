@@ -116,6 +116,8 @@ export type ListingDetail = ListingSummary & {
   readonly specs: ListingSpecs;
   /** Galeri sırası: kapak ilk. `photoCount`/`hasVideo` ile tutarlıdır. */
   readonly media: readonly MediaItem[];
+  /** Madde 33: onaylı rezervasyonun bitişi (ilan rezerve ise); yoksa `null`. */
+  readonly reservedUntil: IsoDateTime | null;
   /** Yöneticinin girdiği geçmiş, güven kontrolleri ve uzman görüşü (madde 11–13); girilmemişse `null`. */
   readonly insights: ListingInsights | null;
 };

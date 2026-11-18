@@ -20,7 +20,7 @@ import { Badge, Card, Chip, Divider } from '@/ui/Ui';
 import { Colors, Radius, Spacing } from '@/ui/theme';
 
 import { APPOINTMENT_TIMES, LEAD_STATUS_TONES, appointmentIso, dayLabel, formatAppointment, formatLeadDate, leadStatusLabel, leadWhen, telUrl } from './presentation';
-import { useLeadQuery, useUpdateLead } from './useLeadsQueries';
+import { useLeadQuery, useReservation, useUpdateLead } from './useLeadsQueries';
 
 /**
  * Talep detayı. Müşteri: konu, durum, arama zamanı ve atanan danışman ("Danışmanınız … sizi arayacaktır"). Yönetici: ayrıca müşteri adı ve telefonu
@@ -69,6 +69,14 @@ function LeadContent({ lead }: { lead: Lead }) {
           <Badge label={leadStatusLabel(lead.status)} tone={LEAD_STATUS_TONES[lead.status]} />
         </View>
         <Text variant="small">{formatLeadDate(lead.createdAt)}</Text>
+        {lead.reservedUntil ? (
+          <View style={styles.appointment} testID="lead-reserved">
+            <Icon name="lock" size={18} color="success" />
+            <Text variant="smallSemibold" color="success" style={styles.flex}>
+              Araç {formatAppointment(lead.reservedUntil)} tarihine kadar {isAdmin ? 'bu müşteri için' : 'sizin için'} rezerve
+            </Text>
+          </View>
+        ) : null}
         {lead.appointmentAt && open ? (
           <View style={styles.appointment} testID="lead-appointment">
             <Icon name="calendar" size={18} color="success" />
@@ -106,6 +114,28 @@ function LeadContent({ lead }: { lead: Lead }) {
             </View>
             <Icon name="chevron-right" size={22} color="textTertiary" />
           </Pressable>
+        </Card>
+      ) : null}
+
+      {lead.fleetListings.length ? (
+        <Card style={styles.planCard}>
+          <Text variant="subheading">Toplu teklif istenen araçlar ({lead.fleetListings.length})</Text>
+          {lead.fleetListings.map((item) => (
+            <Pressable
+              key={item.id}
+              accessibilityRole="button"
+              onPress={() => router.push(listingHref(item.id))}
+              style={({ pressed }) => [styles.fleetRow, pressed && styles.pressed]}>
+              <ListingImage uri={item.coverImageUri} style={styles.thumb} iconSize={20} />
+              <View style={styles.flex}>
+                <Text variant="smallSemibold" numberOfLines={2}>
+                  {item.title}
+                </Text>
+                <Text variant="caption">{formatMoney(item.price)} (talep anındaki fiyat)</Text>
+              </View>
+              <Icon name="chevron-right" size={20} color="textTertiary" />
+            </Pressable>
+          ))}
         </Card>
       ) : null}
 
@@ -173,6 +203,7 @@ function LeadContent({ lead }: { lead: Lead }) {
             ) : null}
             <Text variant="caption">Durum veya danışman değiştiğinde müşteriye bildirim gider.</Text>
           </Card>
+          {lead.topic === 'reservation' && lead.listing ? <ReservationEditor lead={lead} /> : null}
           <AppointmentEditor lead={lead} />
           <Button title="Müşteriyi Ara" icon="phone" variant="navy" onPress={() => void Linking.openURL(telUrl(lead.contactPhone)).catch(() => undefined)} testID="lead-call-customer" />
           <OptionSheet
@@ -188,6 +219,42 @@ function LeadContent({ lead }: { lead: Lead }) {
         </>
       ) : null}
     </ScrollView>
+  );
+}
+
+const RESERVATION_DAYS = [1, 2, 3, 7];
+
+/** Madde 33: yönetici rezervasyonu onaylar (ilan seçilen gün kadar "Rezerve", süre dolunca otomatik yayına döner) ya da kaldırır. */
+function ReservationEditor({ lead }: { lead: Lead }) {
+  const { approve, release } = useReservation(lead.id);
+  const [days, setDays] = useState(3);
+  const error = approve.error ?? release.error;
+  const reservationError = error instanceof AppError ? error.fieldErrors?.reservation : undefined;
+  return (
+    <Card style={styles.statusCard}>
+      <Text variant="subheading">Rezervasyon</Text>
+      {lead.reservedUntil ? (
+        <>
+          <Text variant="small">İlan {formatAppointment(lead.reservedUntil)} tarihine kadar rezerve. Süre dolunca otomatik yeniden yayına girer.</Text>
+          <Button title="Rezervasyonu Kaldır" variant="outline" loading={release.isPending} onPress={() => release.mutate()} testID="lead-reservation-release" />
+        </>
+      ) : (
+        <>
+          <Text variant="small">Onaylanınca ilan “Rezerve” görünür ve müşteriye bildirim gider.</Text>
+          <View style={styles.wrapRow}>
+            {RESERVATION_DAYS.map((value) => (
+              <Chip key={value} label={`${value} gün`} selected={days === value} onPress={() => setDays(value)} />
+            ))}
+          </View>
+          <Button title="Rezervasyonu Onayla" icon="lock" loading={approve.isPending} onPress={() => approve.mutate(days)} testID="lead-reservation-approve" />
+        </>
+      )}
+      {error ? (
+        <Text variant="small" color="danger" accessibilityRole="alert">
+          {reservationError ?? userMessage(error)}
+        </Text>
+      ) : null}
+    </Card>
   );
 }
 
@@ -296,6 +363,8 @@ const styles = StyleSheet.create({
   noteBox: { padding: Spacing.three, gap: Spacing.one },
   statusCard: { padding: Spacing.three, gap: Spacing.three },
   chipRow: { gap: Spacing.two, paddingRight: Spacing.three },
+  wrapRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
+  fleetRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, paddingVertical: Spacing.one },
   appointment: {
     flexDirection: 'row',
     alignItems: 'center',

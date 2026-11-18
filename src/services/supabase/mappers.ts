@@ -193,7 +193,7 @@ export function toMediaItem(row: MediaRow): MediaItem {
 
 /** Detay: özet + açıklama + özellikler + medya (galeri sırası; fotoğraflar önce, video sonda — tasarım 12/26). */
 export function toListingDetail(
-  row: ListingRow & { description: string | null; listing_media: readonly MediaRow[]; listing_insights?: InsightsRow | null },
+  row: ListingRow & { description: string | null; listing_media: readonly MediaRow[]; listing_insights?: InsightsRow | null; reserved_until?: string | null },
 ): ListingDetail {
   const summary = toListingSummary(row);
   const sorted = [...row.listing_media].sort((a, b) => a.sort_order - b.sort_order);
@@ -209,5 +209,6 @@ export function toListingDetail(
     specs: toSpecs(row),
     media,
     insights: row.listing_insights ? toInsights(row.listing_insights) : null,
+    reservedUntil: row.status === 'reserved' && row.reserved_until ? toIso(row.reserved_until) : null,
   };
 }

@@ -214,6 +214,8 @@ export type CreateLeadInput = {
   readonly note?: string;
   /** Hesaplayıcıdan gelen ödeme planı (finansman talebi). */
   readonly plan?: FinancePlan;
+  /** Madde 44: toplu teklif istenen ilanlar (en çok 3). */
+  readonly fleetListingIds?: readonly ListingId[];
 };
 
 /** `mine`: oturumdaki kullanıcının talepleri. `all`: firma gelen kutusu (yalnız yönetici; müşteride RLS yine kendi taleplerini döner). */
@@ -238,6 +240,10 @@ export interface LeadsService {
   countNew(): Promise<number>;
   /** Yönetici: `from` zamanından sonraki randevulu talepler, yakından uzağa (en çok 200). */
   listAppointments(from: string): Promise<readonly Lead[]>;
+  /** Madde 33 (yönetici): talebin ilanını `days` gün rezerve eder; bitiş zamanını döner. */
+  approveReservation(id: LeadId, days: number): Promise<string>;
+  /** Madde 33 (yönetici): rezervasyonu kaldırır, ilan yeniden yayına girer. */
+  releaseReservation(id: LeadId): Promise<void>;
 }
 
 // --- Advisors (danışmanlar) ---------------------------------------------------------------------------------------

@@ -8,14 +8,16 @@ import type { AdvisorId, LeadId, ListingId, UserId } from './ids';
  * değil, aynı formun konu seçenekleridir.
  */
 /** `inspection` / `expertise`: yerinde inceleme ve ekspertiz randevusu (madde 31, 15). */
-export type LeadTopic = 'info' | 'financing' | 'video_call' | 'inspection' | 'expertise';
+export type LeadTopic = 'info' | 'financing' | 'video_call' | 'inspection' | 'expertise' | 'insurance' | 'fleet_quote' | 'reservation';
 
 export type LeadStatus = 'new' | 'in_progress' | 'completed' | 'cancelled';
 
 /** Aranmak için uygun saat aralığı. */
 export type LeadTimeSlot = 'morning' | 'noon' | 'afternoon' | 'any';
 
-export const LEAD_TOPICS: readonly LeadTopic[] = ['info', 'financing', 'video_call', 'inspection', 'expertise'];
+/** Talep formunda seçilebilen konular. `fleet_quote` (toplu teklif) karşılaştırma ekranından, `reservation` ilan detayından açılır. */
+export const LEAD_TOPICS: readonly LeadTopic[] = ['info', 'financing', 'video_call', 'inspection', 'expertise', 'insurance', 'reservation'];
+const ALL_LEAD_TOPICS: readonly LeadTopic[] = [...LEAD_TOPICS, 'fleet_quote'];
 export const LEAD_STATUSES: readonly LeadStatus[] = ['new', 'in_progress', 'completed', 'cancelled'];
 export const LEAD_TIME_SLOTS: readonly LeadTimeSlot[] = ['any', 'morning', 'noon', 'afternoon'];
 
@@ -25,6 +27,9 @@ export const LEAD_TOPIC_LABELS: Record<LeadTopic, string> = {
   video_call: 'Görüntülü inceleme',
   inspection: 'Yerinde inceleme randevusu',
   expertise: 'Ekspertiz randevusu',
+  insurance: 'Sigorta / kasko teklifi',
+  fleet_quote: 'Toplu (filo) teklif',
+  reservation: 'Aracı rezerve etmek istiyorum',
 };
 
 /** Liste ve bildirimlerde kısa konu adı. */
@@ -34,6 +39,9 @@ export const LEAD_TOPIC_SHORT: Record<LeadTopic, string> = {
   video_call: 'Görüntülü inceleme',
   inspection: 'Yerinde inceleme',
   expertise: 'Ekspertiz',
+  insurance: 'Sigorta / kasko',
+  fleet_quote: 'Toplu teklif',
+  reservation: 'Rezervasyon',
 };
 
 export const LEAD_STATUS_LABELS: Record<LeadStatus, string> = {
@@ -50,7 +58,7 @@ export const LEAD_TIME_SLOT_LABELS: Record<LeadTimeSlot, string> = {
   afternoon: '15:00 – 18:00',
 };
 
-export const isLeadTopic = (value: unknown): value is LeadTopic => typeof value === 'string' && (LEAD_TOPICS as readonly string[]).includes(value);
+export const isLeadTopic = (value: unknown): value is LeadTopic => typeof value === 'string' && (ALL_LEAD_TOPICS as readonly string[]).includes(value);
 export const isLeadStatus = (value: unknown): value is LeadStatus => typeof value === 'string' && (LEAD_STATUSES as readonly string[]).includes(value);
 export const isLeadTimeSlot = (value: unknown): value is LeadTimeSlot =>
   typeof value === 'string' && (LEAD_TIME_SLOTS as readonly string[]).includes(value);
@@ -78,6 +86,10 @@ export type Lead = {
   readonly note: string | null;
   /** Hesaplayıcıdan gelen ödeme planı; yoksa `null`. */
   readonly plan: FinancePlan | null;
+  /** Madde 44: toplu teklifteki ilanlar (karşılaştırma listesinden). */
+  readonly fleetListings: readonly LeadListing[];
+  /** Madde 33: onaylanmış rezervasyonun bitişi (ilan şu an bu talep için rezerve ise); yoksa `null`. */
+  readonly reservedUntil: IsoDateTime | null;
   readonly advisor: Advisor | null;
   /** Yöneticinin atadığı randevu (madde 31); yoksa `null`. */
   readonly appointmentAt: IsoDateTime | null;

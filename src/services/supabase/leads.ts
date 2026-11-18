@@ -11,30 +11,52 @@ import {
   parseFinancePlan,
   type Lead,
   type LeadId,
+  type LeadListing,
 } from '@/domain';
 
 import type { CreateLeadInput, LeadsService, ListLeadsInput, UpdateLeadInput } from '../contracts';
 import type { Supabase } from './client';
 import type { Json, Tables } from './database.types';
-import { call, offsetOf, pageRange, requireUserId, tlToKurus, toIso, toPage, unwrap, unwrapMaybe } from './shared';
+import { call, ensure, offsetOf, pageRange, requireUserId, tlToKurus, toIso, toPage, unwrap, unwrapMaybe } from './shared';
 
 type Row = Pick<
   Tables<'leads'>,
   'id' | 'user_id' | 'topic' | 'status' | 'preferred_date' | 'preferred_slot' | 'contact_phone' | 'note' | 'data' | 'appointment_at' | 'created_at' | 'updated_at'
 > & {
   advisor: { id: string; full_name: string; phone: string | null; active: boolean } | null;
-  listing: { id: string; title: string; listing_no: number; price: number; cover_url: string | null } | null;
+  listing: { id: string; title: string; listing_no: number; price: number; cover_url: string | null; reserved_until: string | null; reserved_lead_id: string | null } | null;
   customer: { full_name: string | null } | null;
 };
 
 const COLUMNS =
   'id, user_id, topic, status, preferred_date, preferred_slot, contact_phone, note, data, appointment_at, created_at, updated_at, ' +
   'advisor:advisors!leads_advisor_id_fkey(id, full_name, phone, active), ' +
-  'listing:listings!leads_listing_id_fkey(id, title, listing_no, price, cover_url), ' +
+  'listing:listings!leads_listing_id_fkey(id, title, listing_no, price, cover_url, reserved_until, reserved_lead_id), ' +
   'customer:profiles!leads_user_id_fkey(full_name)';
 
 const planOf = (data: Json): ReturnType<typeof parseFinancePlan> =>
   data && typeof data === 'object' && !Array.isArray(data) ? parseFinancePlan((data as Record<string, unknown>).plan) : null;
+
+type FleetItem = { id: string; title: string; listingNo: string; priceKurus: number; coverUrl: string | null };
+
+/** Madde 44: toplu teklifteki ilanların talep anındaki özeti (`data.fleet`). */
+function fleetOf(data: Json): LeadListing[] {
+  const fleet = data && typeof data === 'object' && !Array.isArray(data) ? (data as Record<string, unknown>).fleet : null;
+  if (!Array.isArray(fleet)) return [];
+  return fleet.flatMap((item): LeadListing[] => {
+    const f = item as Partial<FleetItem>;
+    if (typeof f.id !== 'string' || typeof f.title !== 'string') return [];
+    return [
+      {
+        id: asListingId(f.id),
+        title: f.title,
+        listingNumber: String(f.listingNo ?? ''),
+        price: { amountKurus: typeof f.priceKurus === 'number' ? f.priceKurus : 0, currency: 'TRY' },
+        coverImageUri: typeof f.coverUrl === 'string' ? f.coverUrl : null,
+      },
+    ];
+  });
+}
 
 function toLead(row: Row): Lead {
   return {
@@ -46,6 +68,8 @@ function toLead(row: Row): Lead {
     contactPhone: row.contact_phone,
     note: row.note,
     plan: planOf(row.data),
+    fleetListings: fleetOf(row.data),
+    reservedUntil: row.listing?.reserved_lead_id === row.id && row.listing.reserved_until ? toIso(row.listing.reserved_until) : null,
     appointmentAt: row.appointment_at ? toIso(row.appointment_at) : null,
     advisor: row.advisor ? { id: asAdvisorId(row.advisor.id), fullName: row.advisor.full_name, phone: row.advisor.phone, active: row.advisor.active } : null,
     listing: row.listing
@@ -78,6 +102,14 @@ export function createSupabaseLeads(sb: Supabase): LeadsService {
         const phone = input.contactPhone.trim();
         if (!isPlausiblePhone(phone)) throw appError.validation({ contactPhone: 'Geçerli bir telefon numarası girin.' });
         const note = input.note?.trim();
+        let fleet: FleetItem[] | undefined;
+        if (input.fleetListingIds?.length) {
+          const rows = unwrap(await sb.from('listings').select('id, title, listing_no, price, cover_url').in('id', [...input.fleetListingIds].slice(0, 3)));
+          fleet = rows.map((l) => ({ id: l.id, title: l.title, listingNo: String(l.listing_no), priceKurus: tlToKurus(l.price), coverUrl: l.cover_url }));
+        }
+        const data: Record<string, Json> = {};
+        if (input.plan) data.plan = { ...input.plan };
+        if (fleet) data.fleet = fleet;
         const row = unwrap(
           await sb
             .from('leads')
@@ -89,7 +121,7 @@ export function createSupabaseLeads(sb: Supabase): LeadsService {
               preferred_slot: input.preferredSlot,
               contact_phone: phone,
               note: note ? note.slice(0, 1000) : null,
-              data: input.plan ? { plan: { ...input.plan } } : {},
+              data,
             })
             .select(COLUMNS)
             .single(),
@@ -129,6 +161,20 @@ export function createSupabaseLeads(sb: Supabase): LeadsService {
           await sb.from('leads').select(COLUMNS).not('appointment_at', 'is', null).gte('appointment_at', from).order('appointment_at').limit(200),
         ) as unknown as Row[];
         return rows.map(toLead);
+      }),
+
+    approveReservation: (id: LeadId, days: number) =>
+      call(async () => {
+        const result = await sb.rpc('approve_reservation', { p_lead_id: id, p_days: Math.round(days) });
+        const message = (result.error as { message?: string } | null)?.message ?? '';
+        if (/already reserved/.test(message)) throw appError.validation({ reservation: 'Bu ilan başka bir talep için zaten rezerve.' });
+        if (/not available/.test(message)) throw appError.validation({ reservation: 'İlan yayında olmadığı için rezerve edilemez.' });
+        return String(unwrap(result));
+      }),
+
+    releaseReservation: (id: LeadId) =>
+      call(async () => {
+        ensure(await sb.rpc('release_reservation', { p_lead_id: id }));
       }),
 
     countNew: () =>

@@ -16,6 +16,9 @@ export const LEAD_TOPIC_ICONS: Record<LeadTopic, IconName> = {
   video_call: 'video',
   inspection: 'map-pin',
   expertise: 'clipboard',
+  insurance: 'shield',
+  fleet_quote: 'layers',
+  reservation: 'lock',
 };
 
 export const leadStatusLabel = (status: LeadStatus) => LEAD_STATUS_LABELS[status];

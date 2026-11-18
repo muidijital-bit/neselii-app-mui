@@ -20,7 +20,7 @@ Her test adımı bir kutucuktur (`- [ ]`); test ederken işaretleyebilirsiniz. *
 
 ### Hangi uygulama sürümü?
 
-- **TestFlight 1.0.0 (2)** yalnızca Adım 1'i (Talepler) içerir. Bu rehberin tamamını test etmek için yeni bir sürüm gerekir:
+- **TestFlight 1.0.0 (3)** Adım 1–5'i içerir (Adım 6 sonraki build'de). Build 2 yalnızca Adım 1'i içerir. Adım 6 için yeni bir sürüm gerekir:
   - **Expo Go önizlemesi** (en hızlısı): geliştirici yeni önizlemeyi yayımlar (`npm run preview:expo-go`). Test eden kişi Expo Go'da, `neseli-otomotiv` organizasyonuna davet edilmiş Expo hesabıyla giriş yapar.
   - **Yeni TestFlight build'i** (build 3 ve sonrası).
 - Veritabanı tarafındaki tüm değişiklikler zaten canlıdadır. Yeni sürümü açan herkes aynı verileri görür.
@@ -347,6 +347,47 @@ Adımlar:
 
 **Fiyat / durum bildirimi (telefona)**
 - [ ] Favorideki bir ilanın fiyatı panelden değiştirildiğinde bildirim gelir: "Fiyat güncellendi: *ilan*" (uygulama içinde eski → yeni fiyat; telefonda "Yeni fiyat: … TL").
+
+---
+
+## Adım 6 — Talep altyapısı üzerine "Sonraki" maddeleri
+
+### Madde 26 — Sigorta / kasko talebi
+**Müşteri**
+- [ ] Bir ilanda **Beni Arayın** → konu **"Sigorta / kasko teklifi"** → gönder. **Beklenen:** "Talebiniz alındı · Danışmanınız … sizi arayacaktır".
+
+**Yönetici**
+- [ ] Bildirim: "Yeni talep: … · Sigorta / kasko · *ilan*". Talepler listesinde kalkan simgeli "Sigorta / kasko" talebi.
+
+### Madde 44 — Toplu (filo) teklif
+**Müşteri**
+- [ ] 2 veya 3 ilanı karşılaştırmaya ekleyin → **Karşılaştır** ekranının altında **"N araç için toplu teklif iste"**. **Beklenen:** Tek ilan varken bu düğme görünmez.
+- [ ] Düğmeye basın → başlık **"Toplu Teklif"**, "N araç için toplu teklif" altında araçların fotoğraf ve fiyatları; konu seçimi görünmez. Gün/saat, telefon seçip gönderin.
+
+**Yönetici**
+- [ ] Talep detayında **"Toplu teklif istenen araçlar (N)"** kartı: araçlar ve "talep anındaki fiyat". Bir araca dokunun → ilan açılır.
+
+### Madde 33 — Araç rezervasyonu
+**Müşteri**
+- [ ] Yayındaki bir ilanda "Sizi arayalım" bölümünde **Rezerve Et** → başlık **"Rezervasyon"**, konu "Aracı rezerve etmek istiyorum" seçili → gönderin. **Beklenen:** Satılmış veya zaten rezerve ilanda "Rezerve Et" görünmez.
+
+**Yönetici**
+- [ ] Talep detayında **Rezervasyon** kartı: **3 gün** seçip **Rezervasyonu Onayla**. **Beklenen:** Başlıkta "Araç … tarihine kadar bu müşteri için rezerve"; durum "Görüşülüyor".
+- [ ] İlanı açın → durum rozeti **Rezerve**, altında "… tarihine kadar rezerve".
+- [ ] Müşteri tarafında aynı ilan için ikinci bir rezervasyon talebi oluşturun (ilan rezerve olduğundan "Rezerve Et" görünmez: **Beni Arayın** → konu "Aracı rezerve etmek istiyorum") ve yönetici olarak onaylamayı deneyin. **Beklenen:** "Bu ilan başka bir talep için zaten rezerve." uyarısı — ilan iki kez rezerve edilemez.
+- [ ] İlk talepte **Rezervasyonu Kaldır**. **Beklenen:** İlan yeniden "Yayında".
+
+**Müşteri (kontrol)**
+- [ ] Onayda **"Rezervasyonunuz onaylandı · … tarihine kadar sizin için ayrıldı"**; kaldırılınca **"Rezervasyon sona erdi · … · rezervasyon kaldırıldı"**.
+- [ ] Talep detayında yeşil "Araç … tarihine kadar sizin için rezerve" (rezervasyon sürerken).
+
+**Otomatik bitiş**
+- [ ] 1 günlük rezervasyon onaylayın; süre dolduktan sonra en geç 15 dakika içinde ilan otomatik "Yayında" olur, müşteriye "Rezervasyon sona erdi · süre doldu", yöneticilere "Rezervasyon süresi doldu" bildirimi gelir. (Hızlı test için süre veritabanından geriye alınabilir — geliştiriciye iletin.)
+
+### Madde 16 — Gerekli belgeler
+**Müşteri**
+- [ ] İlan detayında "Sizi arayalım" bölümünün altındaki **"Satın alma için gerekli belgeler"** → **Gerekli Belgeler** ekranı.
+- [ ] **Bireysel alım / Kurumsal alım** sekmeleri arasında geçin. **Beklenen:** 4 adımlı belge listeleri değişir; altta bilgilendirme notu.
 
 ---
 

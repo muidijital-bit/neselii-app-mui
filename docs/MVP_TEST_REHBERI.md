@@ -20,7 +20,7 @@ Her test adımı bir kutucuktur (`- [ ]`); test ederken işaretleyebilirsiniz. *
 
 ### Hangi uygulama sürümü?
 
-- **TestFlight 1.0.0 (5)** bu rehberdeki **tüm adımları (1–12)** içerir. Eski build'ler: (4) Adım 1–7, (3) Adım 1–5, (2) yalnız Adım 1. Alternatif olarak:
+- **TestFlight 1.0.0 (6)** bu rehberdeki **tüm adımları (1–12)** içerir ve iOS 27'de açılışta kapanma sorununu düzeltir; **iOS 27 yüklü iPhone'larda build 6'yı kullanın** (build 5 açılmaz). Eski build'ler: (5) Adım 1–12, (4) Adım 1–7, (3) Adım 1–5, (2) yalnız Adım 1. Alternatif olarak:
   - **Expo Go önizlemesi** (en hızlısı): geliştirici yeni önizlemeyi yayımlar (`npm run preview:expo-go`). Test eden kişi Expo Go'da, `neseli-otomotiv` organizasyonuna davet edilmiş Expo hesabıyla giriş yapar.
   - **Yeni TestFlight build'i** (build 3 ve sonrası).
 - Veritabanı tarafındaki tüm değişiklikler zaten canlıdadır. Yeni sürümü açan herkes aynı verileri görür.
@@ -433,7 +433,7 @@ Adımlar:
 
 ## Adım 8 — Belgeler
 
-> PDF seçme ve PDF üretme yerel modül kullanır: **TestFlight build 5** ve Expo Go önizlemesinde çalışır.
+> PDF seçme ve PDF üretme yerel modül kullanır: **TestFlight build 5 ve sonrası** ile Expo Go önizlemesinde çalışır.
 
 ### Madde 9, 10 — Araç sağlık kartı ve ekspertiz raporu
 **Yönetici**

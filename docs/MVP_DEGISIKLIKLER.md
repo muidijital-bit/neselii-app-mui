@@ -301,7 +301,15 @@ Her maddenin müşteri ve yönetici tarafında nasıl test edileceği: **`docs/M
 - **Müşteri:** Profil → **Araç Paketleri**: paket kartları (kapak görselleri, araç sayısı, toplam fiyat) → paket detayı (ilan kartları) → **"Bu paket için teklif iste"** → toplu teklif formu (tüm paket araçlarıyla tek talep).
 - **Veritabanı:** `vehicle_packages`, `vehicle_package_items`; `leads.finance_stage`, `leads.sales_stage`; finansman adımı bildirimi tetikleyicisi. Toplu teklif en çok 10 araca çıkarıldı.
 
+## Düzeltme — iOS 27'de açılışta kapanma · TestFlight 1.0.0 (6)
+
+- **Sorun:** iOS 27 SDK'sıyla derlenen build 5, iOS 27 yüklü iPhone'larda açılır açılmaz kapanıyordu. Apple, iOS 27'de uygulamaların "UIScene" yaşam döngüsünü kullanmasını zorunlu kıldı; şablon bunu açmıyordu.
+- **Düzeltme:** `plugins/withSceneLifecycle.js` config plugin'i Info.plist'e sahne yapılandırmasını ekler ve AppDelegate'i Expo'nun `ExpoAppSceneDelegate` sınıfıyla çalışacak hale getirir (`app.json` plugins listesinde). Derin bağlantılar ve bildirim açılışları sahne delegesi üzerinden iletilir.
+- **Doğrulama:** Release derlemesi iOS 27 simülatöründe açıldı; müşteri ve yönetici akışları (Adım 1–12 ekranları) otomatik testle (Maestro) gezildi, çökme olmadı.
+
 ## Sıradaki adımlar
-- iOS push için APNs kurulumu (Apple hesabında anahtar gerekir) ve yeni TestFlight build'i.
-- Formdaki **"İlk aşama" ve "Sonraki"** maddelerinin tamamı uygulandı (kapora/online ödeme ve banka API'si gibi tartışılabilir alt parçalar hariç).
-- Formdaki maddelerin tamamı uygulandı (Madde 15 Adım 5'teki randevu yapısıyla karşılanıyor). Kalan: tartışılabilir alt parçalar (Madde 19 banka ön başvurusu/API, Madde 33 kapora-online ödeme, Madde 8 sahibinden entegrasyonu), iOS push için APNs kurulumu.
+- Formdaki 52 maddenin 50'si uygulamada var. Madde 5 (favoriler, kayıtlı aramalar) ve Madde 29 (danışmana soru sor, ilan koduyla mesaj) MVP çalışmasından önce zaten vardı.
+- Kalan iki madde formda **"Görüşelim"** işaretli ve dış bir anlaşmaya bağlı:
+  - **Madde 8 — Canlı stok uygunluğu:** firma notu "sahibinden entegrasyonu ya da bot". Uygulama içinde rezerve/satıldı durumu ve bildirimi var (Madde 6, 33); sahibinden ile otomatik eşitleme yok.
+  - **Madde 19 — Banka ön başvurusu:** müşterinin açık onayıyla talebin anlaşmalı bankaya iletilmesi. Banka ile anlaşma/API gerekir.
+- iOS push için APNs kurulumu (Apple hesabında anahtar gerekir).

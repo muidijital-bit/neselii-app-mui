@@ -15,7 +15,7 @@
         "usesNonExemptEncryption": false
       },
       "appleTeamId": "7DKZH9VMX9",
-      "buildNumber": "5"
+      "buildNumber": "6"
     },
     "android": {
       "adaptiveIcon": {
@@ -62,6 +62,7 @@
         }
       ],
       "./plugins/withoutPushEntitlement",
+      "./plugins/withSceneLifecycle",
       "expo-video",
       "expo-image",
       "expo-font",
